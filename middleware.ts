@@ -39,5 +39,11 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|logo.png|icon.png|apple-touch-icon.png|manifest.json).*)'],
+  // Static assets are matched by extension rather than by name. The old list
+  // named icon.png, which no longer exists, and missed icon-192.png and
+  // icon-512.png — the two the manifest actually points at — so an installed
+  // app could not fetch its own icons while signed out.
+  matcher: [
+    '/((?!_next/static|_next/image|favicon\\.ico|manifest\\.json|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico)$).*)',
+  ],
 };
