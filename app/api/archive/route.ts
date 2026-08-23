@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildArchivePayload, CompleteArchiveData } from '@/lib/archive';
-import { getAdminDb, isAdminConfigured, ADMIN_NOT_CONFIGURED } from '@/lib/firebase-admin';
+import {
+  getAdminDb,
+  getAdminConfigStatus,
+  isAdminConfigured,
+  ADMIN_NOT_CONFIGURED,
+} from '@/lib/firebase-admin';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // firebase-admin cannot run on the Edge runtime
@@ -10,9 +15,24 @@ export const runtime = 'nodejs'; // firebase-admin cannot run on the Edge runtim
  * itself before the user clicks anything.
  */
 export async function GET() {
+  const status = getAdminConfigStatus();
+
+  if (status.ok) {
+    return NextResponse.json({
+      configured: true,
+      projectId: status.projectId,
+      serviceAccount: status.clientEmail,
+      cronSecret: Boolean(process.env.CRON_SECRET),
+      appPassword: Boolean(process.env.APP_PASSWORD),
+    });
+  }
+
   return NextResponse.json({
-    configured: isAdminConfigured,
-    message: isAdminConfigured ? null : ADMIN_NOT_CONFIGURED,
+    configured: false,
+    reason: status.reason,
+    message: status.detail,
+    cronSecret: Boolean(process.env.CRON_SECRET),
+    appPassword: Boolean(process.env.APP_PASSWORD),
   });
 }
 
