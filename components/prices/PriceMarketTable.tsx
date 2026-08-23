@@ -58,71 +58,80 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
 
   return (
     <div className="w-full">
-      {/* Quick Summary Highlights */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      {/* 3 Pastel Summary Cards (Matching the image style) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-6">
+        {/* Card 1: Risers */}
         <button
           onClick={() => setFilterType('critical_risers')}
-          className={`p-4 rounded-2xl border text-left transition ${
-            filterType === 'critical_risers'
-              ? 'bg-emerald-50 dark:bg-emerald-950/80 border-emerald-500 ring-2 ring-emerald-400'
-              : 'bg-white dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/40 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 shadow-sm'
+          className={`card-pastel-purple p-5 text-left transition transform hover:scale-[1.02] active:scale-98 shadow-md ${
+            filterType === 'critical_risers' ? 'ring-4 ring-[#111318] dark:ring-white' : ''
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-              🚀 เสี่ยงราคาขึ้นคืนนี้
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-[#111318]/80 dark:text-white/80">
+              🚀 ขึ้นคืนนี้ (Tonight)
             </span>
-            <TrendingUp className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="w-8 h-8 rounded-full bg-[#111318] text-white flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+            </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mt-1">
+          <div className="text-3xl font-black text-[#111318] dark:text-white">
             {criticalRisersCount} คน
           </div>
-          <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block">ยอดซื้อสุทธิพุ่งสูง คาดปรับ +£0.1m</span>
+          <span className="text-[11px] text-[#111318]/70 dark:text-white/70 mt-1 block font-medium">
+            ยอดซื้อสุทธิพุ่งสูง คาดปรับ +£0.1m
+          </span>
         </button>
 
+        {/* Card 2: Fallers */}
         <button
           onClick={() => setFilterType('critical_fallers')}
-          className={`p-4 rounded-2xl border text-left transition ${
-            filterType === 'critical_fallers'
-              ? 'bg-rose-50 dark:bg-rose-950/80 border-rose-500 ring-2 ring-rose-400'
-              : 'bg-white dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/40 hover:bg-rose-50 dark:hover:bg-rose-950/60 shadow-sm'
+          className={`card-pastel-orange p-5 text-left transition transform hover:scale-[1.02] active:scale-98 shadow-md ${
+            filterType === 'critical_fallers' ? 'ring-4 ring-[#111318] dark:ring-white' : ''
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider">
-              ⚠️ เสี่ยงราคาตกคืนนี้
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-[#111318]/80 dark:text-white/80">
+              ⚠️ ตกคืนนี้ (Tonight)
             </span>
-            <TrendingDown className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+            <div className="w-8 h-8 rounded-full bg-[#111318] text-white flex items-center justify-center">
+              <TrendingDown className="w-4 h-4 text-rose-400" />
+            </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mt-1">
+          <div className="text-3xl font-black text-[#111318] dark:text-white">
             {criticalFallersCount} คน
           </div>
-          <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block">ยอดเทขายสูงมาก คาดปรับ -£0.1m</span>
+          <span className="text-[11px] text-[#111318]/70 dark:text-white/70 mt-1 block font-medium">
+            ยอดเทขายสูงมาก คาดปรับ -£0.1m
+          </span>
         </button>
 
+        {/* Card 3: All Players */}
         <button
           onClick={() => setFilterType('all')}
-          className={`p-4 rounded-2xl border text-left transition ${
-            filterType === 'all'
-              ? 'bg-purple-50 dark:bg-purple-900/80 border-purple-500 ring-2 ring-purple-400'
-              : 'bg-white dark:bg-purple-950/30 border-purple-200 dark:border-purple-800/40 hover:bg-purple-50 dark:hover:bg-purple-950/60 shadow-sm'
+          className={`card-pastel-blue p-5 text-left transition transform hover:scale-[1.02] active:scale-98 shadow-md ${
+            filterType === 'all' ? 'ring-4 ring-[#111318] dark:ring-white' : ''
           }`}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-purple-700 dark:text-purple-300 uppercase tracking-wider">
-              ⚽ ผู้เล่นทั้งหมดใน FPL
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[11px] font-black uppercase tracking-wider text-[#111318]/80 dark:text-white/80">
+              ⚽ ทั้งหมด (All Players)
             </span>
-            <Sparkles className="w-5 h-5 text-purple-600 dark:text-fpl-cyan" />
+            <div className="w-8 h-8 rounded-full bg-[#111318] text-white flex items-center justify-center">
+              <Sparkles className="w-4 h-4 text-pastel-blue" />
+            </div>
           </div>
-          <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mt-1">
+          <div className="text-3xl font-black text-[#111318] dark:text-white">
             {analyses.length} คน
           </div>
-          <span className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 block">วิเคราะห์แนวโน้มราคาแบบเรียลไทม์</span>
+          <span className="text-[11px] text-[#111318]/70 dark:text-white/70 mt-1 block font-medium">
+            ดัชนีโมเมนตัมราคาเรียลไทม์
+          </span>
         </button>
       </div>
 
-      {/* Filter and Search Controls */}
-      <div className="glass-panel p-4 rounded-2xl border border-purple-200 dark:border-purple-800/60 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center transition-colors">
+      {/* Filter and Search Controls (Matching Pill Style) */}
+      <div className="pastel-card p-4 shadow-sm mb-6 flex flex-col md:flex-row gap-3 justify-between items-center transition-colors">
         {/* Search */}
         <div className="relative w-full md:max-w-xs">
           <input
@@ -130,12 +139,12 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="ค้นหาชื่อนักเตะ หรือทีม..."
-            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-purple-950/80 border border-purple-200 dark:border-purple-800 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-purple-600 dark:focus:border-fpl-green shadow-sm"
+            className="w-full pl-9 pr-4 py-2 bg-pastel-bg dark:bg-[#12151c] border border-black/5 dark:border-white/10 rounded-full text-xs text-[#111318] dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pastel-blue"
           />
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+          <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3.5 top-2.5" />
         </div>
 
-        {/* Categories Tabs */}
+        {/* Categories Tabs in Round Capsules */}
         <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
           {[
             { key: 'all', label: 'ทั้งหมด' },
@@ -151,10 +160,10 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
             <button
               key={tab.key}
               onClick={() => setFilterType(tab.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${
                 filterType === tab.key
-                  ? 'bg-purple-900 dark:bg-fpl-green text-white dark:text-fpl-purple shadow-sm'
-                  : 'bg-gray-100 dark:bg-purple-950/60 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-purple-900 border border-purple-100 dark:border-purple-800/40'
+                  ? 'bg-[#111318] dark:bg-white text-white dark:text-[#111318] shadow-sm'
+                  : 'bg-pastel-bg dark:bg-pastel-darkPill text-gray-600 dark:text-gray-300 hover:bg-gray-200'
               }`}
             >
               {tab.label}
@@ -164,16 +173,16 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
       </div>
 
       {/* Table Container */}
-      <div className="glass-panel rounded-2xl border border-purple-200 dark:border-purple-800/60 overflow-hidden shadow-xl">
+      <div className="pastel-card overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-700 dark:text-gray-200">
-            <thead className="text-[11px] uppercase bg-purple-100 dark:bg-purple-950/90 text-purple-900 dark:text-purple-200 border-b border-purple-200 dark:border-purple-800/80 font-black">
+            <thead className="text-[11px] uppercase bg-gray-50 dark:bg-pastel-darkPill text-gray-500 dark:text-gray-400 border-b border-black/5 dark:border-white/5 font-black">
               <tr>
                 <th className="px-4 py-3.5">ผู้เล่น (Player)</th>
                 <th className="px-3 py-3.5">ตำแหน่ง</th>
                 <th
                   onClick={() => handleSort('currentCost')}
-                  className="px-3 py-3.5 cursor-pointer hover:text-purple-900 dark:hover:text-white"
+                  className="px-3 py-3.5 cursor-pointer hover:text-[#111318] dark:hover:text-white"
                 >
                   <div className="flex items-center gap-1">
                     <span>ราคา</span>
@@ -182,7 +191,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                 </th>
                 <th
                   onClick={() => handleSort('selectedByPercent')}
-                  className="px-3 py-3.5 cursor-pointer hover:text-purple-900 dark:hover:text-white"
+                  className="px-3 py-3.5 cursor-pointer hover:text-[#111318] dark:hover:text-white"
                 >
                   <div className="flex items-center gap-1">
                     <span>ถือครอง %</span>
@@ -191,7 +200,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                 </th>
                 <th
                   onClick={() => handleSort('netTransfers')}
-                  className="px-3 py-3.5 cursor-pointer hover:text-purple-900 dark:hover:text-white"
+                  className="px-3 py-3.5 cursor-pointer hover:text-[#111318] dark:hover:text-white"
                 >
                   <div className="flex items-center gap-1">
                     <span>ยอดซื้อ/ขายสุทธิ</span>
@@ -200,40 +209,40 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                 </th>
                 <th
                   onClick={() => handleSort('changeScore')}
-                  className="px-3 py-3.5 cursor-pointer hover:text-purple-900 dark:hover:text-white"
+                  className="px-3 py-3.5 cursor-pointer hover:text-[#111318] dark:hover:text-white"
                 >
                   <div className="flex items-center gap-1">
-                    <span>ดัชนีราคา (Prediction)</span>
+                    <span>ดัชนีราคา</span>
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
-                <th className="px-4 py-3.5 text-right">สถานะแจ้งเตือน</th>
+                <th className="px-4 py-3.5 text-right">สถานะ</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-purple-100 dark:divide-purple-900/40">
+            <tbody className="divide-y divide-black/5 dark:divide-white/5">
               {filteredData.slice(0, 100).map((player) => {
                 return (
                   <tr
                     key={player.elementId}
-                    className="hover:bg-purple-50/60 dark:hover:bg-purple-900/20 transition group"
+                    className="hover:bg-pastel-bg/60 dark:hover:bg-pastel-darkPill/40 transition group"
                   >
-                    {/* Player Info */}
+                    {/* Player Info with condition / injury under name & club */}
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-start gap-3">
                         <PlayerJersey
                           teamCode={player.team.code}
                           isGkp={player.elementType.id === 1}
-                          className="w-8 h-8 shrink-0"
+                          className="w-8 h-8 shrink-0 mt-0.5"
                         />
                         <div>
-                          <div className="font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-fpl-green transition">
+                          <div className="font-bold text-[#111318] dark:text-white group-hover:text-pastel-blueDark transition">
                             {player.webName}
                           </div>
                           <div className="text-[11px] text-gray-500 dark:text-gray-400 font-semibold">
                             {player.team.name} ({player.team.short_name})
                           </div>
                           {player.news && (
-                            <div className="text-[10px] text-rose-600 dark:text-rose-400 mt-1 flex items-start gap-1 font-medium leading-tight max-w-[200px] sm:max-w-sm">
+                            <div className="text-[10px] text-rose-600 dark:text-rose-400 mt-1 flex items-start gap-1 font-medium leading-tight max-w-[220px] sm:max-w-md">
                               <span className="shrink-0 text-[11px]">⚠️</span>
                               <span>{player.news}</span>
                             </div>
@@ -243,17 +252,17 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                     </td>
 
                     {/* Position */}
-                    <td className="px-3 py-3 text-xs font-semibold text-purple-700 dark:text-purple-300">
+                    <td className="px-3 py-3 text-xs font-bold text-gray-600 dark:text-gray-300">
                       {player.elementType.singular_name_short}
                     </td>
 
                     {/* Current Cost */}
-                    <td className="px-3 py-3 font-bold text-gray-900 dark:text-white font-mono">
+                    <td className="px-3 py-3 font-black text-[#111318] dark:text-white font-mono">
                       £{player.currentCost.toFixed(1)}m
                     </td>
 
                     {/* Ownership % */}
-                    <td className="px-3 py-3 text-xs text-amber-600 dark:text-amber-300 font-mono font-bold">
+                    <td className="px-3 py-3 text-xs text-gray-600 dark:text-gray-300 font-mono font-bold">
                       {player.selectedByPercent}%
                     </td>
 
@@ -270,24 +279,24 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
 
                     {/* Score Bar */}
                     <td className="px-3 py-3">
-                      <div className="w-32">
+                      <div className="w-28">
                         <div className="flex justify-between text-[10px] font-bold mb-1">
                           <span className={player.changeScore > 0 ? 'text-emerald-600 dark:text-emerald-400' : player.changeScore < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-400'}>
                             {player.changeScore > 0 ? `+${player.changeScore}` : player.changeScore}%
                           </span>
                         </div>
-                        <div className="h-2 bg-gray-200 dark:bg-gray-900 rounded-full overflow-hidden border border-purple-200 dark:border-purple-900">
+                        <div className="h-2 bg-gray-100 dark:bg-black/40 rounded-full overflow-hidden">
                           <div
                             className={`h-full ${
                               player.changeScore >= 75
-                                ? 'bg-emerald-500 dark:bg-emerald-400'
+                                ? 'bg-emerald-500'
                                 : player.changeScore > 0
-                                ? 'bg-emerald-600'
+                                ? 'bg-emerald-400'
                                 : player.changeScore <= -75
                                 ? 'bg-rose-500'
                                 : player.changeScore < 0
-                                ? 'bg-orange-500'
-                                : 'bg-gray-400 dark:bg-gray-700'
+                                ? 'bg-orange-400'
+                                : 'bg-gray-300'
                             }`}
                             style={{
                               width: `${Math.min(100, Math.max(8, Math.abs(player.changeScore)))}%`,
@@ -301,31 +310,31 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                     {/* Status Pill */}
                     <td className="px-4 py-3 text-right">
                       {player.status === 'rising_soon' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/50 text-[11px] font-black animate-pulse-rise">
-                          <TrendingUp className="w-3 h-3" />
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#111318] text-white text-[11px] font-bold animate-pulse-rise shadow-sm">
+                          <TrendingUp className="w-3 h-3 text-emerald-400" />
                           <span>ขึ้นคืนนี้</span>
                         </span>
                       )}
                       {player.status === 'likely_riser' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 text-[11px] font-semibold">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[11px] font-semibold">
                           <TrendingUp className="w-3 h-3" />
                           <span>ขาขึ้น</span>
                         </span>
                       )}
                       {player.status === 'falling_soon' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-500/50 text-[11px] font-black animate-pulse-fall">
-                          <TrendingDown className="w-3 h-3" />
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-[#111318] text-white text-[11px] font-bold animate-pulse-fall shadow-sm">
+                          <TrendingDown className="w-3 h-3 text-rose-400" />
                           <span>ตกคืนนี้</span>
                         </span>
                       )}
                       {player.status === 'likely_faller' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-50 dark:bg-orange-950 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800 text-[11px] font-semibold">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-orange-100 dark:bg-orange-950 text-orange-800 dark:text-orange-300 text-[11px] font-semibold">
                           <TrendingDown className="w-3 h-3" />
                           <span>ขาลง</span>
                         </span>
                       )}
                       {player.status === 'stable' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 dark:bg-purple-950/60 text-gray-500 dark:text-gray-400 text-[11px]">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-pastel-darkPill text-gray-500 dark:text-gray-400 text-[11px]">
                           <Minus className="w-3 h-3" />
                           <span>ปกติ</span>
                         </span>
@@ -337,8 +346,8 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
             </tbody>
           </table>
         </div>
-        <div className="p-3 text-center text-xs text-gray-500 dark:text-gray-400 border-t border-purple-100 dark:border-purple-900/60 bg-purple-50/50 dark:bg-purple-950/40">
-          แสดงรายการ 100 อันดับแรกตามตัวกรองที่เลือก (ข้อมูลอัปเดตต่อเนื่องจาก FPL Official API)
+        <div className="p-3.5 text-center text-xs text-gray-400 border-t border-black/5 dark:border-white/5 bg-gray-50/50 dark:bg-pastel-darkPill/20">
+          แสดง 100 อันดับแรกตามตัวกรองที่เลือก (อัปเดตจาก FPL Official API)
         </div>
       </div>
     </div>

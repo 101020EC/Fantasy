@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
+import BottomNav from '@/components/BottomNav';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AuthProvider } from '@/components/AuthContext';
 import PasswordGate from '@/components/PasswordGate';
@@ -17,13 +18,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="th" className="dark" suppressHydrationWarning>
+    <html lang="th" className="light" suppressHydrationWarning>
       <body className="antialiased min-h-screen flex flex-col transition-colors duration-300 w-full overflow-x-hidden">
         <AuthProvider>
           <PasswordGate>
             <ThemeProvider>
               <Navbar />
               <div className="flex-1 w-full">{children}</div>
+              <BottomNav />
             </ThemeProvider>
           </PasswordGate>
         </AuthProvider>

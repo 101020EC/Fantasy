@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Shield, Search, TrendingUp, Sparkles, Activity, ArrowRight, HelpCircle, User, Send } from 'lucide-react';
+import { Shield, Search, TrendingUp, TrendingDown, Sparkles, ArrowRight, User, Send, Calendar, CheckCircle2, ChevronRight, Activity } from 'lucide-react';
 import RecentTeams from '@/components/team/RecentTeams';
 import { useAuth } from '@/components/AuthContext';
 import TelegramSettingsModal from '@/components/telegram/TelegramSettingsModal';
@@ -19,7 +19,6 @@ export default function HomePage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  // Automatic redirect to saved team if user already has one and is not explicitly switching
   useEffect(() => {
     if (savedTeamId && !isSwitching) {
       router.replace(`/team/${savedTeamId}`);
@@ -44,7 +43,7 @@ export default function HomePage() {
     router.push(`/team/${demoId}`);
   };
 
-  const handleCard1Click = () => {
+  const handleOpenMyTeam = () => {
     if (savedTeamId || teamId.trim()) {
       const target = teamId.trim() || savedTeamId;
       setLoading(true);
@@ -55,54 +54,79 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-70px)] flex flex-col justify-between w-full">
-      <main className="w-full max-w-5xl mx-auto px-4 py-8 sm:py-12 text-center">
-        {/* Top Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/60 border border-purple-300 dark:border-purple-700/60 text-purple-800 dark:text-fpl-cyan text-xs font-bold mb-4 shadow-sm">
-          <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-fpl-green" />
-          <span>FPL Team Viewer & Price Predictor 2024/25</span>
-        </div>
-
-        {/* Hero Title */}
-        <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-tight text-gray-900 dark:text-white mb-3">
-          จัดทัพ <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-700 dark:from-fpl-green via-teal-600 dark:via-fpl-cyan to-pink-600 dark:to-fpl-pink">Fantasy</span>
-          <br className="hidden sm:inline" /> ดักราคาขึ้น-ลง
-        </h1>
-
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-6 leading-relaxed">
-          กรอกเพียง <strong>FPL Team ID</strong> เพื่อดูแผนการเล่น 11 ตัวจริง, ตัวสำรอง, กัปตัน, คะแนนสด
-          พร้อมระบบเรดาร์แจ้งเตือนนักเตะที่เสี่ยง <strong>ราคาตก</strong> หรือมีโอกาส <strong>ราคาขึ้น</strong> คืนนี้!
-        </p>
-
-        {/* Saved Team Banner if user is currently switching */}
-        {savedTeamId && (
-          <div className="max-w-xl mx-auto mb-4 p-3 rounded-2xl bg-purple-50 dark:bg-purple-950/80 border border-purple-200 dark:border-purple-800 flex items-center justify-between shadow-sm">
-            <div className="flex items-center gap-2 text-left">
-              <User className="w-4 h-4 text-purple-600 dark:text-fpl-green" />
-              <div>
-                <span className="text-xs text-gray-500 dark:text-gray-400 block">ทีมที่คุณบันทึกไว้ในเครื่อง:</span>
-                <span className="text-sm font-black text-gray-900 dark:text-white">Team ID #{savedTeamId}</span>
-              </div>
+    <div className="min-h-[calc(100vh-80px)] flex flex-col justify-between w-full px-3 sm:px-6 py-4 sm:py-8 max-w-5xl mx-auto">
+      <main className="w-full space-y-4 sm:space-y-6">
+        {/* 1. Large Periwinkle Blue Hero Card (Matching the UX Lab / Learning Roadmap Card in the screenshot) */}
+        <div className="card-pastel-blue p-6 sm:p-8 relative overflow-hidden shadow-xl">
+          {/* Top header row inside Hero Card */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="w-10 h-10 rounded-full bg-white/80 dark:bg-black/40 flex items-center justify-center shadow-sm">
+              <Shield className="w-5 h-5 text-[#111318] dark:text-white" />
             </div>
+            {/* Circular status indicator badge like (2/3) in image */}
+            <div className="w-10 h-10 rounded-full border border-[#111318]/20 dark:border-white/20 flex items-center justify-center font-black text-xs text-[#111318] dark:text-white bg-white/30 backdrop-blur-sm">
+              2025
+            </div>
+          </div>
+
+          <div className="max-w-md">
+            <h1 className="text-2xl sm:text-4xl font-black text-[#111318] dark:text-white tracking-tight leading-tight mb-2">
+              Check Your FPL Squad &amp; Price Radar
+            </h1>
+            <p className="text-xs sm:text-sm text-[#111318]/80 dark:text-white/80 font-medium mb-6 leading-relaxed">
+              ใส่ Team ID เพื่อวิเคราะห์ 11 ตัวจริง พร้อมระบบเรดาร์ดักราคานักเตะขึ้น-ลงรอบดึก
+            </p>
+          </div>
+
+          {/* Capsule Action Button in Hero Card (like JOIN NOW in image) */}
+          <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={() => {
-                setLoading(true);
-                router.push(`/team/${savedTeamId}`);
-              }}
-              className="px-3 py-1.5 bg-purple-900 dark:bg-fpl-green text-white dark:text-fpl-purple font-black text-xs rounded-xl hover:scale-105 transition shadow"
+              onClick={handleOpenMyTeam}
+              className="px-6 py-2.5 bg-[#111318] text-white dark:bg-white dark:text-[#111318] font-black text-xs sm:text-sm rounded-full shadow-lg hover:scale-105 active:scale-95 transition-transform flex items-center gap-2"
             >
-              เปิดดูทีมหลัก &rarr;
+              <span>{savedTeamId ? `OPEN SQUAD #${savedTeamId}` : 'GET STARTED'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={() => setIsTelegramModalOpen(true)}
+              className="px-4 py-2.5 bg-white/70 dark:bg-black/30 backdrop-blur-md text-[#111318] dark:text-white font-bold text-xs rounded-full border border-black/10 dark:border-white/10 hover:bg-white transition flex items-center gap-1.5"
+            >
+              <Send className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+              <span>Telegram Alert</span>
             </button>
           </div>
-        )}
+        </div>
 
-        {/* Team ID Search Box */}
-        <div className="max-w-xl mx-auto">
-          <form
-            onSubmit={handleSearch}
-            className="p-2 sm:p-2.5 rounded-2xl glass-panel-glow flex flex-col sm:flex-row items-center gap-2 shadow-lg"
-          >
-            <div className="relative w-full flex-1">
+        {/* 2. Gameweek Schedule Capsule Bar (Matching the Sun Mon Tue Wed Thu Fri Sat pills in the image) */}
+        <div className="pastel-card p-3 sm:p-4 shadow-sm flex items-center justify-between overflow-x-auto gap-2">
+          {[
+            { label: 'GW 25', status: 'done', color: 'bg-gray-100 dark:bg-pastel-darkPill text-gray-400' },
+            { label: 'GW 26', status: 'done', color: 'bg-gray-100 dark:bg-pastel-darkPill text-gray-400' },
+            { label: 'GW 27', status: 'current', color: 'bg-pastel-orange text-[#111318] font-black shadow-md' },
+            { label: 'GW 28', status: 'next', color: 'bg-gray-100 dark:bg-pastel-darkPill text-gray-500' },
+            { label: 'GW 29', status: 'upcoming', color: 'bg-gray-100 dark:bg-pastel-darkPill text-gray-500' },
+            { label: 'GW 30', status: 'upcoming', color: 'bg-gray-100 dark:bg-pastel-darkPill text-gray-500' },
+          ].map((item, idx) => (
+            <div
+              key={idx}
+              className={`flex-1 min-w-[70px] text-center py-2 px-1 rounded-full text-xs transition ${item.color}`}
+            >
+              <span className="block text-[9px] uppercase opacity-75">Event</span>
+              <span className="font-bold">{item.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* 3. Team ID Capsule Search Bar */}
+        <div className="pastel-card p-4 sm:p-6 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-black uppercase tracking-wider text-gray-400">Team Setup</span>
+            <span className="text-xs text-gray-400">กรอกหมายเลขทีม FPL</span>
+          </div>
+
+          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
               <input
                 ref={inputRef}
                 type="number"
@@ -110,143 +134,146 @@ export default function HomePage() {
                 onChange={(e) => setTeamId(e.target.value)}
                 placeholder="กรอก FPL Team ID (เช่น 1, 12345)"
                 required
-                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-purple-950/70 border border-purple-200 dark:border-purple-800/80 rounded-xl text-gray-900 dark:text-white font-bold placeholder-gray-400 focus:outline-none focus:border-purple-600 dark:focus:border-fpl-green focus:ring-2 focus:ring-purple-500/20 dark:focus:ring-fpl-green/50 text-base transition shadow-sm"
+                className="w-full pl-10 pr-4 py-3.5 bg-pastel-bg dark:bg-[#12151c] border border-black/5 dark:border-white/10 rounded-full text-[#111318] dark:text-white font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pastel-blue text-sm transition"
               />
-              <Search className="w-5 h-5 text-gray-400 absolute left-3 top-3.5" />
+              <Search className="w-4 h-4 text-gray-400 absolute left-4 top-4" />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-purple-900 dark:from-fpl-green to-purple-800 dark:to-emerald-400 text-white dark:text-fpl-purple font-black text-base rounded-xl flex items-center justify-center gap-2 shadow-md hover:opacity-95 active:scale-95 transition disabled:opacity-50"
+              className="px-8 py-3.5 bg-[#111318] dark:bg-white text-white dark:text-[#111318] font-black text-sm rounded-full shadow-md hover:opacity-90 active:scale-95 transition disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? (
-                <span>กำลังโหลด...</span>
-              ) : (
-                <>
-                  <span>เปิดดูทีม</span>
-                  <ArrowRight className="w-5 h-5" />
-                </>
-              )}
+              {loading ? 'Loading...' : 'เปิดดูทีม'}
             </button>
           </form>
 
           {/* Quick Demo IDs */}
-          <div className="flex items-center justify-center gap-2 mt-4 text-xs text-gray-500 dark:text-gray-400 flex-wrap">
-            <span>ตัวอย่างทีม ID ทดลอง:</span>
+          <div className="flex items-center gap-2 mt-3 text-xs text-gray-400 flex-wrap">
+            <span>ตัวอย่างทีม:</span>
             {['1', '100', '12345', '54321'].map((id) => (
               <button
                 key={id}
                 onClick={() => handleDemoTeam(id)}
-                className="px-2.5 py-1 rounded-lg bg-purple-100/80 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800/60 hover:border-purple-500 dark:hover:border-fpl-cyan text-purple-900 dark:text-gray-300 font-mono transition"
+                className="px-2.5 py-0.5 rounded-full bg-gray-100 dark:bg-pastel-darkPill hover:bg-pastel-blueLight text-gray-700 dark:text-gray-300 font-mono text-[11px] transition"
               >
                 #{id}
               </button>
             ))}
           </div>
 
-          {/* Recent Teams stored in local storage */}
           <RecentTeams />
         </div>
 
-        {/* Feature Interactive Cards (Clickable on Mobile & Desktop) */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto mt-12 text-left">
-          {/* Card 1: Pitch View */}
-          <button
-            type="button"
-            onClick={handleCard1Click}
-            className="p-5 rounded-2xl glass-panel border border-purple-200/80 dark:border-purple-800/60 hover:border-purple-500 dark:hover:border-fpl-green/60 active:scale-98 transition group text-left shadow-sm flex flex-col justify-between"
-          >
-            <div>
-              <div className="w-11 h-11 rounded-xl bg-purple-100 dark:bg-fpl-green/20 text-purple-700 dark:text-fpl-green flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <Shield className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-black text-gray-900 dark:text-white mb-1 flex items-center justify-between">
-                <span>ผังสนามจัดทีม (Pitch View)</span>
-                <ArrowRight className="w-4 h-4 text-purple-600 dark:text-fpl-green opacity-0 group-hover:opacity-100 transition-opacity" />
-              </h3>
-              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                แสดง 11 ตัวจริงตามฟอร์เมชันอัตโนมัติ พร้อมกัปตัน (C), รองกัปตัน (V), แต้มสะสม และลำดับตัวสำรอง 1-4
-              </p>
-            </div>
-            <span className="text-[11px] font-bold text-purple-700 dark:text-fpl-green mt-3 block">
-              {savedTeamId ? `เปิดดูทีมของคุณ (#${savedTeamId}) \u2192` : 'คลิกเพื่อกรอก Team ID \u2192'}
-            </span>
-          </button>
-
-          {/* Card 2: Price Radar */}
+        {/* 4. Two Soft Pastel Cards: Lilac & Warm Orange (Matching the Design Odyssey & Focus Mode in screenshot) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Card A: Lilac Card (Price Risers) */}
           <Link
             href="/prices"
-            className="p-5 rounded-2xl glass-panel border border-purple-200/80 dark:border-purple-800/60 hover:border-pink-500 dark:hover:border-fpl-pink/60 active:scale-98 transition group text-left shadow-sm flex flex-col justify-between"
+            className="card-pastel-purple p-6 relative overflow-hidden shadow-lg group hover:scale-[1.02] active:scale-98 transition-all block text-left"
           >
-            <div>
-              <div className="w-11 h-11 rounded-xl bg-pink-100 dark:bg-fpl-pink/20 text-pink-700 dark:text-fpl-pink flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <TrendingUp className="w-5 h-5" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 rounded-full bg-[#111318] text-white flex items-center justify-center shadow">
+                <TrendingUp className="w-5 h-5 text-emerald-400" />
               </div>
-              <h3 className="text-base font-black text-gray-900 dark:text-white mb-1 flex items-center justify-between">
-                <span>เรดาร์เตือนราคาขึ้น/ลง</span>
-                <ArrowRight className="w-4 h-4 text-pink-600 dark:text-fpl-pink opacity-0 group-hover:opacity-100 transition-opacity" />
-              </h3>
-              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                คำนวณยอดซื้อเข้า-ขายออกสุทธิและ Transfer Velocity เพื่อแจ้งเตือนนักเตะในทีมที่จะปรับราคาในคืนนี้
-              </p>
+              <div className="w-9 h-9 rounded-full border border-[#111318]/20 dark:border-white/20 flex items-center justify-center font-black text-xs text-[#111318] dark:text-white bg-white/30 backdrop-blur-sm">
+                +£
+              </div>
             </div>
-            <span className="text-[11px] font-bold text-pink-600 dark:text-fpl-pink mt-3 block">
-              เปิดกระดานเรดาร์ราคา &rarr;
+
+            <span className="text-[11px] font-bold text-[#111318]/70 dark:text-white/70 block uppercase tracking-wider">
+              Price Radar
             </span>
+            <h3 className="text-xl font-black text-[#111318] dark:text-white mt-0.5 mb-1">
+              Top Risers Alert
+            </h3>
+            <p className="text-xs text-[#111318]/80 dark:text-white/80 leading-relaxed mb-4">
+              เรดาร์เช็คยอดซื้อเข้าสุทธิ ดักซื้อก่อนนักเตะราคาแพงขึ้นคืนนี้
+            </p>
+
+            <div className="flex items-center justify-between pt-2 border-t border-black/10 dark:border-white/10 text-xs font-black text-[#111318] dark:text-white">
+              <span>EXPLORE RISERS</span>
+              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
           </Link>
 
-          {/* Card 3: Telegram Notification Setup */}
-          <button
-            type="button"
-            onClick={() => setIsTelegramModalOpen(true)}
-            className="p-5 rounded-2xl glass-panel border border-purple-200/80 dark:border-purple-800/60 hover:border-sky-500 dark:hover:border-sky-400/60 active:scale-98 transition group text-left shadow-sm flex flex-col justify-between"
+          {/* Card B: Orange Card (Price Fallers) */}
+          <Link
+            href="/prices"
+            className="card-pastel-orange p-6 relative overflow-hidden shadow-lg group hover:scale-[1.02] active:scale-98 transition-all block text-left"
           >
-            <div>
-              <div className="w-11 h-11 rounded-xl bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <Send className="w-5 h-5" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-10 h-10 rounded-full bg-[#111318] text-white flex items-center justify-center shadow">
+                <TrendingDown className="w-5 h-5 text-rose-400" />
               </div>
-              <h3 className="text-base font-black text-gray-900 dark:text-white mb-1 flex items-center justify-between">
-                <span>แจ้งเตือนผ่าน Telegram</span>
-                <ArrowRight className="w-4 h-4 text-sky-600 dark:text-sky-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </h3>
-              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                เชื่อมต่อบอท Telegram ฟรี เพื่อส่งแจ้งเตือนเตือนราคานักเตะในทีมของคุณถึงมือถือแบบอัตโนมัติ
-              </p>
+              <div className="w-9 h-9 rounded-full border border-[#111318]/20 dark:border-white/20 flex items-center justify-center font-black text-xs text-[#111318] dark:text-white bg-white/30 backdrop-blur-sm">
+                -£
+              </div>
             </div>
-            <span className="text-[11px] font-bold text-sky-600 dark:text-sky-400 mt-3 block">
-              ตั้งค่า Telegram Alert &rarr;
+
+            <span className="text-[11px] font-bold text-[#111318]/70 dark:text-white/70 block uppercase tracking-wider">
+              Risk Management
             </span>
-          </button>
+            <h3 className="text-xl font-black text-[#111318] dark:text-white mt-0.5 mb-1">
+              Top Fallers Risk
+            </h3>
+            <p className="text-xs text-[#111318]/80 dark:text-white/80 leading-relaxed mb-4">
+              เช็คนักเตะที่ยอดเทขายทะลัก เสี่ยงราคาตกคืนนี้เพื่อรีบเปลี่ยนตัว
+            </p>
+
+            <div className="flex items-center justify-between pt-2 border-t border-black/10 dark:border-white/10 text-xs font-black text-[#111318] dark:text-white">
+              <span>CHECK FALLERS</span>
+              <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </Link>
         </div>
 
-        {/* How to find Team ID Section */}
-        <div className="mt-12 max-w-3xl mx-auto p-5 rounded-2xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 text-left">
-          <div className="flex items-center gap-2 text-purple-700 dark:text-fpl-cyan font-bold text-sm mb-3">
-            <HelpCircle className="w-4 h-4" />
-            <span>วิธีดู FPL Team ID ของคุณ</span>
-          </div>
-          <ol className="list-decimal list-inside text-xs text-gray-700 dark:text-gray-300 space-y-2 leading-relaxed">
-            <li>เข้าไปที่เว็บไซต์ทางการ <strong>fantasy.premierleague.com</strong> บนเบราว์เซอร์</li>
-            <li>ไปที่แท็บเมนู <strong>&apos;Pick Team&apos;</strong> หรือ <strong>&apos;Points&apos;</strong></li>
-            <li>คลิกที่ลิงก์ <strong>&apos;View Gameweek history&apos;</strong></li>
-            <li>
-              ดูที่ URL ในแถบที่อยู่ด้านบน จะมีรูปแบบ:{' '}
-              <code className="px-2 py-0.5 rounded bg-purple-200 dark:bg-purple-900 font-mono text-purple-900 dark:text-fpl-green text-[11px]">
-                https://fantasy.premierleague.com/entry/<strong>[TEAM_ID]</strong>/history
-              </code>
-            </li>
-            <li>นำตัวเลขตรง [TEAM_ID] มากรอกในช่องค้นหาด้านบนได้ทันที</li>
-          </ol>
+        {/* 5. Black Capsule Row Items (Matching the Path / Mode black capsule rows in the image) */}
+        <div className="space-y-2.5">
+          <span className="text-xs font-black uppercase tracking-wider text-gray-400 block px-1">
+            Quick Actions
+          </span>
+
+          {/* Row 1: Pitch View */}
+          <button
+            onClick={handleOpenMyTeam}
+            className="w-full p-4 rounded-full bg-[#111318] text-white dark:bg-[#1a1d26] dark:text-white flex items-center justify-between hover:scale-[1.01] active:scale-98 transition shadow-md"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-white text-[#111318] dark:bg-pastel-blue dark:text-[#111318] flex items-center justify-center font-bold">
+                <Shield className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <div className="font-bold text-sm">Squad Formation (Pitch View)</div>
+                <div className="text-[11px] text-gray-400">11 ตัวจริง และตัวสำรอง</div>
+              </div>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
+              <ChevronRight className="w-4 h-4" />
+            </div>
+          </button>
+
+          {/* Row 2: Full Market */}
+          <Link
+            href="/prices"
+            className="w-full p-4 rounded-full bg-pastel-blueLight text-[#111318] dark:bg-pastel-darkPill dark:text-white flex items-center justify-between hover:scale-[1.01] active:scale-98 transition shadow-sm block"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[#111318] text-white dark:bg-white dark:text-[#111318] flex items-center justify-center font-bold">
+                <Activity className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <div className="font-bold text-sm">Full Premier League Market</div>
+                <div className="text-[11px] text-gray-600 dark:text-gray-400">ตลาดราคาผู้เล่นทุกคนในลีก</div>
+              </div>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center">
+              <ChevronRight className="w-4 h-4" />
+            </div>
+          </Link>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-purple-200 dark:border-purple-900/40 py-5 text-center text-xs text-gray-500 dark:text-gray-400">
-        <p>Fantasy Premier League Team Viewer & Price Alert &bull; Powered by Next.js & Vercel</p>
-      </footer>
-
-      {/* Telegram Modal */}
       <TelegramSettingsModal
         isOpen={isTelegramModalOpen}
         onClose={() => setIsTelegramModalOpen(false)}

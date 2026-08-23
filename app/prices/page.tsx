@@ -24,43 +24,38 @@ export default async function PricesPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+      {/* Top Header Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="px-2.5 py-0.5 rounded-md bg-purple-100 dark:bg-fpl-green/20 text-purple-800 dark:text-fpl-green text-xs font-black border border-purple-300 dark:border-fpl-green/40">
-              MARKET RADAR
-            </span>
-            {currentEventName && (
-              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                • {currentEventName}
-              </span>
-            )}
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pastel-blueLight dark:bg-pastel-darkPill text-xs font-black text-[#111318] dark:text-white mb-2">
+            <span>MARKET RADAR</span>
+            {currentEventName && <span>• {currentEventName}</span>}
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-2.5">
-            <TrendingUp className="w-8 h-8 text-teal-600 dark:text-fpl-cyan" />
-            <span>กระดานเรดาร์ราคา FPL (Price Changes)</span>
+          <h1 className="text-2xl sm:text-4xl font-black text-[#111318] dark:text-white tracking-tight">
+            FPL Price Changes Radar
           </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 max-w-2xl">
-            วิเคราะห์และคาดการณ์การปรับราคาขึ้น/ลงของนักเตะใน Premier League ก่อนการปรับราคาประจำวัน
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+            วิเคราะห์และคาดการณ์การปรับราคาขึ้น/ลงของนักเตะ Premier League ประจำวัน
           </p>
         </div>
 
-        {/* Deadline & Nightly change notice */}
-        <div className="p-3.5 bg-white dark:bg-purple-950/80 border border-purple-200 dark:border-purple-800 rounded-2xl flex items-center gap-3 text-xs text-gray-700 dark:text-gray-300 shadow-sm">
-          <Clock className="w-5 h-5 text-amber-500 dark:text-amber-400 shrink-0" />
+        {/* Change Time Box */}
+        <div className="p-3.5 rounded-2xl bg-white dark:bg-[#171a23] border border-black/5 dark:border-white/10 flex items-center gap-3 text-xs shadow-sm self-start sm:self-auto">
+          <div className="w-8 h-8 rounded-full bg-pastel-orangeLight text-pastel-orangeDark flex items-center justify-center font-bold">
+            <Clock className="w-4 h-4" />
+          </div>
           <div>
-            <span className="font-bold text-gray-900 dark:text-white block">เวลาปรับราคาประจำวัน:</span>
-            <span className="text-gray-500 dark:text-gray-400">ประมาณ 01:30 - 02:30 UK (07:30 - 08:30 น. ไทย)</span>
+            <span className="font-bold text-[#111318] dark:text-white block">เวลาปรับราคา:</span>
+            <span className="text-gray-500 dark:text-gray-400 text-[11px]">~07:30 - 08:30 น. (เวลาไทย)</span>
           </div>
         </div>
       </div>
 
       {errorMsg ? (
-        <div className="p-6 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-center text-rose-800 dark:text-rose-200">
+        <div className="p-6 rounded-3xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-center text-rose-800 dark:text-rose-200">
           <AlertCircle className="w-8 h-8 mx-auto mb-2 text-rose-600 dark:text-rose-400" />
-          <p className="font-bold text-lg">{errorMsg}</p>
+          <p className="font-bold text-base">{errorMsg}</p>
         </div>
       ) : (
         <PriceMarketTable analyses={analyses} />
