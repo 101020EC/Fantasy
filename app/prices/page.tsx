@@ -43,9 +43,14 @@ export default async function PricesPage() {
           <div className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
             <Clock className="w-3.5 h-3.5" />
           </div>
-          <div>
-            <span className="font-black text-[#111318] block text-[11px] sm:text-xs">Update Window:</span>
-            <span className="text-gray-500 text-[10px] sm:text-[11px]">~01:30 - 02:30 UTC</span>
+          <div className="leading-tight">
+            <span className="font-black text-[#111318] block text-[11px] sm:text-xs">Update Window</span>
+            <span className="block text-[11px] sm:text-xs font-bold text-[#38003c]">
+              ~08:30 - 09:30 น.
+            </span>
+            <span className="block text-gray-400 text-[9px] sm:text-[10px]">
+              เวลาไทย · 01:30 - 02:30 UTC
+            </span>
           </div>
         </div>
       </div>

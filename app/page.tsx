@@ -42,10 +42,14 @@ function HistoryView() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
-  // "Change team" links arrive as /?switch=true
+  // Change-team controls arrive as /?switch=true. Consume the flag straight
+  // away — leaving it in the URL made the dialog reappear on every refresh or
+  // back-navigation, which read as "it pops up every time".
   useEffect(() => {
-    if (searchParams.get('switch') === 'true') setIsSetupModalOpen(true);
-  }, [searchParams]);
+    if (searchParams.get('switch') !== 'true') return;
+    setIsSetupModalOpen(true);
+    router.replace('/', { scroll: false });
+  }, [searchParams, router]);
 
   // Load Team Data & History
   useEffect(() => {

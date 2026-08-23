@@ -108,9 +108,9 @@ export default function Navbar() {
                   <span>Team</span>
                 </Link>
 
-                {/* History (links to Home / search overview) */}
+                {/* History — plain home; only the change-team controls open setup */}
                 <Link
-                  href="/?switch=true"
+                  href="/"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-emerald-800 hover:bg-emerald-50 transition"
                 >

@@ -190,47 +190,47 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
       <div className="pastel-card overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-700">
-            <thead className="text-[11px] uppercase bg-gray-50 text-gray-500 border-b border-black/5 font-black">
+            <thead className="text-[11px] uppercase text-gray-400 border-b border-black/5 font-black tracking-wide">
               <tr>
-                <th className="px-4 py-3.5">Player</th>
-                <th className="px-3 py-3.5">Pos</th>
+                <th className="px-4 py-3.5 text-left">Player</th>
+                <th className="px-3 py-3.5 text-center">Pos</th>
                 <th
                   onClick={() => handleSort('currentCost')}
-                  className="px-3 py-3.5 cursor-pointer hover:text-[#111318]"
+                  className="px-3 py-3.5 text-center cursor-pointer hover:text-[#111318] transition"
                 >
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-center gap-1">
                     <span>Price</span>
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('selectedByPercent')}
-                  className="px-3 py-3.5 cursor-pointer hover:text-[#111318]"
+                  className="px-3 py-3.5 text-center cursor-pointer hover:text-[#111318] transition"
                 >
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-center gap-1">
                     <span>Owned %</span>
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('netTransfers')}
-                  className="px-3 py-3.5 cursor-pointer hover:text-[#111318]"
+                  className="px-3 py-3.5 text-center cursor-pointer hover:text-[#111318] transition"
                 >
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-center gap-1">
                     <span>Net Transfers</span>
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('changeScore')}
-                  className="px-3 py-3.5 cursor-pointer hover:text-[#111318]"
+                  className="px-3 py-3.5 text-center cursor-pointer hover:text-[#111318] transition"
                 >
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center justify-center gap-1">
                     <span>Target %</span>
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
-                <th className="px-4 py-3.5 text-right">Status</th>
+                <th className="px-4 py-3.5 text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5">
@@ -257,9 +257,14 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                             {player.team.name}
                           </div>
                           {player.news && (
-                            <div className="text-[10px] text-rose-600 mt-1 flex items-start gap-1 font-medium leading-tight max-w-[220px] sm:max-w-md">
+                            <div
+                              title={player.news}
+                              className="text-[10px] text-rose-600 mt-1 flex items-center gap-1 font-medium leading-tight whitespace-nowrap"
+                            >
                               <span className="shrink-0 text-[11px]">⚠️</span>
-                              <span>{player.news}</span>
+                              <span className="truncate max-w-[260px] sm:max-w-[420px] lg:max-w-[560px]">
+                                {player.news}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -267,22 +272,22 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                     </td>
 
                     {/* Position */}
-                    <td className="px-3 py-3 text-xs font-bold text-gray-600">
+                    <td className="px-3 py-3 text-center text-xs font-bold text-gray-600">
                       {player.elementType.singular_name_short}
                     </td>
 
                     {/* Current Cost */}
-                    <td className="px-3 py-3 font-black text-[#111318] font-mono">
+                    <td className="px-3 py-3 text-center font-black text-[#111318] font-mono">
                       £{player.currentCost.toFixed(1)}m
                     </td>
 
                     {/* Ownership % */}
-                    <td className="px-3 py-3 text-xs text-gray-600 font-mono font-bold">
+                    <td className="px-3 py-3 text-center text-xs text-gray-600 font-mono font-bold">
                       {player.selectedByPercent}%
                     </td>
 
                     {/* Net Transfers */}
-                    <td className="px-3 py-3 font-mono font-bold text-xs">
+                    <td className="px-3 py-3 text-center font-mono font-bold text-xs">
                       {player.netTransfers > 0 ? (
                         <span className="text-emerald-600">+{player.netTransfers.toLocaleString()}</span>
                       ) : player.netTransfers < 0 ? (
@@ -294,7 +299,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
 
                     {/* Score Bar */}
                     <td className="px-3 py-3">
-                      <div className="w-28">
+                      <div className="w-28 mx-auto">
                         <div className="flex justify-between text-[10px] font-bold mb-1">
                           <span className={player.changeScore > 0 ? 'text-emerald-600' : player.changeScore < 0 ? 'text-rose-600' : 'text-gray-400'}>
                             {player.changeScore > 0 ? `+${player.changeScore}` : player.changeScore}%
@@ -323,7 +328,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                     </td>
 
                     {/* Status Pill */}
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-center">
                       {player.status === 'rising_soon' && (
                         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-600 text-white text-[11px] font-bold animate-pulse-rise shadow-sm">
                           <TrendingUp className="w-3 h-3 text-white" />
