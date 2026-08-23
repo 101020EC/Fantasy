@@ -6,13 +6,11 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import TelegramSettingsModal from './telegram/TelegramSettingsModal';
-import FirebaseBackupModal from './team/FirebaseBackupModal';
 import PremierLeagueLogo from './PremierLeagueLogo';
 
 export default function Navbar() {
   const [quickTeamId, setQuickTeamId] = useState('');
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
-  const [isBackupOpen, setIsBackupOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -148,19 +146,16 @@ export default function Navbar() {
                 </button>
 
                 {/* Back Up */}
-                <button
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setIsBackupOpen(true);
-                  }}
-                  type="button"
+                <Link
+                  href="/backup"
+                  onClick={() => setIsMenuOpen(false)}
                   className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-indigo-800 hover:bg-indigo-50 transition text-left"
                 >
                   <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
                     <Database className="w-4 h-4" />
                   </div>
                   <span>Back Up</span>
-                </button>
+                </Link>
 
                 <div className="my-1 border-t border-black/5" />
 
@@ -189,10 +184,6 @@ export default function Navbar() {
         onClose={() => setIsTelegramOpen(false)}
       />
 
-      <FirebaseBackupModal
-        isOpen={isBackupOpen}
-        onClose={() => setIsBackupOpen(false)}
-      />
     </>
   );
 }
