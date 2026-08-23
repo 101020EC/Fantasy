@@ -4,9 +4,11 @@ import { FPLEntry, FPLPicksResponse } from '@/lib/types';
 interface TeamHeaderProps {
   entry: FPLEntry;
   picksData: FPLPicksResponse;
+  /** True when previewing a gameweek that has not been played yet. */
+  isPreview?: boolean;
 }
 
-export default function TeamHeader({ entry, picksData }: TeamHeaderProps) {
+export default function TeamHeader({ entry, picksData, isPreview = false }: TeamHeaderProps) {
   const history = picksData?.entry_history;
 
   const teamValue = history?.value
@@ -21,6 +23,9 @@ export default function TeamHeader({ entry, picksData }: TeamHeaderProps) {
     ? (entry.last_deadline_bank / 10).toFixed(1)
     : '0.0';
 
+  // A future gameweek has no points. Showing the current one's numbers under a
+  // heading for the gameweek being previewed is simply wrong.
+  const dash = '—';
   const gwPoints = history?.points ?? entry.summary_event_points ?? 0;
   const totalPoints = history?.total_points ?? entry.summary_overall_points ?? 0;
   const overallRank = history?.overall_rank ?? entry.summary_overall_rank ?? null;
@@ -36,7 +41,7 @@ export default function TeamHeader({ entry, picksData }: TeamHeaderProps) {
         <div className="p-3.5 rounded-2xl bg-pastel-blueLight text-center">
           <span className="text-[11px] text-gray-600 block mb-0.5 font-semibold">GW Points</span>
           <span className="text-2xl font-black text-[#111318]">
-            {gwPoints}
+            {isPreview ? dash : gwPoints}
           </span>
         </div>
 
@@ -60,7 +65,7 @@ export default function TeamHeader({ entry, picksData }: TeamHeaderProps) {
         <div className="p-3.5 rounded-2xl bg-pastel-bg text-center">
           <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">GW Rank</span>
           <span className="text-base font-black text-pastel-orangeDark truncate block">
-            {gwRank ? `#${gwRank.toLocaleString()}` : '-'}
+            {isPreview ? dash : gwRank ? `#${gwRank.toLocaleString()}` : '-'}
           </span>
         </div>
 

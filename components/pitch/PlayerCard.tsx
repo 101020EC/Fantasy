@@ -10,6 +10,8 @@ interface PlayerCardProps {
   onClick: (player: TeamSquadPlayer) => void;
   isBench?: boolean;
   mode?: CardMode;
+  /** Previewing a gameweek that has not been played — no points exist for it. */
+  isPreview?: boolean;
 }
 
 export default function PlayerCard({
@@ -17,6 +19,7 @@ export default function PlayerCard({
   onClick,
   isBench = false,
   mode = 'stats',
+  isPreview = false,
 }: PlayerCardProps) {
   const { element, team, elementType, priceAnalysis, nextFixture, fixtures, pick } = player;
 
@@ -151,7 +154,7 @@ export default function PlayerCard({
             <div className="px-1 py-0.5 flex items-center justify-between text-[9px] sm:text-[10px] font-bold bg-white">
               <span className="text-gray-600 font-mono">£{priceAnalysis.currentCost.toFixed(1)}</span>
               <span className="text-[#111318] px-1.5 py-0.5 rounded-full bg-pastel-blueLight font-black text-[9px]">
-                {element.event_points}pt
+                {isPreview ? '—' : `${element.event_points}pt`}
               </span>
             </div>
 
@@ -189,18 +192,34 @@ export default function PlayerCard({
               }
 
               const played = fx.started && fx.scoreFor !== null && fx.scoreAgainst !== null;
+              // A draw is neither a win nor a loss, so it stays neutral —
+              // tinting it either colour would read as the wrong result.
+              const outcome = !played
+                ? null
+                : fx.scoreFor! > fx.scoreAgainst!
+                ? 'bg-emerald-800 text-emerald-50'
+                : fx.scoreFor! < fx.scoreAgainst!
+                ? 'bg-rose-900 text-rose-50'
+                : 'bg-black/30 text-white';
+
               return (
                 <div
                   key={slot}
                   title={`GW${fx.event} · ${fx.isHome ? 'vs' : 'away to'} ${fx.opponent.name} · difficulty ${fx.difficulty}`}
-                  className={`py-1 text-center leading-tight ${fixtureTone(fx.difficulty)}`}
+                  className={`py-1 px-0.5 text-center leading-tight ${fixtureTone(fx.difficulty)}`}
                 >
-                  <span className="block text-[8px] sm:text-[9px] font-black truncate px-0.5">
+                  {/* The abbreviation is only three letters — never truncate it,
+                      or the cell shows something that is not a club. */}
+                  <span className="block text-[9px] sm:text-[10px] font-black tracking-tight">
                     {fx.opponent.short_name}
-                    <span className="opacity-70">{fx.isHome ? '' : '·a'}</span>
+                  </span>
+                  <span className="block text-[7px] sm:text-[8px] font-bold opacity-80">
+                    {fx.isHome ? 'H' : 'A'}
                   </span>
                   {played && (
-                    <span className="block text-[8px] font-black tabular-nums">
+                    <span
+                      className={`block mt-0.5 rounded-sm text-[8px] font-black tabular-nums ${outcome}`}
+                    >
                       {fx.scoreFor}-{fx.scoreAgainst}
                     </span>
                   )}

@@ -8,11 +8,14 @@ import PlayerDetailModal from './PlayerDetailModal';
 
 interface FootballPitchProps {
   players: TeamSquadPlayer[];
+  isPreview?: boolean;
 }
 
-export default function FootballPitch({ players }: FootballPitchProps) {
+export default function FootballPitch({ players, isPreview = false }: FootballPitchProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<TeamSquadPlayer | null>(null);
-  const [mode, setMode] = useState<CardMode>('stats');
+  // Previewing a future gameweek: fixtures are the only thing that differs,
+  // so open on the view that shows them.
+  const [mode, setMode] = useState<CardMode>(isPreview ? 'fixtures' : 'stats');
 
   const starters = players.filter((p) => p.pick.position <= 11);
   const bench = players.filter((p) => p.pick.position > 11);
@@ -84,34 +87,34 @@ export default function FootballPitch({ players }: FootballPitchProps) {
         {/* Row 1: Goalkeeper */}
         <div className="relative z-10 flex justify-center items-center py-1">
           {gk.map((player) => (
-            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} />
+            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} isPreview={isPreview} />
           ))}
         </div>
 
         {/* Row 2: Defenders */}
         <div className="relative z-10 flex justify-around items-center py-1 gap-1">
           {def.map((player) => (
-            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} />
+            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} isPreview={isPreview} />
           ))}
         </div>
 
         {/* Row 3: Midfielders */}
         <div className="relative z-10 flex justify-around items-center py-1 gap-1">
           {mid.map((player) => (
-            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} />
+            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} isPreview={isPreview} />
           ))}
         </div>
 
         {/* Row 4: Forwards */}
         <div className="relative z-10 flex justify-around items-center py-1 gap-1">
           {fwd.map((player) => (
-            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} />
+            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} isPreview={isPreview} />
           ))}
         </div>
       </div>
 
       {/* Bench */}
-      <BenchList benchPlayers={bench} onPlayerClick={setSelectedPlayer} mode={mode} />
+      <BenchList benchPlayers={bench} onPlayerClick={setSelectedPlayer} mode={mode} isPreview={isPreview} />
 
       {/* Player Modal */}
       <PlayerDetailModal

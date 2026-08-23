@@ -6,6 +6,8 @@ import {
   saveTelegramConfig,
   clearTelegramConfig,
   maskToken,
+  DEFAULT_ALERTS,
+  AlertToggles,
 } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +26,7 @@ export async function GET() {
     botTokenMask: maskToken(cfg.botToken),
     chatId: cfg.chatId,
     teamId: cfg.teamId,
+    alerts: cfg.alerts,
     storable: isAdminConfigured,
   });
 }
@@ -64,8 +67,25 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  await saveTelegramConfig({ botToken, chatId, teamId });
-  return NextResponse.json({ saved: true, botTokenMask: maskToken(botToken), chatId, teamId });
+  // Normalise rather than trusting the form: unknown keys dropped, the
+  // deadline window clamped to something a daily job can actually honour.
+  const a = body.alerts ?? {};
+  const alerts: AlertToggles = {
+    priceMoves: Boolean(a.priceMoves ?? DEFAULT_ALERTS.priceMoves),
+    trends: Boolean(a.trends ?? DEFAULT_ALERTS.trends),
+    injuries: Boolean(a.injuries ?? DEFAULT_ALERTS.injuries),
+    watchlist: Boolean(a.watchlist ?? DEFAULT_ALERTS.watchlist),
+    deadlineHours: Math.min(72, Math.max(0, Number(a.deadlineHours) || 0)),
+  };
+
+  await saveTelegramConfig({ botToken, chatId, teamId, alerts });
+  return NextResponse.json({
+    saved: true,
+    botTokenMask: maskToken(botToken),
+    chatId,
+    teamId,
+    alerts,
+  });
 }
 
 export async function DELETE() {

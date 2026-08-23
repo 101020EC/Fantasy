@@ -140,7 +140,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
             </div>
           </div>
           <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-            <Rocket className="w-5 h-5 animate-pulse-rise" />
+            <Rocket className="w-5 h-5 animate-blink" />
           </div>
         </button>
 
@@ -164,7 +164,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
             </div>
           </div>
           <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-            <Leaf className="w-5 h-5 rotate-[135deg] animate-pulse-fall" />
+            <Leaf className="w-5 h-5 rotate-[135deg] animate-blink" />
           </div>
         </button>
       </div>

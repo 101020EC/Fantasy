@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FPLEntry, TeamSquadPlayer } from '@/lib/types';
-import { CheckCircle2, TrendingDown, TrendingUp, ArrowRightLeft, Send, ChevronRight, ChevronLeft } from 'lucide-react';
-import TelegramSettingsModal from '../telegram/TelegramSettingsModal';
+import { CheckCircle2, TrendingDown, TrendingUp, History } from 'lucide-react';
 
 interface TeamPitchTopBarProps {
   entry: FPLEntry;
@@ -23,7 +22,6 @@ export default function TeamPitchTopBar({
   players,
   activeChip,
 }: TeamPitchTopBarProps) {
-  const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const shownGw = fixtureGw ?? gameweek;
 
   // Price risk calculation
@@ -46,34 +44,31 @@ export default function TeamPitchTopBar({
             <span className="px-3 py-1 rounded-full bg-[#111318] text-white text-[11px] font-black font-mono shadow-sm">
               ID #{entry.id}
             </span>
-            <span className="px-3 py-1 rounded-full bg-white/80 text-[#111318] text-[11px] font-black shadow-sm">
-              GW {gameweek}
-            </span>
-            {shownGw > gameweek && (
-              <Link
-                href={`/team/${entry.id}`}
-                title="Back to this gameweek"
-                className="pl-1.5 pr-2 py-1 rounded-full bg-white/60 text-[#111318] text-[11px] font-black shadow-sm flex items-center gap-0.5 hover:bg-white transition active:scale-95"
-              >
-                <ChevronLeft className="w-3 h-3 stroke-[3]" />
-                GW {shownGw}
-              </Link>
-            )}
-            {shownGw < 38 && (
-              <Link
-                href={`/team/${entry.id}?gw=${shownGw + 1}`}
-                title={`See who this squad faces in GW ${shownGw + 1}`}
-                className="pl-2 pr-1.5 py-1 rounded-full bg-[#111318] text-white text-[11px] font-black shadow-sm flex items-center gap-0.5 hover:bg-[#38003c] transition active:scale-95"
-              >
-                GW {shownGw + 1}
-                <ChevronRight className="w-3 h-3 stroke-[3]" />
-              </Link>
-            )}
-            {activeChip && (
-              <span className="px-2.5 py-0.5 rounded-full bg-[#38003c] text-white text-[10px] font-black shadow-sm">
-                {activeChip.toUpperCase()}
-              </span>
-            )}
+            {/* Two plain chips: the squad's gameweek, and the next one to
+                preview fixtures for. No arrows — they implied paging through
+                gameweeks, which is not what this does. */}
+            {[gameweek, gameweek + 1].filter((gw) => gw <= 38).map((gw) => {
+              const isShown = gw === shownGw;
+              const href = gw === gameweek ? `/team/${entry.id}` : `/team/${entry.id}?gw=${gw}`;
+              return (
+                <Link
+                  key={gw}
+                  href={href}
+                  title={
+                    gw === gameweek
+                      ? `This squad, gameweek ${gw}`
+                      : `Fixtures this squad faces in gameweek ${gw}`
+                  }
+                  className={`px-3 py-1 rounded-full text-[11px] font-black shadow-sm transition active:scale-95 ${
+                    isShown
+                      ? 'bg-[#111318] text-white'
+                      : 'bg-white/60 text-[#111318] hover:bg-white'
+                  }`}
+                >
+                  GW {gw}
+                </Link>
+              );
+            })}
             {entry.player_region_name && (
               <span className="text-[11px] text-[#111318]/70 font-semibold hidden sm:inline ml-1">
                 • {entry.player_region_name}
@@ -81,35 +76,26 @@ export default function TeamPitchTopBar({
             )}
           </div>
 
-          {/* Right Edge: Market (Logo) + Change Team (Logo) + Telegram (Logo) */}
+          {/* Market and History. Changing team lives on History, and the alert
+              settings moved to the navbar, so neither needs a slot here. */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* Market Icon Button */}
             <Link
               href="/prices"
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-orange-600 shadow-sm flex items-center justify-center transition active:scale-95"
-              title="Market Prices"
+              title="Market prices"
+              aria-label="Market prices"
             >
               <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
             </Link>
 
-            {/* Change Team Icon Button */}
             <Link
-              href="/?switch=true"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-[#111318] shadow-sm flex items-center justify-center transition active:scale-95"
-              title="Change Team"
+              href="/"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-emerald-700 shadow-sm flex items-center justify-center transition active:scale-95"
+              title="History"
+              aria-label="History"
             >
-              <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+              <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
             </Link>
-
-            {/* Telegram Icon Button */}
-            <button
-              onClick={() => setIsTelegramOpen(true)}
-              type="button"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-sky-50 text-sky-600 shadow-sm flex items-center justify-center transition active:scale-95"
-              title="Telegram Alerts"
-            >
-              <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
           </div>
         </div>
 
@@ -163,10 +149,6 @@ export default function TeamPitchTopBar({
         </div>
       </div>
 
-      <TelegramSettingsModal
-        isOpen={isTelegramOpen}
-        onClose={() => setIsTelegramOpen(false)}
-      />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { escapeMarkdown, sendTelegramMessage, getTelegramConfig } from '@/lib/telegram';
 import { requireSession } from '@/lib/auth-server';
+import { recordNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,13 @@ export async function POST() {
     `_You will receive notifications if players in your squad are predicted to rise or fall in price\\!_ 🚀🔻`;
 
   const result = await sendTelegramMessage(botToken, chatId, message);
+  if (result.ok) {
+    await recordNotification({
+      kind: 'test',
+      summary: { risers: 0, fallers: 0, watchlist: 0, injuries: 0, deadlineIn: null },
+      text: message,
+    });
+  }
   if (!result.ok) {
     return NextResponse.json({ success: false, error: result.description }, { status: 502 });
   }

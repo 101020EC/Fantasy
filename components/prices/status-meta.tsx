@@ -7,8 +7,10 @@ import { PriceStatus } from '@/lib/types';
  * chips and the summary cards all read from here, so a label and its icon can
  * never drift apart.
  *
- * Rocket and leaf pulse; the two "trending" states do not. The pulse keyframes
- * live in globals.css and already honour prefers-reduced-motion.
+ * Rocket and leaf blink; the two "trending" states do not. Blinking fades
+ * opacity rather than animating transform — the earlier pulse fought the
+ * leaf's rotation and cancelled it. Keyframes live in globals.css and honour
+ * prefers-reduced-motion.
  */
 export interface StatusMeta {
   label: string;
@@ -23,7 +25,7 @@ export const STATUS_META: Record<PriceStatus, StatusMeta> = {
   rising_soon: {
     label: 'Rising Tonight',
     Icon: Rocket,
-    iconClass: 'text-emerald-600 animate-pulse-rise',
+    iconClass: 'text-emerald-600 animate-blink',
     pillClass: 'bg-emerald-600 text-white shadow-sm',
   },
   likely_riser: {
@@ -48,7 +50,7 @@ export const STATUS_META: Record<PriceStatus, StatusMeta> = {
     label: 'Falling Tonight',
     // A leaf tipped off its stem — the falling-leaf reading, without a custom asset.
     Icon: Leaf,
-    iconClass: 'text-rose-600 rotate-[135deg] animate-pulse-fall',
+    iconClass: 'text-rose-600 rotate-[135deg] animate-blink',
     pillClass: 'bg-rose-600 text-white shadow-sm',
   },
 };
