@@ -7,24 +7,11 @@
   --foreground: #111318;
 }
 
-.dark {
-  --background: #0e1118;
-  --foreground: #f4f6fb;
-}
-
 body {
   color: var(--foreground);
   min-height: 100vh;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   background-color: var(--background);
-  transition: background-color 0.3s ease, color 0.3s ease;
-  padding-bottom: 80px; /* Space for bottom mobile navigation bar */
-}
-
-@media (min-width: 768px) {
-  body {
-    padding-bottom: 0px;
-  }
 }
 
 /* Custom scrollbar */
@@ -39,10 +26,6 @@ body {
   background: #cbd5e1;
   border-radius: 9999px;
 }
-.dark ::-webkit-scrollbar-thumb {
-  background: #262b3a;
-  border-radius: 9999px;
-}
 
 /* Modern Squircle Card Styles */
 .pastel-card {
@@ -52,22 +35,11 @@ body {
   box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
 }
 
-.dark .pastel-card {
-  background-color: #171a23;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 4px 24px -2px rgba(0, 0, 0, 0.4);
-}
-
 /* Hero & Section Color Cards */
 .card-pastel-blue {
   background: linear-gradient(135deg, #9bb8ff 0%, #87a7fc 100%);
   color: #111318;
   border-radius: 32px;
-}
-.dark .card-pastel-blue {
-  background: linear-gradient(135deg, #2b3b64 0%, #1f2a48 100%);
-  color: #ffffff;
-  border: 1px solid rgba(155, 184, 255, 0.2);
 }
 
 .card-pastel-purple {
@@ -75,21 +47,11 @@ body {
   color: #111318;
   border-radius: 28px;
 }
-.dark .card-pastel-purple {
-  background: linear-gradient(135deg, #44244f 0%, #2f1738 100%);
-  color: #ffffff;
-  border: 1px solid rgba(235, 179, 255, 0.2);
-}
 
 .card-pastel-orange {
   background: linear-gradient(135deg, #ffa842 0%, #f79623 100%);
   color: #111318;
   border-radius: 28px;
-}
-.dark .card-pastel-orange {
-  background: linear-gradient(135deg, #4d2f10 0%, #361f07 100%);
-  color: #ffffff;
-  border: 1px solid rgba(255, 168, 66, 0.2);
 }
 
 /* Pitch Styling */
@@ -99,12 +61,6 @@ body {
   border-radius: 32px;
   border: 2px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 10px 30px -5px rgba(20, 79, 43, 0.3);
-}
-
-.dark .pastel-pitch {
-  background: linear-gradient(180deg, #123d24 0%, #0b2918 100%);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
 }
 
 /* Pulse animation */

@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
-import BottomNav from '@/components/BottomNav';
 import { AuthProvider } from '@/components/AuthContext';
 import PasswordGate from '@/components/PasswordGate';
 
@@ -30,7 +29,6 @@ export default function RootLayout({
           <PasswordGate>
             <Navbar />
             <div className="flex-1 w-full">{children}</div>
-            <BottomNav />
           </PasswordGate>
         </AuthProvider>
       </body>

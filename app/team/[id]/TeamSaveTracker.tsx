@@ -3,20 +3,26 @@
 import { useEffect } from 'react';
 import { saveRecentTeam } from '@/components/team/RecentTeams';
 import { useAuth } from '@/components/AuthContext';
+import { archiveGameweekData } from '@/lib/firebase-service';
 
 interface TeamSaveTrackerProps {
   id: string;
-  name: string;
-  managerName: string;
+  entry: any;
+  picksData: any;
+  gw: number;
 }
 
-export default function TeamSaveTracker({ id, name, managerName }: TeamSaveTrackerProps) {
+export default function TeamSaveTracker({ id, entry, picksData, gw }: TeamSaveTrackerProps) {
   const { setSavedTeamId } = useAuth();
 
   useEffect(() => {
-    saveRecentTeam(id, name, managerName);
+    const managerName = `${entry.player_first_name} ${entry.player_last_name}`;
+    saveRecentTeam(id, entry.name, managerName);
     setSavedTeamId(id);
-  }, [id, name, managerName, setSavedTeamId]);
+
+    // Background save to Firebase Firestore
+    archiveGameweekData(id, entry, picksData, gw).catch(() => {});
+  }, [id, entry, picksData, gw, setSavedTeamId]);
 
   return null;
 }

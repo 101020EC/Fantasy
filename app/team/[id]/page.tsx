@@ -11,7 +11,9 @@ import {
 import { FPLPicksResponse } from '@/lib/types';
 import TeamHeader from '@/components/team/TeamHeader';
 import FootballPitch from '@/components/pitch/FootballPitch';
+import TeamPitchTopBar from '@/components/pitch/TeamPitchTopBar';
 import PriceAlertBanner from '@/components/prices/PriceAlertBanner';
+import PrivateLeaguesCard from '@/components/team/PrivateLeaguesCard';
 import TeamSaveTracker from './TeamSaveTracker';
 import TeamActionButtons from '@/components/team/TeamActionButtons';
 import { AlertCircle, ChevronLeft, ChevronRight, Search } from 'lucide-react';
@@ -70,8 +72,9 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5">
         <TeamSaveTracker
           id={id}
-          name={entry.name}
-          managerName={`${entry.player_first_name} ${entry.player_last_name}`}
+          entry={entry}
+          picksData={picksData}
+          gw={activeGw}
         />
 
         {/* Action Controls & GW Navigation Bar */}
@@ -114,16 +117,26 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           </div>
         </div>
 
-        {/* 1. Football Pitch View FIRST (รูปแผนการเล่นและผังสนามขึ้นมาก่อน) */}
+        {/* 1. Today Safe / Price Alert Header on top of Pitch with Team Name, ID, Manager Name, GW */}
+        <TeamPitchTopBar
+          entry={entry}
+          gameweek={activeGw}
+          players={squadPlayers}
+        />
+
+        {/* 2. Football Pitch View */}
         <div>
           <FootballPitch players={squadPlayers} />
         </div>
 
-        {/* 2. Price Alerts Radar for this Squad */}
+        {/* 3. Detailed Price Alert Banner if any alerts */}
         <PriceAlertBanner players={squadPlayers} />
 
-        {/* 3. Team Overview Header & Stats (แต้ม GW นี้, แต้มสะสม, อันดับโลก อยู่ด้านล่าง) */}
+        {/* 4. Team Overview Header & Stats (แต้ม GW นี้, แต้มสะสม, อันดับโลก อยู่ด้านล่าง) */}
         <TeamHeader entry={entry} picksData={picksData} currentEvent={activeEvent} />
+
+        {/* 5. Private Leagues Card (ข้อมูล Private Leagues ที่บันทึกใน Firebase) */}
+        <PrivateLeaguesCard leagues={(entry as any).leagues?.classic || []} />
       </div>
     );
   } catch (err: any) {

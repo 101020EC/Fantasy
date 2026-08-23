@@ -27,7 +27,7 @@ export default function Navbar() {
       <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-black/5 px-4 sm:px-8 py-3 transition-colors shadow-sm">
         <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-3">
           {/* Official Premier League Logo + FPL Radar Brand Name */}
-          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
+          <Link href="/?switch=true" className="flex items-center gap-2.5 group shrink-0">
             <PremierLeagueLogo className="w-9 h-9 sm:w-10 sm:h-10 drop-shadow-sm group-hover:scale-105 transition-transform" />
             <div>
               <div className="flex items-center gap-1">
