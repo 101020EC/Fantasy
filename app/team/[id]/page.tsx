@@ -12,10 +12,10 @@ import { FPLPicksResponse } from '@/lib/types';
 import TeamHeader from '@/components/team/TeamHeader';
 import FootballPitch from '@/components/pitch/FootballPitch';
 import TeamPitchTopBar from '@/components/pitch/TeamPitchTopBar';
+import TeamGameweekScroll from '@/components/team/TeamGameweekScroll';
 import PrivateLeaguesCard from '@/components/team/PrivateLeaguesCard';
 import TeamSaveTracker from './TeamSaveTracker';
-import TeamActionButtons from '@/components/team/TeamActionButtons';
-import { AlertCircle, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { AlertCircle, Search } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +41,8 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       bootstrap.events.find((e) => e.is_next) ||
       bootstrap.events[0];
 
-    const initialGw = queryGw ? parseInt(queryGw) : (entry.current_event || currentEvent?.id || 1);
+    const currentGwNum = currentEvent?.id || 27;
+    const initialGw = queryGw ? parseInt(queryGw) : (entry.current_event || currentGwNum);
 
     let activeGw = initialGw;
     let picksData: FPLPicksResponse | null = null;
@@ -76,48 +77,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           gw={activeGw}
         />
 
-        {/* Action Controls: Left (Change Team Icon) | Center (Telegram) | Right (GW Navigation) */}
-        <div className="flex items-center justify-between gap-2">
-          {/* Change Team Icon & Telegram Center Button */}
-          <TeamActionButtons />
-
-          {/* Gameweek Selector on the Right */}
-          <div className="flex items-center gap-1 bg-white border border-black/5 rounded-full p-1 shadow-sm">
-            {activeGw > 1 ? (
-              <Link
-                href={`/team/${id}?gw=${activeGw - 1}`}
-                className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition"
-                title="GW ก่อนหน้า"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Link>
-            ) : (
-              <span className="p-1.5 text-gray-300 cursor-not-allowed">
-                <ChevronLeft className="w-4 h-4" />
-              </span>
-            )}
-
-            <span className="text-xs sm:text-sm font-black text-[#111318] px-2.5">
-              GW {activeGw}
-            </span>
-
-            {activeGw < 38 ? (
-              <Link
-                href={`/team/${id}?gw=${activeGw + 1}`}
-                className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition"
-                title="GW ถัดไป"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            ) : (
-              <span className="p-1.5 text-gray-300 cursor-not-allowed">
-                <ChevronRight className="w-4 h-4" />
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* 1. Today Safe / Price Alert Header on top of Pitch (Decorated with Avatar + Team + Manager + GW) */}
+        {/* 1. Top Blue Hero Card: Change Team, Telegram, Avatar, Team Name, Today Safe beside name */}
         <TeamPitchTopBar
           entry={entry}
           gameweek={activeGw}
@@ -125,15 +85,22 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           activeChip={picksData?.active_chip}
         />
 
-        {/* 2. Football Pitch View */}
+        {/* 2. Full Horizontal Gameweek Capsule Scroll Bar (GW 1 ... GW 38) */}
+        <TeamGameweekScroll
+          teamId={id}
+          activeGw={activeGw}
+          currentGw={currentGwNum}
+        />
+
+        {/* 3. Football Pitch View */}
         <div>
           <FootballPitch players={squadPlayers} />
         </div>
 
-        {/* 3. Team Overview Header & Stats (แต้ม GW นี้, แต้มสะสม, อันดับโลก อยู่ด้านล่าง) */}
+        {/* 4. Team Overview Header & Stats (แต้ม GW นี้, แต้มสะสม, อันดับโลก อยู่ด้านล่าง) */}
         <TeamHeader entry={entry} picksData={picksData} currentEvent={activeEvent} />
 
-        {/* 4. Private Leagues Card (จัดลำดับขึ้นลงได้ตามต้องการ) */}
+        {/* 5. Private Leagues Card (จัดลำดับขึ้นลงได้ตามต้องการ) */}
         <PrivateLeaguesCard
           leagues={(entry as any).leagues?.classic || []}
           currentTeamId={id}

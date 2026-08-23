@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Menu, LogOut, Send, Shield, Activity, TrendingUp, Database, X } from 'lucide-react';
+import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import TelegramSettingsModal from './telegram/TelegramSettingsModal';
 import FirebaseBackupModal from './team/FirebaseBackupModal';
@@ -43,8 +43,8 @@ export default function Navbar() {
     <>
       <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-black/5 px-4 sm:px-8 py-3 transition-colors shadow-sm">
         <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-3">
-          {/* Official Premier League Logo + Brand Name "Fanta" */}
-          <Link href="/?switch=true" className="flex items-center gap-2.5 group shrink-0">
+          {/* Logo links to main screen: Team (or Home if no team saved) */}
+          <Link href={teamUrl} className="flex items-center gap-2.5 group shrink-0">
             <PremierLeagueLogo className="w-9 h-9 sm:w-10 sm:h-10 drop-shadow-sm group-hover:scale-105 transition-transform" />
             <div>
               <div className="flex items-center gap-1">
@@ -104,16 +104,16 @@ export default function Navbar() {
                   <span>Team</span>
                 </Link>
 
-                {/* Radar (links to Home page) */}
+                {/* History (links to Home / search overview) */}
                 <Link
                   href="/?switch=true"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-emerald-800 hover:bg-emerald-50 transition"
                 >
                   <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                    <Activity className="w-4 h-4" />
+                    <History className="w-4 h-4" />
                   </div>
-                  <span>Radar</span>
+                  <span>History</span>
                 </Link>
 
                 {/* Market */}
