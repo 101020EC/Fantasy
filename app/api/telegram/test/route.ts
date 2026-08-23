@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 
 /** Reports whether the server can send alerts, without revealing the token. */
 export async function GET() {
-  const { configured, chatId, teamId } = getTelegramConfig();
+  const { configured, chatId, teamId } = await getTelegramConfig();
   return NextResponse.json({
     configured,
     chatId: chatId ? `…${chatId.slice(-4)}` : null,
@@ -23,7 +23,7 @@ export async function POST() {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { botToken, chatId, teamId, configured } = getTelegramConfig();
+  const { botToken, chatId, teamId, configured } = await getTelegramConfig();
   if (!configured) {
     return NextResponse.json(
       {
