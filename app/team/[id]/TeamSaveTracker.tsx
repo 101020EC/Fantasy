@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { saveRecentTeam } from '@/components/team/RecentTeams';
+import { useAuth } from '@/components/AuthContext';
 
 interface TeamSaveTrackerProps {
   id: string;
@@ -10,9 +11,12 @@ interface TeamSaveTrackerProps {
 }
 
 export default function TeamSaveTracker({ id, name, managerName }: TeamSaveTrackerProps) {
+  const { setSavedTeamId } = useAuth();
+
   useEffect(() => {
     saveRecentTeam(id, name, managerName);
-  }, [id, name, managerName]);
+    setSavedTeamId(id);
+  }, [id, name, managerName, setSavedTeamId]);
 
   return null;
 }
