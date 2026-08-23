@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFPLBootstrap, fetchFPLEntry, fetchFPLPicks, buildSquadPlayers } from '@/lib/fpl-api';
 import { escapeMarkdown, sendTelegramMessage, getTelegramConfig } from '@/lib/telegram';
+import { getAdminDb, isAdminConfigured } from '@/lib/firebase-admin';
+import { analyzePlayerPrice } from '@/lib/price-calculator';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,16 +46,41 @@ export async function GET(req: NextRequest) {
 
     const picksData = await fetchFPLPicks(teamId, entry.current_event || currentEvent.id);
     const squadPlayers = buildSquadPlayers(picksData.picks, bootstrap, [], currentEvent.id);
+    const squadIds = new Set(squadPlayers.map((p) => p.element.id));
 
-    // 2. Which players are about to move
+    // 2. Watchlist. Kept in Firestore precisely so this job can read it —
+    //    there is no browser here to hold a local list.
+    let watchedPlayers: { name: string; short: string; analysis: ReturnType<typeof analyzePlayerPrice> }[] = [];
+    if (isAdminConfigured) {
+      const snap = await getAdminDb().collection('watchlists').doc(String(teamId)).get();
+      const watchIds: number[] = snap.data()?.elementIds ?? [];
+      const teamMap = new Map(bootstrap.teams.map((t) => [t.id, t]));
+
+      watchedPlayers = watchIds
+        // A player already in the squad is reported under the squad heading;
+        // listing them twice in one message is noise.
+        .filter((id) => !squadIds.has(id))
+        .map((id) => bootstrap.elements.find((el) => el.id === id))
+        .filter((el): el is NonNullable<typeof el> => Boolean(el))
+        .map((el) => ({
+          name: el.web_name,
+          short: teamMap.get(el.team)?.short_name ?? 'CLB',
+          analysis: analyzePlayerPrice(el, bootstrap),
+        }));
+    }
+
+    // 3. Which players are about to move
     const risers = squadPlayers.filter((p) => p.priceAnalysis.status === 'rising_soon');
     const fallers = squadPlayers.filter((p) => p.priceAnalysis.status === 'falling_soon');
+    const watchMovers = watchedPlayers.filter(
+      (p) => p.analysis.status === 'rising_soon' || p.analysis.status === 'falling_soon'
+    );
 
-    if (risers.length === 0 && fallers.length === 0) {
+    if (risers.length === 0 && fallers.length === 0 && watchMovers.length === 0) {
       return NextResponse.json({
         alertSent: false,
-        message: 'No price change alerts for squad tonight.',
-        checkedPlayersCount: squadPlayers.length,
+        message: 'No price change alerts tonight.',
+        checkedPlayersCount: squadPlayers.length + watchedPlayers.length,
       });
     }
 
@@ -77,6 +104,18 @@ export async function GET(req: NextRequest) {
       fallers.forEach((p) => (text += line(p, '')));
       text += `\n`;
     }
+    if (watchMovers.length > 0) {
+      text += `👁 *Watchlist:*\n`;
+      watchMovers.forEach((p) => {
+        const arrow = p.analysis.status === 'rising_soon' ? '🚀' : '🔻';
+        const sign = p.analysis.netTransfers > 0 ? '+' : '';
+        text += `${arrow} *${escapeMarkdown(p.name)}* \\(${escapeMarkdown(p.short)}\\) \\| Net: ${escapeMarkdown(
+          sign + p.analysis.netTransfers.toLocaleString()
+        )}\n`;
+      });
+      text += `\n`;
+    }
+
     text += `⏰ _Prices update daily ~01:30 \\- 02:30 UTC_`;
 
     // 4. Deliver, and report Telegram's verdict honestly
@@ -92,6 +131,7 @@ export async function GET(req: NextRequest) {
       alertSent: true,
       risersCount: risers.length,
       fallersCount: fallers.length,
+      watchlistCount: watchMovers.length,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Error executing cron job' }, { status: 500 });

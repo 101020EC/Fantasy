@@ -38,8 +38,13 @@ Status key: **OPEN** (needs a decision) · **DECIDED** · **DONE**
 
 - **League types.** FPL returns only two `league_type` values: `s` (system —
   club, country, gameweek, Overall, sponsor leagues) and `x` (invitational).
-  Team 1 has 23 classic leagues, of which exactly 1 is `x`. There is also a
-  separate `h2h` array, empty for that team. Audit fix M10 narrowed the card
+  Team 1 has 23 classic leagues. There is also a separate `h2h` array, empty
+  for that team.
+
+  _Correction (found while verifying batch 2): an earlier note here said only
+  1 of the 23 was `x`. That came from printing the first 8 rows and reading
+  them as the whole set. The real split is **16 private / 7 system**, which
+  the rendered cards confirm._ Audit fix M10 narrowed the card
   to `x` only; #7 asks to widen it again.
 - **Backup is a modal**, opened from the navbar menu — not a route.
 - **Already archived** by `POST /api/archive`: `teams/{id}`,

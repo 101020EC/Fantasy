@@ -2,9 +2,11 @@
 
 import React, { useMemo, useState } from 'react';
 import { PriceAnalysis } from '@/lib/types';
-import { ArrowUpDown, Leaf, Rocket, Search } from 'lucide-react';
+import { ArrowUpDown, Leaf, Rocket, Search, Star, AlertCircle } from 'lucide-react';
 import PlayerJersey from '../pitch/PlayerJersey';
-import { STATUS_META, StatusPill } from './status-meta';
+import { StatusPill } from './status-meta';
+import { useAuth } from '../AuthContext';
+import { useMarketContext } from './useMarketContext';
 
 const POSITION_IDS: Record<string, number> = { gkp: 1, def: 2, mid: 3, fwd: 4 };
 
@@ -39,6 +41,12 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
     'netTransfers' | 'changeScore' | 'currentCost' | 'selectedByPercent'
   >('netTransfers');
   const [sortAsc, setSortAsc] = useState(false);
+  const [watchMode, setWatchMode] = useState(false);
+  const [watchOnly, setWatchOnly] = useState(false);
+
+  const { savedTeamId } = useAuth();
+  const { squadIds, watchIds, watchlistReady, toggleWatch, saveError } =
+    useMarketContext(savedTeamId);
 
   const filteredData = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -64,6 +72,8 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
         if (positionFilter !== 'all' && p.elementType.id !== POSITION_IDS[positionFilter])
           return false;
 
+        if (watchOnly && !watchIds.has(p.elementId)) return false;
+
         return true;
       })
       .sort((a, b) => {
@@ -72,7 +82,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
         if (valA === valB) return 0;
         return sortAsc ? (valA > valB ? 1 : -1) : valA < valB ? 1 : -1;
       });
-  }, [analyses, search, statusFilter, positionFilter, sortField, sortAsc]);
+  }, [analyses, search, statusFilter, positionFilter, sortField, sortAsc, watchOnly, watchIds]);
 
   const visibleRows = filteredData.slice(0, 100);
 
@@ -179,21 +189,82 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
 
       {/* Search and position controls */}
       <div className="pastel-card p-4 sm:p-5 shadow-sm mb-4 space-y-3">
-        <div className="relative w-full">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search player name or club..."
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-black/5 rounded-full text-base sm:text-xs text-[#111318] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600 transition shadow-inner"
-          />
-          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search player name or club..."
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-black/5 rounded-full text-base sm:text-xs text-[#111318] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600 transition shadow-inner"
+            />
+            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setWatchMode((v) => !v)}
+            disabled={!savedTeamId}
+            title={
+              savedTeamId
+                ? 'Add or remove players from your watchlist'
+                : 'Pick a team first to use the watchlist'
+            }
+            className={`shrink-0 px-3.5 py-2.5 rounded-full text-xs font-black transition flex items-center gap-1.5 disabled:opacity-40 ${
+              watchMode
+                ? 'bg-pink-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-600 hover:bg-pink-50 hover:text-pink-600'
+            }`}
+          >
+            <Star className={`w-4 h-4 ${watchMode ? 'fill-current' : ''}`} />
+            <span className="hidden sm:inline">Watchlist</span>
+            {watchIds.size > 0 && (
+              <span
+                className={`px-1.5 rounded-full text-[10px] ${
+                  watchMode ? 'bg-white/25' : 'bg-pink-100 text-pink-700'
+                }`}
+              >
+                {watchIds.size}
+              </span>
+            )}
+          </button>
         </div>
+
+        {watchMode && !watchlistReady && savedTeamId && (
+          <div className="p-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-bold flex items-start gap-2">
+            <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+            <span>
+              The watchlist needs Firebase configured on the server, otherwise it cannot be saved or
+              used for Telegram alerts.
+            </span>
+          </div>
+        )}
+
+        {saveError && (
+          <div className="p-2.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-bold flex items-start gap-2">
+            <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+            <span>{saveError}</span>
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-black/5">
           <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">
             Position
           </span>
+          {watchIds.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setWatchOnly((v) => !v)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-black transition flex items-center gap-1 mr-1 ${
+                watchOnly
+                  ? 'bg-pink-500 text-white shadow-sm'
+                  : 'bg-pink-50 text-pink-700 hover:bg-pink-100'
+              }`}
+            >
+              <Star className={`w-3 h-3 ${watchOnly ? 'fill-current' : ''}`} />
+              <span>Watchlist only</span>
+            </button>
+          )}
           {POSITION_FILTERS.map((tab) => (
             <button
               key={tab.key}
@@ -228,10 +299,23 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
             </thead>
             <tbody className="divide-y divide-black/5">
               {visibleRows.map((player) => {
-                const meta = STATUS_META[player.status];
+                const inSquad = squadIds.has(player.elementId);
+                const watched = watchIds.has(player.elementId);
+
+                // Squad wins the row colour when a player is both — being in
+                // the team is the stronger fact; the star still marks the
+                // watchlist membership.
+                const rowTint = inSquad
+                  ? 'bg-sky-50 hover:bg-sky-100'
+                  : watched
+                  ? 'bg-pink-50 hover:bg-pink-100'
+                  : 'hover:bg-purple-50/40';
 
                 return (
-                  <tr key={player.elementId} className="hover:bg-purple-50/40 transition group">
+                  <tr
+                    key={player.elementId}
+                    className={`transition group ${rowTint}`}
+                  >
                     {/* Target % — half the previous width */}
                     <td className="px-3 py-3">
                       <div className="w-14 mx-auto">
@@ -278,8 +362,36 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                           className="w-8 h-8 shrink-0 mt-0.5"
                         />
                         <div>
-                          <div className="font-bold text-[#111318] group-hover:text-purple-700 transition">
-                            {player.webName}
+                          <div className="flex items-center gap-1.5">
+                            <div className="font-bold text-[#111318] group-hover:text-purple-700 transition">
+                              {player.webName}
+                            </div>
+                            {inSquad && (
+                              <span className="px-1.5 py-0.5 rounded-full bg-sky-500 text-white text-[9px] font-black shrink-0">
+                                MY TEAM
+                              </span>
+                            )}
+                            {watched && (
+                              <Star className="w-3 h-3 text-pink-500 fill-current shrink-0" />
+                            )}
+                            {watchMode && (
+                              <button
+                                type="button"
+                                onClick={() => toggleWatch(player.elementId)}
+                                aria-label={
+                                  watched
+                                    ? `Remove ${player.webName} from watchlist`
+                                    : `Add ${player.webName} to watchlist`
+                                }
+                                className={`ml-0.5 p-1 rounded-full transition shrink-0 ${
+                                  watched
+                                    ? 'bg-pink-500 text-white hover:bg-pink-600'
+                                    : 'bg-gray-100 text-gray-400 hover:bg-pink-100 hover:text-pink-600'
+                                }`}
+                              >
+                                <Star className={`w-3 h-3 ${watched ? 'fill-current' : ''}`} />
+                              </button>
+                            )}
                           </div>
                           <div className="text-[11px] text-gray-500 font-semibold">
                             {player.team.name}

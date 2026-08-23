@@ -23,10 +23,10 @@ export default function PrivateLeaguesCard({
   // Filter classic leagues
   // league_type 'x' is FPL's marker for an invitational league. The previous
   // `|| rank_type !== 'g'` let global and club-supporter leagues through.
-  const baseLeagues = useMemo(() => {
-    const privateLeagues = leagues.filter((l) => l.league_type === 'x');
-    return privateLeagues.length > 0 ? privateLeagues : leagues.slice(0, 10);
-  }, [leagues]);
+  // System leagues have their own card now, so no fallback: if there are no
+  // invitational leagues, say so rather than padding the list with whatever
+  // FPL enrolled this manager into.
+  const baseLeagues = useMemo(() => leagues.filter((l) => l.league_type === 'x'), [leagues]);
 
   // Initialize and load custom order from localStorage
   useEffect(() => {
@@ -111,7 +111,7 @@ export default function PrivateLeaguesCard({
     }
   };
 
-  if (!orderedLeagues || orderedLeagues.length === 0) return null;
+  const isEmpty = !orderedLeagues || orderedLeagues.length === 0;
 
   return (
     <div className="pastel-card p-5 sm:p-7 shadow-sm mb-6">
@@ -149,10 +149,19 @@ export default function PrivateLeaguesCard({
           </div>
         </div>
 
-        <span className="text-xs font-bold text-gray-400 font-mono">
+        <span className="text-xs font-bold text-gray-400 font-mono shrink-0">
           {orderedLeagues.length} leagues
         </span>
       </div>
+
+      {isEmpty && (
+        <div className="py-8 text-center">
+          <p className="text-sm font-bold text-gray-500 mb-1">No private leagues yet</p>
+          <p className="text-xs text-gray-400">
+            Join or create an invitational league in the FPL app and it will appear here.
+          </p>
+        </div>
+      )}
 
       {/* List of Leagues */}
       <div className="space-y-3">

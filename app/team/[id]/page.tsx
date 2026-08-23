@@ -13,6 +13,7 @@ import TeamHeader from '@/components/team/TeamHeader';
 import FootballPitch from '@/components/pitch/FootballPitch';
 import TeamPitchTopBar from '@/components/pitch/TeamPitchTopBar';
 import PrivateLeaguesCard from '@/components/team/PrivateLeaguesCard';
+import GlobalLeaguesCard from '@/components/team/GlobalLeaguesCard';
 import TeamSaveTracker from './TeamSaveTracker';
 import { AlertCircle, Search } from 'lucide-react';
 
@@ -109,6 +110,9 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           currentTeamId={id}
           currentGw={activeGw}
         />
+
+        {/* 5. Leagues FPL enrols you into — rank only, no member table */}
+        <GlobalLeaguesCard leagues={(entry as any).leagues?.classic || []} />
       </div>
     );
   } catch (err: any) {
