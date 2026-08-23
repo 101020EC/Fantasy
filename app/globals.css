@@ -54,22 +54,22 @@ body {
   border-radius: 28px;
 }
 
-/* Modern Pastel Pitch Styling */
+/* Softer, Lighter Pastel Football Pitch */
 .pastel-pitch {
-  background: linear-gradient(180deg, #2b7a4b 0%, #22663d 50%, #1b5331 100%);
+  background: linear-gradient(180deg, #52aa77 0%, #439665 50%, #358354 100%);
   background-image: 
     repeating-linear-gradient(
       0deg,
-      rgba(255, 255, 255, 0.03) 0px,
-      rgba(255, 255, 255, 0.03) 40px,
-      transparent 40px,
-      transparent 80px
+      rgba(255, 255, 255, 0.06) 0px,
+      rgba(255, 255, 255, 0.06) 42px,
+      transparent 42px,
+      transparent 84px
     ),
-    linear-gradient(180deg, #2e8250 0%, #23693f 50%, #19522f 100%);
+    linear-gradient(180deg, #58b27e 0%, #469b69 50%, #378857 100%);
   position: relative;
   border-radius: 32px;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 12px 32px -4px rgba(25, 82, 47, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 10px 28px -4px rgba(70, 155, 105, 0.2);
 }
 
 /* Pulse animation */

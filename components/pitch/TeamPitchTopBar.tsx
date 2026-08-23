@@ -36,7 +36,7 @@ export default function TeamPitchTopBar({
       {/* Periwinkle Blue Card */}
       <div className="card-pastel-blue p-5 sm:p-6 mb-4 shadow-xl relative overflow-hidden transition-all text-[#111318]">
         {/* Row 1: Left (ID, GW, Region) & Right (Market Icon + Change Team Icon + Telegram Icon attached to right edge) */}
-        <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-black/10">
+        <div className="flex items-center justify-between gap-2 mb-3.5 pb-2.5 border-b border-black/10">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="px-3 py-1 rounded-full bg-[#111318] text-white text-[11px] font-black font-mono shadow-sm">
               ID #{entry.id}
@@ -88,44 +88,53 @@ export default function TeamPitchTopBar({
           </div>
         </div>
 
-        {/* Row 2: Avatar + Team Name + Today Safe Badge on the Right of Name */}
-        <div className="flex items-center gap-3.5 sm:gap-4">
-          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/90 flex items-center justify-center text-2xl font-bold shrink-0 shadow-md">
-            👑
-          </div>
-
-          <div className="flex-1 min-w-0">
-            {/* Team Name + Today Safe Badge side-by-side */}
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#111318] tracking-tight truncate">
-                {entry.name}
-              </h1>
-
-              {/* Today Safe / Price Alert Badge placed directly to the right of Team Name */}
-              {totalCritical === 0 && totalLikely === 0 ? (
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500 text-white text-xs font-black shadow-md shrink-0">
-                  <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>Today Safe</span>
-                </div>
-              ) : (
-                <Link
-                  href="/prices"
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-md transition active:scale-95 shrink-0 animate-pulse-fall"
-                  title="ดูรายละเอียดการปรับราคา"
-                >
-                  <TrendingDown className="w-3.5 h-3.5 stroke-[2.5]" />
-                  <span>
-                    {totalCritical > 0
-                      ? `${totalCritical} คนเสี่ยงปรับราคาคืนนี้!`
-                      : `${totalLikely} คนมีแนวโน้มปรับราคา`}
-                  </span>
-                </Link>
-              )}
+        {/* Row 2: Left (Avatar + Names) & Right (Today Safe aligned to right edge spanning full name height with live pulse) */}
+        <div className="flex items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/90 flex items-center justify-center text-2xl font-bold shrink-0 shadow-md">
+              👑
             </div>
 
-            <p className="text-xs sm:text-sm text-[#111318]/80 font-semibold mt-0.5">
-              {entry.player_first_name} {entry.player_last_name}
-            </p>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#111318] tracking-tight leading-tight truncate">
+                {entry.name}
+              </h1>
+              <p className="text-xs sm:text-sm text-[#111318]/80 font-semibold mt-0.5 leading-snug">
+                {entry.player_first_name} {entry.player_last_name}
+              </p>
+            </div>
+          </div>
+
+          {/* Right Edge: Today Safe (ชิดขอบขวา ความสูงเท่ากับขอบบนชื่อถึงขอบล่างชื่อคนเล่น + Live pulse effect) */}
+          <div className="shrink-0">
+            {totalCritical === 0 && totalLikely === 0 ? (
+              <div className="relative overflow-hidden px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl bg-emerald-500 text-white font-black text-xs sm:text-sm shadow-md flex items-center gap-2 border border-white/20">
+                {/* Live update pulsing indicator */}
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-100 opacity-85"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                </span>
+                <CheckCircle2 className="w-4 h-4 stroke-[3]" />
+                <span className="whitespace-nowrap">Today Safe</span>
+              </div>
+            ) : (
+              <Link
+                href="/prices"
+                className="relative overflow-hidden px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs sm:text-sm shadow-md transition active:scale-95 flex items-center gap-2 border border-white/20 animate-pulse-fall"
+                title="ดูรายละเอียดการปรับราคา"
+              >
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-200 opacity-85"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
+                </span>
+                <TrendingDown className="w-4 h-4 stroke-[3]" />
+                <span className="whitespace-nowrap">
+                  {totalCritical > 0
+                    ? `${totalCritical} คนเสี่ยงราคาตก!`
+                    : `${totalLikely} คนมีแนวโน้ม`}
+                </span>
+              </Link>
+            )}
           </div>
         </div>
       </div>

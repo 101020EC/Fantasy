@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronUp, Users, ArrowUpDown } from 'lucide-react';
+import { Trophy, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronUp, Users, Edit3, Check } from 'lucide-react';
 import { fetchFPLLeagueStandings } from '@/lib/fpl-api';
 
 interface PrivateLeaguesCardProps {
@@ -19,6 +19,7 @@ export default function PrivateLeaguesCard({
   const [standingsMap, setStandingsMap] = useState<Record<number, any[]>>({});
   const [loadingMap, setLoadingMap] = useState<Record<number, boolean>>({});
   const [orderedLeagues, setOrderedLeagues] = useState<any[]>([]);
+  const [isReorderMode, setIsReorderMode] = useState(false);
 
   // Filter classic leagues
   const privateLeagues = leagues.filter((l) => l.league_type === 'x' || l.rank_type !== 'g');
@@ -81,6 +82,8 @@ export default function PrivateLeaguesCard({
   };
 
   const toggleExpand = async (leagueId: number) => {
+    if (isReorderMode) return;
+
     if (expandedLeagueId === leagueId) {
       setExpandedLeagueId(null);
       return;
@@ -107,25 +110,46 @@ export default function PrivateLeaguesCard({
 
   return (
     <div className="pastel-card p-5 sm:p-7 shadow-sm mb-6">
-      {/* Header */}
+      {/* Header with Private Mini-Leagues and Edit button right next to title */}
       <div className="flex items-center justify-between mb-4 pb-3 border-b border-black/5">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold shrink-0">
             <Trophy className="w-5 h-5" />
           </div>
-          <div>
+          <div className="flex items-center gap-2.5">
             <h3 className="text-base font-black text-[#111318]">Private Mini-Leagues</h3>
-            <p className="text-xs text-gray-500">
-              กดลูกศร ▲ ▼ เพื่อจัดลำดับมินิลีกที่ต้องการให้อยู่บนสุด
-            </p>
+            
+            {/* Edit Button right next to title */}
+            <button
+              onClick={() => setIsReorderMode(!isReorderMode)}
+              type="button"
+              className={`px-3 py-1 rounded-full text-xs font-black flex items-center gap-1.5 transition active:scale-95 shadow-sm ${
+                isReorderMode
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                  : 'bg-gray-100 hover:bg-purple-100 text-[#38003c]'
+              }`}
+            >
+              {isReorderMode ? (
+                <>
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>Done</span>
+                </>
+              ) : (
+                <>
+                  <Edit3 className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
+
         <span className="text-xs font-bold text-gray-400 font-mono">
           {orderedLeagues.length} ลีก
         </span>
       </div>
 
-      {/* List of Reorderable Leagues */}
+      {/* List of Leagues */}
       <div className="space-y-3">
         {orderedLeagues.map((league: any, idx: number) => {
           const rank = league.entry_rank || 1;
@@ -138,40 +162,44 @@ export default function PrivateLeaguesCard({
           return (
             <div
               key={league.id}
-              className="rounded-2xl border border-black/5 bg-gray-50/80 overflow-hidden transition"
+              className={`rounded-2xl border transition overflow-hidden ${
+                isReorderMode ? 'border-purple-300 bg-purple-50/20' : 'border-black/5 bg-gray-50/80'
+              }`}
             >
               {/* League Header */}
               <div
                 onClick={() => toggleExpand(league.id)}
                 className="w-full p-3.5 sm:p-4 flex items-center justify-between gap-2 text-left hover:bg-purple-50/50 transition cursor-pointer"
               >
-                {/* Left: Reorder Up/Down buttons + Name */}
-                <div className="flex items-center gap-2 sm:gap-3 truncate">
-                  <div className="flex flex-col gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={(e) => moveLeagueUp(e, idx)}
-                      disabled={idx === 0}
-                      className="p-1 rounded-md bg-white border border-black/5 text-gray-400 hover:text-[#38003c] disabled:opacity-25 transition"
-                      title="เลื่อนขึ้นบน"
-                    >
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => moveLeagueDown(e, idx)}
-                      disabled={idx === orderedLeagues.length - 1}
-                      className="p-1 rounded-md bg-white border border-black/5 text-gray-400 hover:text-[#38003c] disabled:opacity-25 transition"
-                      title="เลื่อนลงล่าง"
-                    >
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                {/* Left: Reorder arrows (Only show when Edit is clicked) + Name */}
+                <div className="flex items-center gap-2.5 sm:gap-3 truncate">
+                  {isReorderMode && (
+                    <div className="flex flex-col gap-0.5 shrink-0 animate-fadeIn" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={(e) => moveLeagueUp(e, idx)}
+                        disabled={idx === 0}
+                        className="p-1 rounded-md bg-white border border-black/10 text-[#38003c] hover:bg-purple-100 disabled:opacity-25 transition shadow-sm"
+                        title="เลื่อนขึ้นบน"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5 stroke-[3]" />
+                      </button>
+                      <button
+                        onClick={(e) => moveLeagueDown(e, idx)}
+                        disabled={idx === orderedLeagues.length - 1}
+                        className="p-1 rounded-md bg-white border border-black/10 text-[#38003c] hover:bg-purple-100 disabled:opacity-25 transition shadow-sm"
+                        title="เลื่อนลงล่าง"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5 stroke-[3]" />
+                      </button>
+                    </div>
+                  )}
 
                   <div className="truncate">
                     <span className="font-black text-xs sm:text-sm text-[#111318] block truncate">
                       {league.name}
                     </span>
                     <span className="text-[10px] text-gray-400 font-mono">
-                      ID: {league.id} &bull; แตะเพื่อดูตารางคะแนน
+                      ID: {league.id}
                     </span>
                   </div>
                 </div>
@@ -199,14 +227,16 @@ export default function PrivateLeaguesCard({
                     </div>
                   </div>
 
-                  <div className="p-1.5 rounded-full bg-white shadow-sm text-gray-400 hover:text-[#38003c]">
-                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </div>
+                  {!isReorderMode && (
+                    <div className="p-1.5 rounded-full bg-white shadow-sm text-gray-400 hover:text-[#38003c]">
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Expanded Full League Standings Table */}
-              {isExpanded && (
+              {isExpanded && !isReorderMode && (
                 <div className="p-4 border-t border-black/5 bg-white">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-1.5 text-xs font-black text-[#38003c]">

@@ -29,14 +29,14 @@ export default function PlayerCard({ player, onClick, isBench = false }: PlayerC
     }
     if (priceAnalysis.status === 'falling_soon') {
       return (
-        <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-rose-500 text-white rounded-full font-black text-[10px] shadow-md animate-pulse-fall" title="เสี่ยงราคาตกคืนนี้!">
+        <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-rose-600 text-white rounded-full font-black text-[10px] shadow-md animate-pulse-fall" title="เสี่ยงราคาตกคืนนี้!">
           <TrendingDown className="w-3 h-3 stroke-[3]" />
         </span>
       );
     }
     if (priceAnalysis.status === 'likely_faller') {
       return (
-        <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 bg-orange-500 text-white rounded-full text-[9px] shadow" title="มีแนวโน้มราคาลง">
+        <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] shadow" title="มีแนวโน้มราคาลง">
           <TrendingDown className="w-2.5 h-2.5 stroke-[2.5]" />
         </span>
       );
@@ -103,26 +103,26 @@ export default function PlayerCard({ player, onClick, isBench = false }: PlayerC
       </div>
 
       {/* Player Info Squircle Box */}
-      <div className="w-full bg-white/95 dark:bg-[#171a23]/95 border border-black/5 dark:border-white/10 rounded-xl sm:rounded-2xl overflow-hidden shadow-md group-hover:ring-2 group-hover:ring-pastel-blue transition">
+      <div className="w-full bg-white/95 border border-black/5 rounded-xl sm:rounded-2xl overflow-hidden shadow-md group-hover:ring-2 group-hover:ring-purple-400 transition">
         {/* Name and Team Tag */}
-        <div className="px-1 py-0.5 text-center bg-gray-50 dark:bg-pastel-darkPill border-b border-black/5 dark:border-white/5 flex items-center justify-center">
-          <span className="text-[10px] sm:text-xs font-black text-[#111318] dark:text-white truncate max-w-[65px] sm:max-w-[85px]">
+        <div className="px-1 py-0.5 text-center bg-gray-50 border-b border-black/5 flex items-center justify-center">
+          <span className="text-[10px] sm:text-xs font-black text-[#111318] truncate max-w-[65px] sm:max-w-[85px]">
             {element.web_name}
           </span>
         </div>
 
         {/* Price & GW Points */}
-        <div className="px-1 py-0.5 flex items-center justify-between text-[9px] sm:text-[10px] font-bold bg-white dark:bg-[#171a23]">
-          <span className="text-gray-600 dark:text-gray-300 font-mono">£{priceAnalysis.currentCost.toFixed(1)}</span>
-          <span className="text-[#111318] dark:text-white px-1.5 py-0.2 rounded-full bg-pastel-blueLight dark:bg-pastel-darkPill font-black text-[9px]">
+        <div className="px-1 py-0.5 flex items-center justify-between text-[9px] sm:text-[10px] font-bold bg-white">
+          <span className="text-gray-600 font-mono">£{priceAnalysis.currentCost.toFixed(1)}</span>
+          <span className="text-[#111318] px-1.5 py-0.2 rounded-full bg-pastel-blueLight font-black text-[9px]">
             {element.event_points}pt
           </span>
         </div>
 
         {/* Next Fixture & FDR */}
         {nextFixture && (
-          <div className="px-1 py-0.5 text-[8px] sm:text-[9px] flex items-center justify-between border-t border-black/5 dark:border-white/5 bg-gray-50/80 dark:bg-[#12151c]/80">
-            <span className="text-gray-500 dark:text-gray-400 font-semibold truncate">
+          <div className="px-1 py-0.5 text-[8px] sm:text-[9px] flex items-center justify-between border-t border-black/5 bg-gray-50/80">
+            <span className="text-gray-500 font-semibold truncate">
               {nextFixture.opponent.short_name} ({nextFixture.isHome ? 'H' : 'A'})
             </span>
             <span className={`px-1 py-0.2 rounded-full font-bold text-[8px] ${getFDRBadgeColor(nextFixture.difficulty)}`}>

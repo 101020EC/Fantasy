@@ -91,14 +91,14 @@ export default function Navbar() {
 
             {/* Dropdown Menu with colorful large items */}
             {isMenuOpen && (
-              <div className="absolute right-0 top-12 w-52 bg-white border border-black/10 rounded-3xl shadow-2xl p-2 z-50 animate-fadeIn space-y-1">
+              <div className="absolute right-0 top-12 w-max min-w-[170px] bg-white border border-black/10 rounded-3xl shadow-2xl p-2 z-50 animate-fadeIn space-y-1">
                 {/* Team */}
                 <Link
                   href={teamUrl}
                   onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-[#38003c] hover:bg-purple-50 transition"
+                  className="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-black text-[#38003c] hover:bg-purple-50 transition whitespace-nowrap"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-purple-100 text-[#38003c] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 text-[#38003c] flex items-center justify-center shrink-0">
                     <Shield className="w-4 h-4" />
                   </div>
                   <span>Team</span>
