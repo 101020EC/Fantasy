@@ -1,6 +1,6 @@
 import React from 'react';
 import { TeamSquadPlayer } from '@/lib/types';
-import { X, TrendingUp, TrendingDown, Minus, Activity, ShieldAlert, DollarSign, Users, Award } from 'lucide-react';
+import { X, TrendingUp, TrendingDown, Minus, Activity, ShieldAlert } from 'lucide-react';
 import PlayerJersey from './PlayerJersey';
 
 interface PlayerDetailModalProps {
@@ -17,37 +17,37 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
     switch (priceAnalysis.status) {
       case 'rising_soon':
         return (
-          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 rounded-full font-bold text-xs animate-pulse-rise">
+          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs animate-pulse-rise">
             <TrendingUp className="w-4 h-4" />
-            <span>เตือน: คาดว่าราคาจะขึ้น (£+0.1m) เร็วๆ นี้!</span>
+            <span>Alert: Expected to Rise (£+0.1m) Tonight!</span>
           </div>
         );
       case 'likely_riser':
         return (
-          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-semibold">
+          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold">
             <TrendingUp className="w-4 h-4" />
-            <span>แนวโน้มราคาขึ้นเรื่อยๆ</span>
+            <span>Trending upward in market transfers</span>
           </div>
         );
       case 'falling_soon':
         return (
-          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-100 dark:bg-rose-500/20 text-rose-800 dark:text-rose-300 rounded-full font-bold text-xs animate-pulse-fall">
+          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-100 text-rose-800 rounded-full font-bold text-xs animate-pulse-fall">
             <TrendingDown className="w-4 h-4" />
-            <span>เตือน: เสี่ยงราคาตก (£-0.1m) คืนนี้!</span>
+            <span>Alert: At Risk of Falling (£-0.1m) Tonight!</span>
           </div>
         );
       case 'likely_faller':
         return (
-          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-orange-100 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 rounded-full text-xs font-semibold">
+          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-50 text-rose-700 rounded-full text-xs font-semibold">
             <TrendingDown className="w-4 h-4" />
-            <span>ยอดขายออกสูง มีแนวโน้มราคาตก</span>
+            <span>High net sales, trending downward</span>
           </div>
         );
       default:
         return (
-          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gray-100 dark:bg-pastel-darkPill text-gray-600 dark:text-gray-300 rounded-full text-xs font-medium">
+          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
             <Minus className="w-4 h-4" />
-            <span>ราคาตลาดคงที่</span>
+            <span>Stable market price</span>
           </div>
         );
     }
@@ -55,26 +55,26 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#171a23] border border-black/5 dark:border-white/10 rounded-3xl p-6 shadow-2xl text-[#111318] dark:text-white max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-white border border-black/5 rounded-3xl p-6 shadow-2xl text-[#111318] max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-[#111318] dark:hover:text-white rounded-full bg-gray-100 dark:bg-white/5 transition"
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-[#111318] rounded-full bg-gray-100 transition"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header with Jersey & Name */}
         <div className="flex items-center gap-4 mb-5">
-          <div className="p-3 bg-pastel-bg dark:bg-pastel-darkPill rounded-2xl">
+          <div className="p-3 bg-pastel-bg rounded-2xl">
             <PlayerJersey teamCode={element.team_code} isGkp={elementType.id === 1} className="w-14 h-14" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#111318] text-white dark:bg-white dark:text-[#111318]">
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#111318] text-white">
                 {elementType.singular_name_short}
               </span>
-              <span className="text-xs font-bold text-gray-500 dark:text-gray-400">{team.name}</span>
+              <span className="text-xs font-bold text-gray-500">{team.name}</span>
               {pick.is_captain && (
                 <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pastel-blue text-[#111318]">
                   CAPTAIN
@@ -86,7 +86,7 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
                 </span>
               )}
             </div>
-            <h2 className="text-xl sm:text-2xl font-black mt-1 text-[#111318] dark:text-white">{priceAnalysis.fullName}</h2>
+            <h2 className="text-xl sm:text-2xl font-black mt-1 text-[#111318]">{priceAnalysis.fullName}</h2>
             <p className="text-xs text-gray-400">ID: {element.id} • {element.web_name}</p>
           </div>
         </div>
@@ -96,51 +96,51 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
 
         {/* Injury / News Alert if any */}
         {element.news && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-start gap-2.5">
-            <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-rose-800 dark:text-rose-200 font-medium leading-relaxed">{element.news}</p>
+          <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-2.5">
+            <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <p className="text-xs text-rose-800 font-medium leading-relaxed">{element.news}</p>
           </div>
         )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5 text-center">
-          <div className="p-3 bg-pastel-bg dark:bg-pastel-darkPill rounded-2xl">
-            <span className="text-[11px] text-gray-500 dark:text-gray-400 block mb-0.5 font-semibold">ราคาปัจจุบัน</span>
-            <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">£{priceAnalysis.currentCost.toFixed(1)}m</span>
+          <div className="p-3 bg-pastel-bg rounded-2xl">
+            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Current Price</span>
+            <span className="text-lg font-black text-emerald-600">£{priceAnalysis.currentCost.toFixed(1)}m</span>
           </div>
 
-          <div className="p-3 bg-pastel-bg dark:bg-pastel-darkPill rounded-2xl">
-            <span className="text-[11px] text-gray-500 dark:text-gray-400 block mb-0.5 font-semibold">แต้มรวม</span>
-            <span className="text-lg font-black text-[#111318] dark:text-white">{element.total_points}</span>
+          <div className="p-3 bg-pastel-bg rounded-2xl">
+            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Total Points</span>
+            <span className="text-lg font-black text-[#111318]">{element.total_points}</span>
           </div>
 
-          <div className="p-3 bg-pastel-bg dark:bg-pastel-darkPill rounded-2xl">
-            <span className="text-[11px] text-gray-500 dark:text-gray-400 block mb-0.5 font-semibold">ฟอร์ม (Form)</span>
-            <span className="text-lg font-black text-pastel-blueDark dark:text-pastel-blue">{element.form}</span>
+          <div className="p-3 bg-pastel-bg rounded-2xl">
+            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Form</span>
+            <span className="text-lg font-black text-pastel-blueDark">{element.form}</span>
           </div>
 
-          <div className="p-3 bg-pastel-bg dark:bg-pastel-darkPill rounded-2xl">
-            <span className="text-[11px] text-gray-500 dark:text-gray-400 block mb-0.5 font-semibold">การถือครอง</span>
-            <span className="text-lg font-black text-pastel-orangeDark dark:text-pastel-orange">{priceAnalysis.selectedByPercent}%</span>
+          <div className="p-3 bg-pastel-bg rounded-2xl">
+            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Selected By</span>
+            <span className="text-lg font-black text-pastel-orangeDark">{priceAnalysis.selectedByPercent}%</span>
           </div>
         </div>
 
         {/* Transfer Velocity & Price Change Prediction Meter */}
-        <div className="p-4 bg-pastel-bg dark:bg-pastel-darkPill rounded-2xl mb-4">
+        <div className="p-4 bg-pastel-bg rounded-2xl mb-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-              <Activity className="w-4 h-4 text-pastel-blueDark dark:text-pastel-blue" />
-              ดัชนีราคา (Price Momentum)
+            <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+              <Activity className="w-4 h-4 text-pastel-blueDark" />
+              Target % (Price Momentum)
             </span>
             <span className={`text-xs font-black ${
-              priceAnalysis.changeScore > 0 ? 'text-emerald-600 dark:text-emerald-400' : priceAnalysis.changeScore < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500'
+              priceAnalysis.changeScore > 0 ? 'text-emerald-600' : priceAnalysis.changeScore < 0 ? 'text-rose-600' : 'text-gray-500'
             }`}>
               {priceAnalysis.changeScore > 0 ? `+${priceAnalysis.changeScore}` : priceAnalysis.changeScore}%
             </span>
           </div>
 
           {/* Meter Bar */}
-          <div className="relative w-full h-2.5 bg-gray-200 dark:bg-black/40 rounded-full overflow-hidden mb-3">
+          <div className="relative w-full h-2.5 bg-gray-200 rounded-full overflow-hidden mb-3">
             <div
               className={`h-full transition-all duration-500 ${
                 priceAnalysis.changeScore > 0
@@ -157,17 +157,17 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
-            <div className="p-2 bg-white dark:bg-[#171a23] rounded-xl shadow-sm">
-              <span className="text-gray-400 text-[10px] block font-medium">ซื้อเข้า GW นี้</span>
-              <span className="font-black text-emerald-600 dark:text-emerald-400">+{priceAnalysis.transfersInEvent.toLocaleString()}</span>
+            <div className="p-2 bg-white rounded-xl shadow-sm">
+              <span className="text-gray-400 text-[10px] block font-medium">Transfers In</span>
+              <span className="font-black text-emerald-600">+{priceAnalysis.transfersInEvent.toLocaleString()}</span>
             </div>
-            <div className="p-2 bg-white dark:bg-[#171a23] rounded-xl shadow-sm">
-              <span className="text-gray-400 text-[10px] block font-medium">ขายออก GW นี้</span>
-              <span className="font-black text-rose-600 dark:text-rose-400">-{priceAnalysis.transfersOutEvent.toLocaleString()}</span>
+            <div className="p-2 bg-white rounded-xl shadow-sm">
+              <span className="text-gray-400 text-[10px] block font-medium">Transfers Out</span>
+              <span className="font-black text-rose-600">-{priceAnalysis.transfersOutEvent.toLocaleString()}</span>
             </div>
-            <div className="p-2 bg-white dark:bg-[#171a23] rounded-xl shadow-sm">
-              <span className="text-gray-400 text-[10px] block font-medium">สุทธิ</span>
-              <span className={`font-black ${priceAnalysis.netTransfers >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+            <div className="p-2 bg-white rounded-xl shadow-sm">
+              <span className="text-gray-400 text-[10px] block font-medium">Net</span>
+              <span className={`font-black ${priceAnalysis.netTransfers >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {priceAnalysis.netTransfers >= 0 ? `+${priceAnalysis.netTransfers.toLocaleString()}` : priceAnalysis.netTransfers.toLocaleString()}
               </span>
             </div>
@@ -176,10 +176,10 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
 
         {/* Next Fixture */}
         {nextFixture && (
-          <div className="p-3.5 bg-pastel-bg dark:bg-pastel-darkPill rounded-2xl flex items-center justify-between">
-            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">นัดถัดไป (Next Fixture)</div>
+          <div className="p-3.5 bg-pastel-bg rounded-2xl flex items-center justify-between">
+            <div className="text-xs text-gray-500 font-medium">Next Fixture</div>
             <div className="flex items-center gap-2">
-              <span className="font-black text-xs sm:text-sm text-[#111318] dark:text-white">
+              <span className="font-black text-xs sm:text-sm text-[#111318]">
                 {nextFixture.isHome ? `${nextFixture.opponent.short_name} (H)` : `${nextFixture.opponent.short_name} (A)`}
               </span>
               <span

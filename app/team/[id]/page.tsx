@@ -60,7 +60,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
     }
 
     if (!picksData) {
-      throw new Error(`ไม่พบข้อมูลการจัดตัวของทีมนี้ (กรุณาตรวจ Team ID)`);
+      throw new Error(`Unable to find squad lineup for this team (Please check Team ID)`);
     }
 
     const fixtures = await fetchFPLFixtures();
@@ -89,10 +89,10 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           <FootballPitch players={squadPlayers} />
         </div>
 
-        {/* 3. Team Overview Header & Stats (แต้ม GW นี้, แต้มสะสม, อันดับโลก อยู่ด้านล่าง) */}
+        {/* 3. Team Overview Header & Stats */}
         <TeamHeader entry={entry} picksData={picksData} currentEvent={activeEvent} />
 
-        {/* 4. Private Leagues Card (จัดลำดับขึ้นลงได้ตามต้องการ) */}
+        {/* 4. Private Leagues Card */}
         <PrivateLeaguesCard
           leagues={(entry as any).leagues?.classic || []}
           currentTeamId={id}
@@ -107,16 +107,16 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-7 h-7" />
           </div>
-          <h2 className="text-xl font-black text-[#111318] mb-2">ไม่พบข้อมูลทีม</h2>
+          <h2 className="text-xl font-black text-[#111318] mb-2">Team Not Found</h2>
           <p className="text-xs text-gray-500 mb-6 leading-relaxed">
-            {err.message || `ไม่พบข้อมูลสำหรับ FPL Team ID: ${id} กรุณาตรวจสอบหมายเลขทีมอีกครั้ง`}
+            {err.message || `No data found for FPL Team ID: ${id}. Please verify the number.`}
           </p>
           <Link
             href="/?switch=true"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#111318] text-white font-black text-xs hover:scale-105 transition-transform shadow-md"
           >
             <Search className="w-4 h-4" />
-            <span>กลับไปหน้าค้นหา Team ID</span>
+            <span>Search Another Team ID</span>
           </Link>
         </div>
       </div>

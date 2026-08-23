@@ -58,11 +58,11 @@ export default function TeamPitchTopBar({
 
           {/* Right Edge: Market (Logo) + Change Team (Logo) + Telegram (Logo) */}
           <div className="flex items-center gap-1.5 shrink-0">
-            {/* Market Icon Button (อยู่หน้าสลับทีม) */}
+            {/* Market Icon Button */}
             <Link
               href="/prices"
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-orange-600 shadow-sm flex items-center justify-center transition active:scale-95"
-              title="ตลาดราคา (Market)"
+              title="Market Prices"
             >
               <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
             </Link>
@@ -71,7 +71,7 @@ export default function TeamPitchTopBar({
             <Link
               href="/?switch=true"
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-[#111318] shadow-sm flex items-center justify-center transition active:scale-95"
-              title="เปลี่ยนทีม (Change Team)"
+              title="Change Team"
             >
               <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
             </Link>
@@ -81,18 +81,18 @@ export default function TeamPitchTopBar({
               onClick={() => setIsTelegramOpen(true)}
               type="button"
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-sky-50 text-sky-600 shadow-sm flex items-center justify-center transition active:scale-95"
-              title="ตั้งค่าแจ้งเตือน Telegram"
+              title="Telegram Alerts"
             >
               <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
           </div>
         </div>
 
-        {/* Row 2: Left (Avatar + Names) & Right (Today Safe aligned to right edge spanning full name height with live pulse) */}
+        {/* Row 2: Left (Avatar + Names) & Right (Today Safe aligned to right edge) */}
         <div className="flex items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/90 flex items-center justify-center text-2xl font-bold shrink-0 shadow-md">
-              👑
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/90 overflow-hidden shrink-0 shadow-md">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
 
             <div className="min-w-0">
@@ -105,11 +105,10 @@ export default function TeamPitchTopBar({
             </div>
           </div>
 
-          {/* Right Edge: Today Safe (ชิดขอบขวา ความสูงเท่ากับขอบบนชื่อถึงขอบล่างชื่อคนเล่น + Live pulse effect) */}
+          {/* Right Edge: Today Safe with Live Pulse */}
           <div className="shrink-0">
             {totalCritical === 0 && totalLikely === 0 ? (
               <div className="relative overflow-hidden px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl bg-emerald-500 text-white font-black text-xs sm:text-sm shadow-md flex items-center gap-2 border border-white/20">
-                {/* Live update pulsing indicator */}
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-100 opacity-85"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
@@ -121,7 +120,7 @@ export default function TeamPitchTopBar({
               <Link
                 href="/prices"
                 className="relative overflow-hidden px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs sm:text-sm shadow-md transition active:scale-95 flex items-center gap-2 border border-white/20 animate-pulse-fall"
-                title="ดูรายละเอียดการปรับราคา"
+                title="View Price Changes"
               >
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-200 opacity-85"></span>
@@ -130,8 +129,8 @@ export default function TeamPitchTopBar({
                 <TrendingDown className="w-4 h-4 stroke-[3]" />
                 <span className="whitespace-nowrap">
                   {totalCritical > 0
-                    ? `${totalCritical} คนเสี่ยงราคาตก!`
-                    : `${totalLikely} คนมีแนวโน้ม`}
+                    ? `${totalCritical} Players at Risk!`
+                    : `${totalLikely} Likely to Change`}
                 </span>
               </Link>
             )}

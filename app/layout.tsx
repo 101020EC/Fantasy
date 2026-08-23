@@ -7,7 +7,17 @@ import PasswordGate from '@/components/PasswordGate';
 export const metadata: Metadata = {
   title: 'Fanta | Fantasy Premier League Team & Price Radar',
   description:
-    'Fanta - เว็บแอปดูทีม Fantasy Premier League ผ่าน Team ID พร้อมเรดาร์แจ้งเตือนราคานักเตะขึ้นหรือลงคืนนี้',
+    'Fanta - Fantasy Premier League live team tracker with nightly price change radar and history archive.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Fanta',
+  },
+  icons: {
+    icon: '/logo.png',
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export const viewport: Viewport = {
@@ -15,6 +25,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#38003c',
 };
 
 export default function RootLayout({
@@ -23,7 +35,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="th" className="light">
+    <html lang="en" className="light">
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Fanta" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+      </head>
       <body className="antialiased min-h-screen flex flex-col bg-pastel-bg text-[#111318] w-full overflow-x-hidden">
         <AuthProvider>
           <PasswordGate>

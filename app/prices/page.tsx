@@ -20,12 +20,12 @@ export default async function PricesPage() {
       currentEventName = currentEvent.name;
     }
   } catch (err: any) {
-    errorMsg = err.message || 'ไม่สามารถโหลดข้อมูลราคาจาก FPL API ได้';
+    errorMsg = err.message || 'Unable to load price data from FPL API';
   }
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
-      {/* Top Header: Price Change on Left + เวลาปรับราคา on Right in the same row */}
+      {/* Top Header: Price Change on Left + Change Time on Right */}
       <div className="flex items-center justify-between gap-3 mb-4 pb-1">
         <div className="flex items-center gap-2 sm:gap-3">
           <h1 className="text-2xl sm:text-4xl font-black text-[#111318] tracking-tight">
@@ -38,14 +38,14 @@ export default async function PricesPage() {
           )}
         </div>
 
-        {/* เวลาปรับราคา on the Right of Price Change */}
+        {/* Change Time Box on the Right */}
         <div className="px-3.5 py-2 rounded-2xl bg-white border border-black/5 flex items-center gap-2 text-xs shadow-sm shrink-0">
           <div className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
             <Clock className="w-3.5 h-3.5" />
           </div>
           <div>
-            <span className="font-black text-[#111318] block text-[11px] sm:text-xs">เวลาปรับราคา:</span>
-            <span className="text-gray-500 text-[10px] sm:text-[11px]">~07:30 - 08:30 น. (ไทย)</span>
+            <span className="font-black text-[#111318] block text-[11px] sm:text-xs">Update Window:</span>
+            <span className="text-gray-500 text-[10px] sm:text-[11px]">~01:30 - 02:30 UTC</span>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Send, CheckCircle2, AlertCircle, HelpCircle, X, Copy } from 'lucide-react';
+import { Send, Check, Bell, AlertCircle, Loader2, X, ExternalLink } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 
 interface TelegramSettingsModalProps {
@@ -13,36 +13,37 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
   const { savedTeamId } = useAuth();
   const [botToken, setBotToken] = useState('');
   const [chatId, setChatId] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [teamId, setTeamId] = useState('');
+  const [isSaved, setIsSaved] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    try {
-      const savedToken = localStorage.getItem('fpl_tg_token') || '';
-      const savedChat = localStorage.getItem('fpl_tg_chat_id') || '';
-      setBotToken(savedToken);
-      setChatId(savedChat);
-    } catch (e) {}
-  }, [isOpen]);
+    if (typeof window !== 'undefined') {
+      setBotToken(localStorage.getItem('fpl_tg_bot_token') || '');
+      setChatId(localStorage.getItem('fpl_tg_chat_id') || '');
+      setTeamId(localStorage.getItem('fpl_tg_team_id') || savedTeamId || '');
+    }
+  }, [isOpen, savedTeamId]);
 
   if (!isOpen) return null;
 
-  const handleSave = () => {
-    try {
-      localStorage.setItem('fpl_tg_token', botToken.trim());
-      localStorage.setItem('fpl_tg_chat_id', chatId.trim());
-      setTestResult({ success: true, message: 'บันทึกการตั้งค่า Telegram เรียบร้อยแล้ว!' });
-    } catch (e) {}
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem('fpl_tg_bot_token', botToken.trim());
+    localStorage.setItem('fpl_tg_chat_id', chatId.trim());
+    localStorage.setItem('fpl_tg_team_id', teamId.trim());
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 3000);
   };
 
-  const handleTestNotification = async () => {
-    if (!botToken.trim() || !chatId.trim()) {
-      setTestResult({ success: false, message: 'กรุณากรอก Bot Token และ Chat ID ให้ครบถ้วน' });
+  const handleTestAlert = async () => {
+    if (!botToken || !chatId) {
+      setTestResult({ success: false, message: 'Please enter both Bot Token and Chat ID' });
       return;
     }
 
-    setLoading(true);
+    setIsTesting(true);
     setTestResult(null);
 
     try {
@@ -52,45 +53,35 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
         body: JSON.stringify({
           botToken: botToken.trim(),
           chatId: chatId.trim(),
-          teamId: savedTeamId || 'FPL',
+          teamId: teamId.trim() || savedTeamId,
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        handleSave();
         setTestResult({
           success: true,
-          message: 'ส่งข้อความทดสอบไปยัง Telegram สำเร็จ! กรุณาเช็คในแอป Telegram ของคุณ',
+          message: 'Test alert message sent to your Telegram successfully!',
         });
       } else {
         setTestResult({
           success: false,
-          message: data.error || 'ไม่สามารถส่งข้อความได้ กรุณาตรวจ Token และ Chat ID',
+          message: data.error || 'Failed to send test message. Please verify your Bot Token & Chat ID.',
         });
       }
     } catch (err: any) {
-      setTestResult({ success: false, message: err.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ' });
+      setTestResult({
+        success: false,
+        message: err.message || 'Connection error',
+      });
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const cronUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/api/cron/price-alert?teamId=${savedTeamId || 'YOUR_TEAM_ID'}&token=${botToken}&chatId=${chatId}`
-    : '';
-
-  const copyCronUrl = () => {
-    if (cronUrl) {
-      navigator.clipboard.writeText(cronUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
+      setIsTesting(false);
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-lg bg-white border border-black/5 rounded-4xl p-6 sm:p-7 shadow-2xl text-[#111318] max-h-[90vh] overflow-y-auto">
+      <div className="relative w-full max-w-md bg-white border border-black/5 rounded-4xl p-6 sm:p-7 shadow-2xl text-[#111318] max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -100,117 +91,122 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
         </button>
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-5">
           <div className="w-11 h-11 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center">
             <Send className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-[#111318]">ตั้งค่าแจ้งเตือน Telegram</h2>
-            <p className="text-xs text-gray-500">รับข้อความเตือนเมื่อนักเตะในทีมเสี่ยงราคาตก/ขึ้นคืนนี้</p>
+            <h2 className="text-xl font-black text-[#111318]">Telegram Price Alerts</h2>
+            <p className="text-xs text-gray-500">Get nightly FPL price rise/fall notifications</p>
           </div>
         </div>
 
-        {/* Instructions */}
-        <div className="p-4 rounded-2xl bg-sky-50 border border-sky-200/80 mb-5 text-xs text-gray-700 space-y-1.5">
-          <div className="font-bold text-sky-900 flex items-center gap-1.5 mb-1">
-            <HelpCircle className="w-4 h-4 text-sky-600" />
-            <span>ขั้นตอนการสร้าง Telegram Bot:</span>
-          </div>
-          <ol className="list-decimal list-inside space-y-1 pl-1">
-            <li>เปิดแอป Telegram ค้นหาบอท <strong>@BotFather</strong> แล้วพิมพ์ <code className="bg-sky-200 px-1 py-0.5 rounded font-mono">/newbot</code></li>
-            <li>ตั้งชื่อบอท จะได้รับ <strong>HTTP API Token</strong></li>
-            <li>ค้นหาบอท <strong>@userinfobot</strong> แล้วกด Start จะได้รับตัวเลข <strong>Id</strong></li>
-            <li>นำ Bot Token และ Chat ID มากรอกด้านล่าง แล้วกดทดสอบส่งข้อความ</li>
+        {/* Guide Box */}
+        <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-100 text-xs text-sky-900 mb-4 space-y-1.5">
+          <p className="font-bold flex items-center gap-1.5">
+            <Bell className="w-3.5 h-3.5 text-sky-600" />
+            <span>Setup Instructions (3 Easy Steps):</span>
+          </p>
+          <ol className="list-decimal pl-4 space-y-1 text-[11px] text-sky-800">
+            <li>Open Telegram & search for <code className="bg-white/80 px-1 rounded font-bold">@BotFather</code> to create a bot and get your <b>Bot Token</b>.</li>
+            <li>Press <b>/start</b> with your bot, then search <code className="bg-white/80 px-1 rounded font-bold">@userinfobot</code> to find your <b>Chat ID</b>.</li>
+            <li>Enter your details below and click <b>Test Alert</b>!</li>
           </ol>
         </div>
 
-        {/* Input Form with text-base to prevent mobile safari zoom */}
-        <div className="space-y-3 mb-4">
+        <form onSubmit={handleSave} className="space-y-3.5">
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">
-              1. Telegram Bot Token:
+            <label className="block text-xs font-black text-gray-700 mb-1">
+              Telegram Bot Token
             </label>
             <input
-              type="text"
+              type="password"
               value={botToken}
               onChange={(e) => setBotToken(e.target.value)}
-              placeholder="เช่น 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-              className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-gray-50 border border-black/10 rounded-2xl text-[#111318] font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
+              placeholder="e.g. 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ..."
+              required
+              className="w-full px-4 py-2.5 bg-gray-50 border border-black/10 rounded-2xl text-xs font-mono font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">
-              2. Telegram Chat ID:
+            <label className="block text-xs font-black text-gray-700 mb-1">
+              Telegram Chat ID
             </label>
             <input
               type="text"
               value={chatId}
               onChange={(e) => setChatId(e.target.value)}
-              placeholder="เช่น 987654321"
-              className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-gray-50 border border-black/10 rounded-2xl text-[#111318] font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
+              placeholder="e.g. 987654321"
+              required
+              className="w-full px-4 py-2.5 bg-gray-50 border border-black/10 rounded-2xl text-xs font-mono font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
-        </div>
 
-        {/* Status result */}
-        {testResult && (
-          <div
-            className={`p-3 rounded-2xl mb-4 text-xs font-bold flex items-center gap-2 ${
-              testResult.success
-                ? 'bg-emerald-50 border border-emerald-300 text-emerald-800'
-                : 'bg-rose-50 border border-rose-300 text-rose-800'
-            }`}
-          >
-            {testResult.success ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-            <span>{testResult.message}</span>
+          <div>
+            <label className="block text-xs font-black text-gray-700 mb-1">
+              FPL Team ID (for tracking squad)
+            </label>
+            <input
+              type="number"
+              value={teamId}
+              onChange={(e) => setTeamId(e.target.value)}
+              placeholder="e.g. 123456"
+              className="w-full px-4 py-2.5 bg-gray-50 border border-black/10 rounded-2xl text-xs font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            />
           </div>
-        )}
 
-        {/* Action Buttons */}
-        <div className="flex gap-2 mb-5">
-          <button
-            onClick={handleTestNotification}
-            disabled={loading}
-            className="flex-1 py-3 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-full flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition disabled:opacity-50"
-          >
-            <Send className="w-3.5 h-3.5" />
-            <span>{loading ? 'กำลังส่ง...' : 'ทดสอบส่งข้อความ'}</span>
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-full transition"
-          >
-            บันทึก
-          </button>
-        </div>
-
-        {/* Automated Cron Alert URL */}
-        {botToken && chatId && (
-          <div className="p-3.5 bg-gray-50 border border-black/5 rounded-2xl text-xs">
-            <span className="font-bold text-gray-700 block mb-1">
-              🔗 URL สำหรับตั้งเวลาอัตโนมัติ (เช่น cron-job.org):
-            </span>
-            <p className="text-[11px] text-gray-500 mb-2">
-              นำ URL นี้ไปใส่ในเว็บตั้งเวลาฟรี ให้เรียกตอน 07:00 น. ทุกวัน
-            </p>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="text"
-                readOnly
-                value={cronUrl}
-                className="w-full px-2.5 py-1.5 bg-white border border-black/10 rounded-xl text-[11px] font-mono text-gray-600"
-              />
-              <button
-                onClick={copyCronUrl}
-                className="px-3 py-1.5 bg-[#111318] text-white font-bold text-xs rounded-full shrink-0 flex items-center gap-1"
-              >
-                <Copy className="w-3 h-3" />
-                <span>{copied ? 'ก๊อปแล้ว!' : 'ก๊อปปี้'}</span>
-              </button>
+          {/* Test Status Banner */}
+          {testResult && (
+            <div
+              className={`p-3 rounded-2xl text-xs font-bold flex items-start gap-2 ${
+                testResult.success
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border border-rose-200'
+              }`}
+            >
+              {testResult.success ? (
+                <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              )}
+              <span>{testResult.message}</span>
             </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="pt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={handleTestAlert}
+              disabled={isTesting || !botToken || !chatId}
+              className="flex-1 py-3 bg-sky-100 hover:bg-sky-200 text-sky-800 font-black text-xs rounded-full transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              {isTesting ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5 text-sky-600" />
+                  <span>Test Alert</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="submit"
+              className="flex-1 py-3 bg-[#38003c] text-white font-black text-xs rounded-full shadow-md hover:opacity-90 active:scale-95 transition flex items-center justify-center gap-1.5"
+            >
+              {isSaved ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Saved!</span>
+                </>
+              ) : (
+                <span>Save Settings</span>
+              )}
+            </button>
           </div>
-        )}
+        </form>
       </div>
     </div>
   );

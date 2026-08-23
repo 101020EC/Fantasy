@@ -1,21 +1,16 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthContext';
 import {
   Trophy,
-  Users,
   ArrowRightLeft,
   ArrowUp,
   ArrowDown,
   Minus,
-  Sparkles,
   Shield,
   Loader2,
-  Calendar,
-  Layers,
-  Activity,
   AlertCircle,
   CheckCircle2,
   Search,
@@ -25,7 +20,6 @@ import PlayerJersey from '@/components/pitch/PlayerJersey';
 
 export default function HistoryPage() {
   const { savedTeamId, setSavedTeamId } = useAuth();
-  const searchParams = useSearchParams();
   const router = useRouter();
 
   // Team & History State
@@ -118,11 +112,11 @@ export default function HistoryPage() {
 
     try {
       const res = await fetch(`/api/fpl/entry/${newTeamInput.trim()}`);
-      if (!res.ok) throw new Error('ไม่พบ Team ID นี้ในระบบ');
+      if (!res.ok) throw new Error('Team ID not found in FPL system');
       const data = await res.json();
       setPreviewNewEntry(data);
     } catch (err: any) {
-      setPreviewError(err.message || 'ไม่พบข้อมูลทีม');
+      setPreviewError(err.message || 'Unable to load team info');
     } finally {
       setPreviewLoading(false);
     }
@@ -161,8 +155,8 @@ export default function HistoryPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Avatar + Manager Name + Team Name */}
           <div className="flex items-center gap-3.5 sm:gap-4">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/90 text-amber-600 flex items-center justify-center text-3xl font-black shrink-0 shadow-lg">
-              👑
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden shrink-0 shadow-lg bg-white">
+              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
             </div>
 
             <div>
@@ -238,42 +232,42 @@ export default function HistoryPage() {
         {/* GW Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
           <div className="pastel-card p-4 text-center">
-            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">แต้ม GW {selectedGw}</span>
+            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">GW {selectedGw} Pts</span>
             <span className="text-2xl font-black text-[#38003c]">
               {currentGwStats?.points ?? '-'}
             </span>
           </div>
 
           <div className="pastel-card p-4 text-center">
-            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">แต้มสะสมรวม</span>
+            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Total Points</span>
             <span className="text-2xl font-black text-[#111318]">
               {currentGwStats?.total_points ?? '-'}
             </span>
           </div>
 
           <div className="pastel-card p-4 text-center">
-            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">อันดับ GW {selectedGw}</span>
+            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">GW {selectedGw} Rank</span>
             <span className="text-base font-black text-amber-700 truncate block">
               {currentGwStats?.rank ? `#${currentGwStats.rank.toLocaleString()}` : '-'}
             </span>
           </div>
 
           <div className="pastel-card p-4 text-center">
-            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">อันดับโลก (OR)</span>
+            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Overall Rank</span>
             <span className="text-base font-black text-[#111318] truncate block">
               {currentGwStats?.overall_rank ? `#${currentGwStats.overall_rank.toLocaleString()}` : '-'}
             </span>
           </div>
 
           <div className="pastel-card p-4 text-center">
-            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">การเปลี่ยนตัว</span>
+            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Transfers</span>
             <span className="text-base font-black text-purple-700">
               {currentGwStats ? `${currentGwStats.event_transfers} (${currentGwStats.event_transfers_cost}pt)` : '-'}
             </span>
           </div>
 
           <div className="pastel-card p-4 text-center">
-            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">แต้มตัวสำรอง</span>
+            <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Bench Points</span>
             <span className="text-base font-black text-emerald-600">
               {currentGwStats?.points_on_bench ?? '-'} pt
             </span>
@@ -289,9 +283,9 @@ export default function HistoryPage() {
               </div>
               <div>
                 <h3 className="text-base font-black text-[#111318]">
-                  รายชื่อนักเตะ 15 คน (Gameweek {selectedGw})
+                  Squad Lineup (Gameweek {selectedGw})
                 </h3>
-                <p className="text-xs text-gray-500">11 ตัวจริง และ 4 ตัวสำรอง</p>
+                <p className="text-xs text-gray-500">Starting XI &amp; Substitutes</p>
               </div>
             </div>
             {gwPicksLoading && <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />}
@@ -299,13 +293,13 @@ export default function HistoryPage() {
 
           {gwPicks.length === 0 ? (
             <div className="py-8 text-center text-xs text-gray-400">
-              ยังไม่มีข้อมูลการจัดตัวใน Gameweek {selectedGw}
+              No squad data available for Gameweek {selectedGw}
             </div>
           ) : (
             <div className="space-y-4">
               {/* Starters Grid */}
               <div>
-                <span className="text-xs font-black uppercase text-gray-400 mb-2 block">11 ตัวจริง</span>
+                <span className="text-xs font-black uppercase text-gray-400 mb-2 block">Starting XI</span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                   {starters.map((p) => {
                     const el = elementMap.get(p.element) as any;
@@ -345,7 +339,7 @@ export default function HistoryPage() {
 
               {/* Bench Grid */}
               <div className="pt-2 border-t border-black/5">
-                <span className="text-xs font-black uppercase text-gray-400 mb-2 block">ตัวสำรอง</span>
+                <span className="text-xs font-black uppercase text-gray-400 mb-2 block">Bench</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {bench.map((p, idx) => {
                     const el = elementMap.get(p.element) as any;
@@ -382,8 +376,8 @@ export default function HistoryPage() {
                 <Trophy className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-base font-black text-[#111318]">อันดับในมินิลีกต่างๆ</h3>
-                <p className="text-xs text-gray-500">สถานะคะแนนและอันดับในแต่ละมินิลีก</p>
+                <h3 className="text-base font-black text-[#111318]">Private Mini-Leagues</h3>
+                <p className="text-xs text-gray-500">Live standings in your private leagues</p>
               </div>
             </div>
           </div>
@@ -405,7 +399,7 @@ export default function HistoryPage() {
                   </div>
 
                   <div className="text-right shrink-0">
-                    <span className="text-sm font-black text-[#38003c] block">อันดับ #{rank}</span>
+                    <span className="text-sm font-black text-[#38003c] block">Rank #{rank}</span>
                     <div className="flex items-center justify-end gap-1 text-[10px] font-bold">
                       {rankDiff > 0 ? (
                         <span className="text-emerald-600 flex items-center font-black">
@@ -417,7 +411,7 @@ export default function HistoryPage() {
                         </span>
                       ) : (
                         <span className="text-gray-400 flex items-center font-medium">
-                          <Minus className="w-2.5 h-2.5" /> คงที่
+                          <Minus className="w-2.5 h-2.5" /> Same
                         </span>
                       )}
                     </div>
@@ -428,13 +422,13 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        {/* Transfers in this Gameweek if any */}
+        {/* Transfers in this Gameweek */}
         {gwTransfers.length > 0 && (
           <div className="pastel-card p-5 sm:p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-black/5">
               <ArrowRightLeft className="w-4 h-4 text-purple-600" />
               <h3 className="text-sm font-black text-[#111318]">
-                การย้ายตัวใน Gameweek {selectedGw} ({gwTransfers.length} รายการ)
+                Gameweek {selectedGw} Transfers ({gwTransfers.length})
               </h3>
             </div>
             <div className="space-y-2">
@@ -483,7 +477,7 @@ export default function HistoryPage() {
               </div>
               <div>
                 <h2 className="text-xl font-black text-[#111318]">Team Setup</h2>
-                <p className="text-xs text-gray-500">กรอก Team ID ที่ต้องการสลับเปลี่ยน</p>
+                <p className="text-xs text-gray-500">Enter a new FPL Team ID to track</p>
               </div>
             </div>
 
@@ -494,7 +488,7 @@ export default function HistoryPage() {
                   type="number"
                   value={newTeamInput}
                   onChange={(e) => setNewTeamInput(e.target.value)}
-                  placeholder="กรอกหมายเลข FPL Team ID (เช่น 12345)..."
+                  placeholder="Enter FPL Team ID (e.g. 12345)..."
                   required
                   className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-black/10 rounded-full text-base font-bold text-[#111318] focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
@@ -514,7 +508,7 @@ export default function HistoryPage() {
                   disabled={previewLoading}
                   className="w-full py-3 bg-[#111318] text-white font-black text-xs rounded-full shadow-md hover:opacity-90 active:scale-95 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  {previewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'ค้นหาทีม'}
+                  {previewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Find Team'}
                 </button>
               )}
             </form>
@@ -524,20 +518,20 @@ export default function HistoryPage() {
               <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3 mb-4 animate-fadeIn">
                 <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>พบข้อมูลทีมใหม่! ยืนยันการเปลี่ยนทีม:</span>
+                  <span>New team found! Confirm switch:</span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-white border border-amber-200/80 text-xs space-y-1">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">ทีมเดิม:</span>
+                    <span className="text-gray-500">Current Team:</span>
                     <span className="font-bold text-[#111318]">#{savedTeamId || '-'} ({entryData?.name || '-'})</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">ทีมใหม่:</span>
+                    <span className="text-gray-500">New Team:</span>
                     <span className="font-black text-[#38003c]">#{previewNewEntry.id} ({previewNewEntry.name})</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">ผู้จัดการ:</span>
+                    <span className="text-gray-500">Manager:</span>
                     <span className="font-bold text-gray-700">{previewNewEntry.player_first_name} {previewNewEntry.player_last_name}</span>
                   </div>
                 </div>
@@ -548,14 +542,14 @@ export default function HistoryPage() {
                     type="button"
                     className="flex-1 py-2.5 bg-[#38003c] text-white font-black text-xs rounded-full shadow-md active:scale-95 transition"
                   >
-                    ยืนยันเปลี่ยนเป็นทีมนี้
+                    Confirm Switch
                   </button>
                   <button
                     onClick={() => setPreviewNewEntry(null)}
                     type="button"
                     className="px-4 py-2.5 bg-gray-200 text-gray-700 font-bold text-xs rounded-full transition"
                   >
-                    ยกเลิก
+                    Cancel
                   </button>
                 </div>
               </div>

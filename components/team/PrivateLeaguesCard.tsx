@@ -110,7 +110,7 @@ export default function PrivateLeaguesCard({
 
   return (
     <div className="pastel-card p-5 sm:p-7 shadow-sm mb-6">
-      {/* Header with Private Mini-Leagues and Edit button right next to title */}
+      {/* Header with Private Mini-Leagues and Edit button */}
       <div className="flex items-center justify-between mb-4 pb-3 border-b border-black/5">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold shrink-0">
@@ -119,7 +119,7 @@ export default function PrivateLeaguesCard({
           <div className="flex items-center gap-2.5">
             <h3 className="text-base font-black text-[#111318]">Private Mini-Leagues</h3>
             
-            {/* Edit Button right next to title */}
+            {/* Edit Button */}
             <button
               onClick={() => setIsReorderMode(!isReorderMode)}
               type="button"
@@ -145,7 +145,7 @@ export default function PrivateLeaguesCard({
         </div>
 
         <span className="text-xs font-bold text-gray-400 font-mono">
-          {orderedLeagues.length} ลีก
+          {orderedLeagues.length} leagues
         </span>
       </div>
 
@@ -171,7 +171,7 @@ export default function PrivateLeaguesCard({
                 onClick={() => toggleExpand(league.id)}
                 className="w-full p-3.5 sm:p-4 flex items-center justify-between gap-2 text-left hover:bg-purple-50/50 transition cursor-pointer"
               >
-                {/* Left: Reorder arrows (Only show when Edit is clicked) + Name */}
+                {/* Left: Reorder arrows + Name */}
                 <div className="flex items-center gap-2.5 sm:gap-3 truncate">
                   {isReorderMode && (
                     <div className="flex flex-col gap-0.5 shrink-0 animate-fadeIn" onClick={(e) => e.stopPropagation()}>
@@ -179,7 +179,7 @@ export default function PrivateLeaguesCard({
                         onClick={(e) => moveLeagueUp(e, idx)}
                         disabled={idx === 0}
                         className="p-1 rounded-md bg-white border border-black/10 text-[#38003c] hover:bg-purple-100 disabled:opacity-25 transition shadow-sm"
-                        title="เลื่อนขึ้นบน"
+                        title="Move Up"
                       >
                         <ChevronUp className="w-3.5 h-3.5 stroke-[3]" />
                       </button>
@@ -187,7 +187,7 @@ export default function PrivateLeaguesCard({
                         onClick={(e) => moveLeagueDown(e, idx)}
                         disabled={idx === orderedLeagues.length - 1}
                         className="p-1 rounded-md bg-white border border-black/10 text-[#38003c] hover:bg-purple-100 disabled:opacity-25 transition shadow-sm"
-                        title="เลื่อนลงล่าง"
+                        title="Move Down"
                       >
                         <ChevronDown className="w-3.5 h-3.5 stroke-[3]" />
                       </button>
@@ -199,7 +199,7 @@ export default function PrivateLeaguesCard({
                       {league.name}
                     </span>
                     <span className="text-[10px] text-gray-400 font-mono">
-                      ID: {league.id}
+                      ID: {league.id} &bull; Tap to view standings
                     </span>
                   </div>
                 </div>
@@ -208,7 +208,7 @@ export default function PrivateLeaguesCard({
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right">
                     <span className="text-sm sm:text-base font-black text-[#38003c] block">
-                      อันดับ #{rank.toLocaleString()}
+                      Rank #{rank.toLocaleString()}
                     </span>
                     <div className="flex items-center justify-end gap-1 text-[10px] font-bold">
                       {rankDiff > 0 ? (
@@ -221,7 +221,7 @@ export default function PrivateLeaguesCard({
                         </span>
                       ) : (
                         <span className="text-gray-400 flex items-center">
-                          <Minus className="w-3 h-3" /> คงที่
+                          <Minus className="w-3 h-3" /> Same
                         </span>
                       )}
                     </div>
@@ -241,7 +241,7 @@ export default function PrivateLeaguesCard({
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-1.5 text-xs font-black text-[#38003c]">
                       <Users className="w-4 h-4 text-purple-600" />
-                      <span>ตารางคะแนนทุกคนในลีก {league.name}</span>
+                      <span>Standings for {league.name}</span>
                     </div>
                     {currentGw && (
                       <span className="text-[11px] font-bold text-gray-500">
@@ -253,21 +253,21 @@ export default function PrivateLeaguesCard({
                   {isLoading ? (
                     <div className="py-8 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
                       <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
-                      <span>กำลังโหลดตารางคะแนน...</span>
+                      <span>Loading standings...</span>
                     </div>
                   ) : standings.length === 0 ? (
                     <div className="py-4 text-center text-xs text-gray-400">
-                      ไม่พบข้อมูลตารางคะแนน
+                      No standings data found
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
                         <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black border-b border-black/5">
                           <tr>
-                            <th className="px-3 py-2">อันดับ</th>
-                            <th className="px-3 py-2">ทีม &amp; ผู้จัดการ</th>
-                            <th className="px-3 py-2 text-center">แต้ม GW</th>
-                            <th className="px-3 py-2 text-right">แต้มรวม</th>
+                            <th className="px-3 py-2">Rank</th>
+                            <th className="px-3 py-2">Team &amp; Manager</th>
+                            <th className="px-3 py-2 text-center">GW Pts</th>
+                            <th className="px-3 py-2 text-right">Total Pts</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-black/5">
@@ -303,7 +303,7 @@ export default function PrivateLeaguesCard({
                                     {member.entry_name}
                                     {isMe && (
                                       <span className="ml-1.5 px-1.5 py-0.2 bg-[#38003c] text-white text-[9px] rounded-full">
-                                        คุณ
+                                        You
                                       </span>
                                     )}
                                   </div>

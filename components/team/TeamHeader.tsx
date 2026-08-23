@@ -1,6 +1,6 @@
 import React from 'react';
 import { FPLEntry, FPLPicksResponse, FPLEvent } from '@/lib/types';
-import { Sparkles, User, Globe } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 interface TeamHeaderProps {
   entry: FPLEntry;
@@ -33,12 +33,12 @@ export default function TeamHeader({ entry, picksData, currentEvent }: TeamHeade
       {/* Top row: Manager Name, Team Name, ID */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-black/5">
         <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center text-xl font-bold shrink-0">
-            👑
+          <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 shadow-md">
+            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="px-2.5 py-0.5 rounded-full bg-[#38003c] text-white text-[10px] font-black">
+              <span className="px-2.5 py-0.5 rounded-full bg-[#38003c] text-white text-[10px] font-black font-mono">
                 ID #{entry.id}
               </span>
               {entry.player_region_name && (
@@ -76,7 +76,7 @@ export default function TeamHeader({ entry, picksData, currentEvent }: TeamHeade
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mt-5">
         {/* GW Points */}
         <div className="p-3.5 rounded-2xl bg-pastel-blueLight text-center">
-          <span className="text-[11px] text-gray-600 block mb-0.5 font-semibold">แต้ม GW นี้</span>
+          <span className="text-[11px] text-gray-600 block mb-0.5 font-semibold">GW Points</span>
           <span className="text-2xl font-black text-[#111318]">
             {gwPoints}
           </span>
@@ -84,7 +84,7 @@ export default function TeamHeader({ entry, picksData, currentEvent }: TeamHeade
 
         {/* Overall Points */}
         <div className="p-3.5 rounded-2xl bg-pastel-bg text-center">
-          <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">แต้มสะสมรวม</span>
+          <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Total Points</span>
           <span className="text-2xl font-black text-[#111318]">
             {totalPoints}
           </span>
@@ -92,7 +92,7 @@ export default function TeamHeader({ entry, picksData, currentEvent }: TeamHeade
 
         {/* Overall Rank */}
         <div className="p-3.5 rounded-2xl bg-pastel-bg text-center">
-          <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">อันดับโลก (OR)</span>
+          <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Overall Rank</span>
           <span className="text-base font-black text-[#111318] truncate block">
             {overallRank ? `#${overallRank.toLocaleString()}` : '-'}
           </span>
@@ -100,7 +100,7 @@ export default function TeamHeader({ entry, picksData, currentEvent }: TeamHeade
 
         {/* GW Rank */}
         <div className="p-3.5 rounded-2xl bg-pastel-bg text-center">
-          <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">อันดับ GW</span>
+          <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">GW Rank</span>
           <span className="text-base font-black text-pastel-orangeDark truncate block">
             {gwRank ? `#${gwRank.toLocaleString()}` : '-'}
           </span>
@@ -108,13 +108,13 @@ export default function TeamHeader({ entry, picksData, currentEvent }: TeamHeade
 
         {/* Squad Value */}
         <div className="p-3.5 rounded-2xl bg-pastel-bg text-center">
-          <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">มูลค่าทีม</span>
+          <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Squad Value</span>
           <span className="text-base font-black text-emerald-600">£{teamValue}m</span>
         </div>
 
         {/* Bank */}
         <div className="p-3.5 rounded-2xl bg-pastel-bg text-center">
-          <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">เงินคงเหลือ (ITB)</span>
+          <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">In The Bank</span>
           <span className="text-base font-black text-purple-600">£{bank}m</span>
         </div>
       </div>

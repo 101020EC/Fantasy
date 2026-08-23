@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { PriceAnalysis } from '@/lib/types';
-import { TrendingUp, TrendingDown, Search, ArrowUpDown, Sparkles, Flame, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, Search, ArrowUpDown } from 'lucide-react';
 import PlayerJersey from '../pitch/PlayerJersey';
 
 interface PriceMarketTableProps {
@@ -58,9 +58,9 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
 
   return (
     <div className="w-full">
-      {/* 2 Main Buttons in the Same Row: Green (Left) for Risers, Red (Right) for Fallers */}
+      {/* 2 Main Summary Cards in the Same Row */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
-        {/* Left: Green Button (ขึ้นคืนนี้) */}
+        {/* Left: Green Button (Rising Tonight) */}
         <button
           onClick={() => setFilterType(filterType === 'critical_risers' ? 'all' : 'critical_risers')}
           className={`p-4 sm:p-5 rounded-3xl text-left transition transform hover:scale-[1.01] active:scale-98 shadow-md flex items-center justify-between ${
@@ -72,10 +72,10 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
           <div>
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-emerald-100">
               <TrendingUp className="w-4 h-4" />
-              <span>ขึ้นคืนนี้</span>
+              <span>Rising Tonight</span>
             </div>
             <div className="text-2xl sm:text-4xl font-black mt-1">
-              {criticalRisersCount} <span className="text-sm font-normal opacity-90">คน</span>
+              {criticalRisersCount} <span className="text-sm font-normal opacity-90">players</span>
             </div>
           </div>
           <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-black text-lg">
@@ -83,22 +83,22 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
           </div>
         </button>
 
-        {/* Right: Red Button (ตกคืนนี้) with Red Icon */}
+        {/* Right: Red Button (Falling Tonight) */}
         <button
           onClick={() => setFilterType(filterType === 'critical_fallers' ? 'all' : 'critical_fallers')}
           className={`p-4 sm:p-5 rounded-3xl text-left transition transform hover:scale-[1.01] active:scale-98 shadow-md flex items-center justify-between ${
             filterType === 'critical_fallers'
               ? 'bg-rose-700 text-white ring-4 ring-rose-300'
-              : 'bg-rose-500 hover:bg-rose-600 text-white'
+              : 'bg-rose-600 hover:bg-rose-700 text-white'
           }`}
         >
           <div>
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-rose-100">
               <TrendingDown className="w-4 h-4" />
-              <span>ตกคืนนี้</span>
+              <span>Falling Tonight</span>
             </div>
             <div className="text-2xl sm:text-4xl font-black mt-1">
-              {criticalFallersCount} <span className="text-sm font-normal opacity-90">คน</span>
+              {criticalFallersCount} <span className="text-sm font-normal opacity-90">players</span>
             </div>
           </div>
           <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-black text-lg">
@@ -115,20 +115,20 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="ค้นหาชื่อนักเตะ หรือทีม..."
+            placeholder="Search player name or club..."
             className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-black/5 rounded-full text-base sm:text-xs text-[#111318] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600 transition shadow-inner"
           />
           <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
         </div>
 
-        {/* Row 1: Status Filters (ขึ้นคืนนี้, ตกคืนนี้, ขาขึ้น, ขาลง) */}
+        {/* Row 1: Status Filters */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-black/5">
-          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">สถานะ:</span>
+          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">Status:</span>
           {[
-            { key: 'critical_risers', label: '🚀 ขึ้นคืนนี้', activeClass: 'bg-emerald-600 text-white' },
-            { key: 'critical_fallers', label: '🔻 ตกคืนนี้', activeClass: 'bg-rose-600 text-white' },
-            { key: 'risers', label: '🟢 ขาขึ้น', activeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-            { key: 'fallers', label: '🔴 ขาลง', activeClass: 'bg-rose-100 text-rose-800 border-rose-300' },
+            { key: 'critical_risers', label: '🚀 Rising Tonight', activeClass: 'bg-emerald-600 text-white' },
+            { key: 'critical_fallers', label: '🔻 Falling Tonight', activeClass: 'bg-rose-600 text-white' },
+            { key: 'risers', label: '🟢 Trending Up', activeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+            { key: 'fallers', label: '🔴 Trending Down', activeClass: 'bg-rose-100 text-rose-800 border-rose-300' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -144,15 +144,15 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
           ))}
         </div>
 
-        {/* Row 2: Positions + All (ปุ่ม All อยู่ท้ายสุด) */}
+        {/* Row 2: Positions + All */}
         <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-black/5">
-          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">ตำแหน่ง:</span>
+          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">Position:</span>
           {[
             { key: 'gkp', label: 'GK' },
             { key: 'def', label: 'DEF' },
             { key: 'mid', label: 'MID' },
             { key: 'fwd', label: 'FWD' },
-            { key: 'all', label: 'All' }, // All at the very end
+            { key: 'all', label: 'All' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -175,14 +175,14 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
           <table className="w-full text-left text-sm text-gray-700">
             <thead className="text-[11px] uppercase bg-gray-50 text-gray-500 border-b border-black/5 font-black">
               <tr>
-                <th className="px-4 py-3.5">ผู้เล่น (Player)</th>
-                <th className="px-3 py-3.5">ตำแหน่ง</th>
+                <th className="px-4 py-3.5">Player</th>
+                <th className="px-3 py-3.5">Pos</th>
                 <th
                   onClick={() => handleSort('currentCost')}
                   className="px-3 py-3.5 cursor-pointer hover:text-[#111318]"
                 >
                   <div className="flex items-center gap-1">
-                    <span>ราคา</span>
+                    <span>Price</span>
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
@@ -191,7 +191,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                   className="px-3 py-3.5 cursor-pointer hover:text-[#111318]"
                 >
                   <div className="flex items-center gap-1">
-                    <span>ถือครอง %</span>
+                    <span>Owned %</span>
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
@@ -200,7 +200,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                   className="px-3 py-3.5 cursor-pointer hover:text-[#111318]"
                 >
                   <div className="flex items-center gap-1">
-                    <span>ยอดซื้อ/ขายสุทธิ</span>
+                    <span>Net Transfers</span>
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
@@ -209,11 +209,11 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                   className="px-3 py-3.5 cursor-pointer hover:text-[#111318]"
                 >
                   <div className="flex items-center gap-1">
-                    <span>ดัชนีราคา</span>
+                    <span>Target %</span>
                     <ArrowUpDown className="w-3 h-3 text-gray-400" />
                   </div>
                 </th>
-                <th className="px-4 py-3.5 text-right">สถานะ</th>
+                <th className="px-4 py-3.5 text-right">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5">
@@ -223,7 +223,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                     key={player.elementId}
                     className="hover:bg-purple-50/40 transition group"
                   >
-                    {/* Player Info with condition / injury under name & club */}
+                    {/* Player Info without duplicate short name */}
                     <td className="px-4 py-3">
                       <div className="flex items-start gap-3">
                         <PlayerJersey
@@ -235,8 +235,9 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                           <div className="font-bold text-[#111318] group-hover:text-purple-700 transition">
                             {player.webName}
                           </div>
+                          {/* Club Name Only (Removed short name abbreviation) */}
                           <div className="text-[11px] text-gray-500 font-semibold">
-                            {player.team.name} ({player.team.short_name})
+                            {player.team.name}
                           </div>
                           {player.news && (
                             <div className="text-[10px] text-rose-600 mt-1 flex items-start gap-1 font-medium leading-tight max-w-[220px] sm:max-w-md">
@@ -304,35 +305,35 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                       </div>
                     </td>
 
-                    {/* Status Pill with Red symbol for Fallers */}
+                    {/* Status Pill */}
                     <td className="px-4 py-3 text-right">
                       {player.status === 'rising_soon' && (
                         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-600 text-white text-[11px] font-bold animate-pulse-rise shadow-sm">
                           <TrendingUp className="w-3 h-3 text-white" />
-                          <span>ขึ้นคืนนี้</span>
+                          <span>Rising Tonight</span>
                         </span>
                       )}
                       {player.status === 'likely_riser' && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-semibold">
                           <TrendingUp className="w-3 h-3" />
-                          <span>ขาขึ้น</span>
+                          <span>Trending Up</span>
                         </span>
                       )}
                       {player.status === 'falling_soon' && (
                         <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-rose-600 text-white text-[11px] font-bold animate-pulse-fall shadow-sm">
                           <TrendingDown className="w-3 h-3 text-white" />
-                          <span>ตกคืนนี้</span>
+                          <span>Falling Tonight</span>
                         </span>
                       )}
                       {player.status === 'likely_faller' && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-semibold">
                           <TrendingDown className="w-3 h-3" />
-                          <span>ขาลง</span>
+                          <span>Trending Down</span>
                         </span>
                       )}
                       {player.status === 'stable' && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[11px]">
-                          <span>ปกติ</span>
+                          <span>Neutral</span>
                         </span>
                       )}
                     </td>
@@ -343,7 +344,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
           </table>
         </div>
         <div className="p-3 text-center text-xs text-gray-400 border-t border-black/5 bg-gray-50/50">
-          แสดง 100 อันดับแรกตามตัวกรองที่เลือก
+          Showing top 100 players matching selected filters
         </div>
       </div>
     </div>

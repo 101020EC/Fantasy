@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Database, Check, Save, Loader2, X, Trophy, AlertCircle } from 'lucide-react';
+import { Database, Check, Save, Loader2, X } from 'lucide-react';
 import { archiveSelectedLeaguesData } from '@/lib/firebase-service';
 import { useAuth } from '../AuthContext';
 
@@ -28,7 +28,7 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
     // Fetch via proxy API route to avoid browser CORS restrictions
     fetch(`/api/fpl/entry/${savedTeamId}`)
       .then((res) => {
-        if (!res.ok) throw new Error('ไม่สามารถโหลดข้อมูลลีกได้');
+        if (!res.ok) throw new Error('Unable to load leagues');
         return res.json();
       })
       .then((entry: any) => {
@@ -113,12 +113,12 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
       );
 
       if (res) {
-        setSyncStatus(`✓ บันทึก ${selectedLeagueIds.length} ลีกที่เลือกและข้อมูลทีมลง Firebase สำเร็จ!`);
+        setSyncStatus(`✓ Successfully backed up ${selectedLeagueIds.length} leagues to Firebase!`);
       } else {
-        setSyncStatus('บันทึกข้อมูลเรียบร้อย');
+        setSyncStatus('Backup complete.');
       }
     } catch (e: any) {
-      setSyncStatus(`บันทึกข้อมูลเรียบร้อย`);
+      setSyncStatus(`Backup complete.`);
     } finally {
       setIsSyncing(false);
       setTimeout(() => setSyncStatus(null), 4000);
@@ -142,8 +142,8 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
             <Database className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-[#111318]">Firebase Back Up</h2>
-            <p className="text-xs text-gray-500">เลือก Private Mini-Leagues ที่ต้องการ Sync บันทึกลง Firebase</p>
+            <h2 className="text-xl font-black text-[#111318]">Firebase Backup</h2>
+            <p className="text-xs text-gray-500">Select Private Mini-Leagues to sync with Firebase Firestore</p>
           </div>
         </div>
 
@@ -158,14 +158,14 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
         {/* Controls */}
         <div className="flex items-center justify-between gap-2 mb-3 px-1">
           <span className="text-xs font-black text-gray-600">
-            เลือกลีก ({selectedLeagueIds.length} / {leagues.length})
+            Selected Leagues ({selectedLeagueIds.length} / {leagues.length})
           </span>
           <div className="flex items-center gap-1.5 text-xs">
             <button
               onClick={selectedLeagueIds.length === leagues.length ? deselectAll : selectAll}
               className="px-2.5 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold transition"
             >
-              {selectedLeagueIds.length === leagues.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
+              {selectedLeagueIds.length === leagues.length ? 'Deselect All' : 'Select All'}
             </button>
           </div>
         </div>
@@ -174,11 +174,11 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
         {loading ? (
           <div className="py-12 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>กำลังโหลดรายชื่อมินิลีกทั้งหมด...</span>
+            <span>Loading mini-leagues...</span>
           </div>
         ) : leagues.length === 0 ? (
           <div className="py-8 text-center text-xs text-gray-400">
-            ไม่พบมินิลีกในทีมนี้ (Team #{savedTeamId})
+            No mini-leagues found for this team (Team #{savedTeamId})
           </div>
         ) : (
           <div className="space-y-2 mb-5 max-h-60 overflow-y-auto pr-1">
@@ -212,7 +212,7 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
                     </div>
                   </div>
                   <span className="text-xs font-black text-[#38003c] shrink-0">
-                    อันดับ #{league.entry_rank || league.entry_last_rank || 1}
+                    Rank #{league.entry_rank || league.entry_last_rank || 1}
                   </span>
                 </div>
               );
@@ -229,12 +229,12 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
           {isSyncing ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>กำลังบันทึกลง Firebase...</span>
+              <span>Saving to Firebase...</span>
             </>
           ) : (
             <>
               <Save className="w-4 h-4" />
-              <span>บันทึก {selectedLeagueIds.length} ลีกที่เลือกลง Firebase</span>
+              <span>Backup {selectedLeagueIds.length} Leagues to Firebase</span>
             </>
           )}
         </button>

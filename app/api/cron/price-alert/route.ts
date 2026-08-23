@@ -40,26 +40,26 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. Format Telegram Message
-    let text = `🚨 *FPL Radar Pro: แจ้งเตือนราคานักเตะคืนนี้!*\n\n`;
-    text += `👤 *ทีม:* ${entry.name} (#${entry.id})\n\n`;
+    let text = `🚨 *Fanta: Price Alert Warning!*\n\n`;
+    text += `👤 *Team:* ${entry.name} (#${entry.id})\n\n`;
 
     if (risers.length > 0) {
-      text += `🚀 *เสี่ยงราคาขึ้น (£+0.1m):*\n`;
+      text += `🚀 *Expected Price Rise (£+0.1m):*\n`;
       risers.forEach((p) => {
-        text += `• *${p.element.web_name}* (${p.team.short_name}) | ซื้อสุทธิ +${p.priceAnalysis.netTransfers.toLocaleString()}\n`;
+        text += `• *${p.element.web_name}* (${p.team.short_name}) | Net: +${p.priceAnalysis.netTransfers.toLocaleString()}\n`;
       });
       text += `\n`;
     }
 
     if (fallers.length > 0) {
-      text += `⚠️ *เสี่ยงราคาตก (£-0.1m):*\n`;
+      text += `🔻 *At Risk of Price Fall (£-0.1m):*\n`;
       fallers.forEach((p) => {
-        text += `• *${p.element.web_name}* (${p.team.short_name}) | ขายสุทธิ ${p.priceAnalysis.netTransfers.toLocaleString()}\n`;
+        text += `• *${p.element.web_name}* (${p.team.short_name}) | Net: ${p.priceAnalysis.netTransfers.toLocaleString()}\n`;
       });
       text += `\n`;
     }
 
-    text += `⏰ _ราคาจะปรับช่วง ~07:30 - 08:30 น. ตามเวลาไทย_`;
+    text += `⏰ _Prices update daily ~01:30 - 02:30 UTC_`;
 
     // 4. Send to Telegram
     const telegramRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
@@ -72,12 +72,18 @@ export async function GET(req: NextRequest) {
       }),
     });
 
-    const result = await telegramRes.json();
+    const tgData = await telegramRes.json();
 
-    return NextResponse.json({ success: true, telegramResult: result });
-  } catch (error: any) {
+    return NextResponse.json({
+      success: true,
+      alertSent: true,
+      risersCount: risers.length,
+      fallersCount: fallers.length,
+      telegramResponse: tgData,
+    });
+  } catch (err: any) {
     return NextResponse.json(
-      { error: error.message || 'Failed to send price alert cron' },
+      { error: err.message || 'Error executing cron job' },
       { status: 500 }
     );
   }

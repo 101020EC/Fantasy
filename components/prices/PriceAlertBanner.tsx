@@ -1,139 +1,73 @@
 'use client';
 
 import React from 'react';
-import { TeamSquadPlayer } from '@/lib/types';
-import { TrendingUp, TrendingDown, CheckCircle2 } from 'lucide-react';
+import { PriceAnalysis } from '@/lib/types';
+import { TrendingUp, TrendingDown, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
 interface PriceAlertBannerProps {
-  players: TeamSquadPlayer[];
+  risers: PriceAnalysis[];
+  fallers: PriceAnalysis[];
 }
 
-export default function PriceAlertBanner({ players }: PriceAlertBannerProps) {
-  const criticalFallers = players.filter((p) => p.priceAnalysis.status === 'falling_soon');
-  const likelyFallers = players.filter((p) => p.priceAnalysis.status === 'likely_faller');
-  
-  const criticalRisers = players.filter((p) => p.priceAnalysis.status === 'rising_soon');
-  const likelyRisers = players.filter((p) => p.priceAnalysis.status === 'likely_riser');
-
-  const totalAlerts = criticalFallers.length + criticalRisers.length;
-
-  if (totalAlerts === 0 && likelyFallers.length === 0 && likelyRisers.length === 0) {
-    return (
-      <div className="mb-6 p-4 rounded-3xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="w-5 h-5" />
-          </div>
-          <div>
-            <h4 className="text-sm font-black text-emerald-900">Today Safe</h4>
-            <p className="text-xs text-gray-500">ไม่มีนักเตะในทีมที่มีความเสี่ยงราคาตกหรือขึ้นในคืนนี้</p>
-          </div>
-        </div>
-        <Link
-          href="/prices"
-          className="text-xs font-bold text-emerald-700 hover:underline hidden sm:block"
-        >
-          ดูตลาดรวม &rarr;
-        </Link>
-      </div>
-    );
+export default function PriceAlertBanner({ risers, fallers }: PriceAlertBannerProps) {
+  if (risers.length === 0 && fallers.length === 0) {
+    return null;
   }
 
   return (
-    <div className="mb-6 p-5 rounded-3xl pastel-card shadow-sm">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3.5 border-b border-black/5">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-pastel-purple text-[#111318] flex items-center justify-center font-bold">
-            ⚡
+    <div className="w-full space-y-2 mb-4">
+      {/* Fallers Alert */}
+      {fallers.length > 0 && (
+        <div className="p-4 rounded-3xl bg-rose-50 border border-rose-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-rose-600 text-white rounded-2xl shrink-0 mt-0.5 shadow-md">
+              <TrendingDown className="w-5 h-5 stroke-[2.5]" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-rose-900">
+                Squad Warning: {fallers.length} player{fallers.length > 1 ? 's' : ''} at risk of falling tonight!
+              </h4>
+              <p className="text-xs text-rose-700 mt-0.5 font-medium">
+                {fallers.map((f) => f.webName).join(', ')}
+              </p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-sm sm:text-base font-black text-[#111318] flex items-center gap-2">
-              <span>เรดาร์ราคานักเตะในทีมคุณ</span>
-              {totalAlerts > 0 && (
-                <span className="px-2.5 py-0.5 text-[10px] font-black rounded-full bg-rose-600 text-white">
-                  {totalAlerts} คนเสี่ยงปรับราคาคืนนี้
-                </span>
-              )}
-            </h3>
-            <p className="text-[11px] text-gray-500">
-              การปรับราคารอบดึกประจำวัน (~07:30 - 08:30 น. ตามเวลาไทย)
-            </p>
-          </div>
+          <Link
+            href="/prices"
+            className="self-start sm:self-center px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-full transition shadow-sm flex items-center gap-1.5 active:scale-95"
+          >
+            <span>View Market</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
+      )}
 
-        <Link
-          href="/prices"
-          className="self-start sm:self-auto px-3.5 py-1.5 rounded-full bg-[#38003c] text-white font-bold text-xs hover:opacity-90 transition"
-        >
-          เปิดตลาดราคา &rarr;
-        </Link>
-      </div>
-
-      {/* Grid of Alerts in Current Squad */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-        {/* Risers Box */}
-        {(criticalRisers.length > 0 || likelyRisers.length > 0) && (
-          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
-            <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs mb-2">
-              <TrendingUp className="w-4 h-4 text-emerald-600" />
-              <span>มีโอกาสราคาขึ้น (£+0.1m):</span>
+      {/* Risers Alert */}
+      {risers.length > 0 && (
+        <div className="p-4 rounded-3xl bg-emerald-50 border border-emerald-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-start gap-3">
+            <div className="p-2 bg-emerald-500 text-white rounded-2xl shrink-0 mt-0.5 shadow-md">
+              <TrendingUp className="w-5 h-5 stroke-[2.5]" />
             </div>
-            <div className="flex flex-wrap gap-1.5">
-              {criticalRisers.map((p) => (
-                <div
-                  key={p.element.id}
-                  className="px-3 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 animate-pulse-rise shadow-sm"
-                >
-                  <span>{p.element.web_name}</span>
-                  <span className="text-[10px] text-emerald-200 font-mono">(+{p.priceAnalysis.netTransfers.toLocaleString()})</span>
-                  <span className="text-[9px] px-1.5 py-0.2 bg-white text-emerald-800 rounded-full font-black">ขึ้นคืนนี้!</span>
-                </div>
-              ))}
-              {likelyRisers.map((p) => (
-                <div
-                  key={p.element.id}
-                  className="px-2.5 py-0.5 rounded-full bg-white text-gray-800 border border-black/5 text-xs font-medium flex items-center gap-1"
-                >
-                  <span>{p.element.web_name}</span>
-                  <span className="text-[10px] text-gray-500 font-mono">(+{p.priceAnalysis.netTransfers.toLocaleString()})</span>
-                </div>
-              ))}
+            <div>
+              <h4 className="text-sm font-black text-emerald-900">
+                Squad Alert: {risers.length} player{risers.length > 1 ? 's' : ''} expected to rise tonight!
+              </h4>
+              <p className="text-xs text-emerald-700 mt-0.5 font-medium">
+                {risers.map((r) => r.webName).join(', ')}
+              </p>
             </div>
           </div>
-        )}
-
-        {/* Fallers Box with Red Styling */}
-        {(criticalFallers.length > 0 || likelyFallers.length > 0) && (
-          <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200">
-            <div className="flex items-center gap-2 text-rose-800 font-bold text-xs mb-2">
-              <TrendingDown className="w-4 h-4 text-rose-600" />
-              <span>เสี่ยงราคาลด (£-0.1m):</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {criticalFallers.map((p) => (
-                <div
-                  key={p.element.id}
-                  className="px-3 py-1 rounded-full bg-rose-600 text-white text-xs font-bold flex items-center gap-1.5 animate-pulse-fall shadow-sm"
-                >
-                  <span>{p.element.web_name}</span>
-                  <span className="text-[10px] text-rose-200 font-mono">({p.priceAnalysis.netTransfers.toLocaleString()})</span>
-                  <span className="text-[9px] px-1.5 py-0.2 bg-white text-rose-800 rounded-full font-black">ตกคืนนี้!</span>
-                </div>
-              ))}
-              {likelyFallers.map((p) => (
-                <div
-                  key={p.element.id}
-                  className="px-2.5 py-0.5 rounded-full bg-white text-gray-800 border border-black/5 text-xs font-medium flex items-center gap-1"
-                >
-                  <span>{p.element.web_name}</span>
-                  <span className="text-[10px] text-gray-500 font-mono">({p.priceAnalysis.netTransfers.toLocaleString()})</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+          <Link
+            href="/prices"
+            className="self-start sm:self-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-full transition shadow-sm flex items-center gap-1.5 active:scale-95"
+          >
+            <span>View Market</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
