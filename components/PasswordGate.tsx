@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
-import { Lock, KeyRound, ArrowRight, Shield, Sparkles, AlertCircle } from 'lucide-react';
+import { Lock, KeyRound, ArrowRight, Sparkles, AlertCircle } from 'lucide-react';
 
 export default function PasswordGate({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, login } = useAuth();
@@ -26,35 +26,35 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
 
   if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-pastel-bg dark:bg-[#0e1118] text-[#111318]">
-        <div className="animate-spin w-8 h-8 border-4 border-pastel-blue border-t-transparent rounded-full" />
+      <div className="min-h-screen flex items-center justify-center bg-pastel-bg text-[#111318]">
+        <div className="animate-spin w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full" />
       </div>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center p-4 bg-pastel-bg dark:bg-[#0e1118] text-[#111318] dark:text-white">
-        <div className="w-full max-w-md p-6 sm:p-8 rounded-4xl bg-white dark:bg-[#171a23] border border-black/5 dark:border-white/10 shadow-2xl text-center">
+      <div className="min-h-screen w-full flex items-center justify-center p-4 bg-pastel-bg text-[#111318]">
+        <div className="w-full max-w-md p-6 sm:p-8 rounded-4xl bg-white border border-black/5 shadow-2xl text-center">
           {/* Logo & Lock Avatar */}
           <div className="relative w-16 h-16 mx-auto mb-5">
             <div className="w-full h-full rounded-full bg-gradient-to-tr from-pastel-blue via-pastel-purple to-pastel-orange p-1 shadow-md">
-              <div className="w-full h-full bg-white dark:bg-[#111318] rounded-full flex items-center justify-center">
-                <Lock className="w-6 h-6 text-[#111318] dark:text-pastel-blue animate-pulse" />
+              <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
+                <Lock className="w-6 h-6 text-[#38003c] animate-pulse" />
               </div>
             </div>
           </div>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pastel-blueLight dark:bg-pastel-darkPill text-[#111318] dark:text-white text-xs font-black mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-pastel-blueDark dark:text-pastel-blue" />
-            <span>FPL RADAR PRO</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pastel-blueLight text-[#38003c] text-xs font-black mb-3">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>FANTA PRO</span>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111318] dark:text-white mb-2">
+          <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111318] mb-2">
             ใส่รหัสผ่านเพื่อเข้าใช้งาน
           </h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-6">
-            เว็บแอปพลิเคชันนี้มีการป้องกันด้วยรหัสผ่าน
+          <p className="text-xs text-gray-500 mb-6">
+            เว็บแอปพลิเคชัน Fanta มีการป้องกันด้วยรหัสผ่าน
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-3.5">
@@ -75,7 +75,7 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
             </div>
 
             {error && (
-              <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/80 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300 text-xs font-bold flex items-center justify-center gap-2">
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center justify-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง</span>
               </div>
@@ -83,15 +83,15 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-[#111318] dark:bg-white text-white dark:text-[#111318] font-black text-sm rounded-full shadow-lg hover:opacity-90 active:scale-95 transition flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-[#38003c] text-white font-black text-sm rounded-full shadow-lg hover:opacity-90 active:scale-95 transition flex items-center justify-center gap-2"
             >
               <span>เข้าสู่ระบบ</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
 
-          <div className="mt-6 pt-4 border-t border-black/5 dark:border-white/10 text-xs text-gray-400">
-            <p>รหัสผ่านทดสอบ: <code className="text-[#111318] dark:text-pastel-blue font-bold bg-gray-100 dark:bg-pastel-darkPill px-2 py-0.5 rounded-full">fpl</code></p>
+          <div className="mt-6 pt-4 border-t border-black/5 text-xs text-gray-400">
+            <p>รหัสผ่านทดสอบ: <code className="text-[#38003c] font-bold bg-gray-100 px-2 py-0.5 rounded-full">fpl</code></p>
           </div>
         </div>
       </div>

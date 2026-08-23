@@ -3,7 +3,7 @@ import { fetchFPLBootstrap } from '@/lib/fpl-api';
 import { getAllMarketPriceAnalyses } from '@/lib/price-calculator';
 import { PriceAnalysis } from '@/lib/types';
 import PriceMarketTable from '@/components/prices/PriceMarketTable';
-import { TrendingUp, Clock, AlertCircle } from 'lucide-react';
+import { Clock, AlertCircle } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,37 +24,34 @@ export default async function PricesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
-      {/* Top Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pastel-blueLight dark:bg-pastel-darkPill text-xs font-black text-[#111318] dark:text-white mb-2">
-            <span>MARKET RADAR</span>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pastel-blueLight text-xs font-black text-[#38003c] mb-1.5">
+            <span>MARKET</span>
             {currentEventName && <span>• {currentEventName}</span>}
           </div>
-          <h1 className="text-2xl sm:text-4xl font-black text-[#111318] dark:text-white tracking-tight">
-            FPL Price Changes Radar
+          <h1 className="text-2xl sm:text-4xl font-black text-[#111318] tracking-tight">
+            Price Change
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-            วิเคราะห์และคาดการณ์การปรับราคาขึ้น/ลงของนักเตะ Premier League ประจำวัน
-          </p>
         </div>
 
         {/* Change Time Box */}
-        <div className="p-3.5 rounded-2xl bg-white dark:bg-[#171a23] border border-black/5 dark:border-white/10 flex items-center gap-3 text-xs shadow-sm self-start sm:self-auto">
-          <div className="w-8 h-8 rounded-full bg-pastel-orangeLight text-pastel-orangeDark flex items-center justify-center font-bold">
+        <div className="p-3 rounded-2xl bg-white border border-black/5 flex items-center gap-2.5 text-xs shadow-sm self-start sm:self-auto">
+          <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
             <Clock className="w-4 h-4" />
           </div>
           <div>
-            <span className="font-bold text-[#111318] dark:text-white block">เวลาปรับราคา:</span>
-            <span className="text-gray-500 dark:text-gray-400 text-[11px]">~07:30 - 08:30 น. (เวลาไทย)</span>
+            <span className="font-bold text-[#111318] block">เวลาปรับราคา:</span>
+            <span className="text-gray-500 text-[11px]">~07:30 - 08:30 น. (เวลาไทย)</span>
           </div>
         </div>
       </div>
 
       {errorMsg ? (
-        <div className="p-6 rounded-3xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-center text-rose-800 dark:text-rose-200">
-          <AlertCircle className="w-8 h-8 mx-auto mb-2 text-rose-600 dark:text-rose-400" />
+        <div className="p-6 rounded-3xl bg-rose-50 border border-rose-200 text-center text-rose-800">
+          <AlertCircle className="w-8 h-8 mx-auto mb-2 text-rose-600" />
           <p className="font-bold text-base">{errorMsg}</p>
         </div>
       ) : (

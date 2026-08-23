@@ -5,9 +5,9 @@ import { AuthProvider } from '@/components/AuthContext';
 import PasswordGate from '@/components/PasswordGate';
 
 export const metadata: Metadata = {
-  title: 'FPL Radar | Fantasy Premier League Team & Price Radar',
+  title: 'Fanta | Fantasy Premier League Team & Price Radar',
   description:
-    'เว็บแอปดูทีม Fantasy Premier League ผ่าน Team ID พร้อมเรดาร์แจ้งเตือนราคานักเตะขึ้นหรือลงคืนนี้',
+    'Fanta - เว็บแอปดูทีม Fantasy Premier League ผ่าน Team ID พร้อมเรดาร์แจ้งเตือนราคานักเตะขึ้นหรือลงคืนนี้',
 };
 
 export const viewport: Viewport = {

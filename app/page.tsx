@@ -71,7 +71,7 @@ export default function HomePage() {
 
           <div className="max-w-md">
             <h1 className="text-2xl sm:text-4xl font-black text-[#111318] tracking-tight leading-tight mb-2">
-              FPL Radar 2024/25
+              Fanta 2024/25
             </h1>
             <p className="text-xs sm:text-sm text-[#111318]/80 font-medium mb-6 leading-relaxed">
               วิเคราะห์ 11 ตัวจริง พร้อมระบบเรดาร์ดักราคานักเตะขึ้น-ลงรอบดึก และบันทึกข้อมูลย้อนหลังลง Firebase

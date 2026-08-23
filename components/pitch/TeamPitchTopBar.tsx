@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { FPLEntry, TeamSquadPlayer } from '@/lib/types';
-import { CheckCircle2, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, TrendingDown } from 'lucide-react';
 import Link from 'next/link';
 
 interface TeamPitchTopBarProps {
@@ -47,10 +47,10 @@ export default function TeamPitchTopBar({ entry, gameweek, players }: TeamPitchT
         ) : (
           <Link
             href="/prices"
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#111318] text-white text-xs font-black shadow-sm animate-pulse-fall"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600 text-white text-xs font-black shadow-sm animate-pulse-fall"
             title="มีนักเตะในทีมเสี่ยงปรับราคาคืนนี้"
           >
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+            <TrendingDown className="w-3.5 h-3.5 text-white" />
             <span>{totalAlerts} คนเสี่ยงปรับราคาคืนนี้</span>
           </Link>
         )}
