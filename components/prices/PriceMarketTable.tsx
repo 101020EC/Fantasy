@@ -139,7 +139,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="ค้นหาชื่อนักเตะ หรือทีม..."
-            className="w-full pl-9 pr-4 py-2 bg-pastel-bg dark:bg-[#12151c] border border-black/5 dark:border-white/10 rounded-full text-xs text-[#111318] dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pastel-blue"
+            className="w-full pl-9 pr-4 py-2 bg-pastel-bg border border-black/5 rounded-full text-base sm:text-xs text-[#111318] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600"
           />
           <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3.5 top-2.5" />
         </div>

@@ -69,7 +69,7 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
                 placeholder="กรอกรหัสผ่าน..."
                 autoFocus
                 required
-                className="w-full pl-11 pr-4 py-3.5 bg-pastel-bg dark:bg-[#12151c] border border-black/5 dark:border-white/10 rounded-full text-[#111318] dark:text-white font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pastel-blue text-sm transition"
+                className="w-full pl-11 pr-4 py-3.5 bg-pastel-bg border border-black/10 rounded-full text-[#111318] font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600 text-base transition"
               />
               <KeyRound className="w-4 h-4 text-gray-400 absolute left-4 top-4" />
             </div>

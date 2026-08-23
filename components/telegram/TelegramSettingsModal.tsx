@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Send, Bell, CheckCircle2, AlertCircle, HelpCircle, X, ExternalLink, ShieldCheck, Copy } from 'lucide-react';
+import { Send, CheckCircle2, AlertCircle, HelpCircle, X, Copy } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 
 interface TelegramSettingsModalProps {
@@ -89,45 +89,45 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#150020] border border-purple-200 dark:border-purple-800 rounded-3xl p-6 shadow-2xl text-gray-900 dark:text-white max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
+      <div className="relative w-full max-w-lg bg-white border border-black/5 rounded-4xl p-6 sm:p-7 shadow-2xl text-[#111318] max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-full bg-gray-100 dark:bg-white/5 transition"
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-[#111318] rounded-full bg-gray-100 transition"
         >
           <X className="w-5 h-5" />
         </button>
 
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-11 h-11 rounded-2xl bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-300 dark:border-sky-500/30">
+          <div className="w-11 h-11 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center">
             <Send className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-gray-900 dark:text-white">ตั้งค่าแจ้งเตือนผ่าน Telegram</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">รับข้อความเตือนเมื่อนักเตะในทีมเสี่ยงราคาตก/ขึ้นคืนนี้</p>
+            <h2 className="text-xl font-black text-[#111318]">ตั้งค่าแจ้งเตือน Telegram</h2>
+            <p className="text-xs text-gray-500">รับข้อความเตือนเมื่อนักเตะในทีมเสี่ยงราคาตก/ขึ้นคืนนี้</p>
           </div>
         </div>
 
         {/* Instructions */}
-        <div className="p-4 rounded-2xl bg-sky-50 dark:bg-purple-950/50 border border-sky-200 dark:border-purple-800/60 mb-5 text-xs text-gray-700 dark:text-gray-300 space-y-2">
-          <div className="font-bold text-sky-900 dark:text-fpl-cyan flex items-center gap-1.5 mb-1">
-            <HelpCircle className="w-4 h-4 text-sky-600 dark:text-fpl-cyan" />
-            <span>ขั้นตอนการสร้าง Telegram Bot (ทำครั้งเดียว):</span>
+        <div className="p-4 rounded-2xl bg-sky-50 border border-sky-200/80 mb-5 text-xs text-gray-700 space-y-1.5">
+          <div className="font-bold text-sky-900 flex items-center gap-1.5 mb-1">
+            <HelpCircle className="w-4 h-4 text-sky-600" />
+            <span>ขั้นตอนการสร้าง Telegram Bot:</span>
           </div>
           <ol className="list-decimal list-inside space-y-1 pl-1">
-            <li>เปิดแอป Telegram ค้นหาบอท <strong>@BotFather</strong> แล้วพิมพ์ <code className="bg-sky-200 dark:bg-purple-900 px-1 py-0.5 rounded font-mono">/newbot</code></li>
-            <li>ตั้งชื่อบอท จะได้รับ <strong>HTTP API Token</strong> (Bot Token)</li>
-            <li>ค้นหาบอท <strong>@userinfobot</strong> แล้วกด Start จะได้รับตัวเลข <strong>Id</strong> (Chat ID) ของคุณ</li>
+            <li>เปิดแอป Telegram ค้นหาบอท <strong>@BotFather</strong> แล้วพิมพ์ <code className="bg-sky-200 px-1 py-0.5 rounded font-mono">/newbot</code></li>
+            <li>ตั้งชื่อบอท จะได้รับ <strong>HTTP API Token</strong></li>
+            <li>ค้นหาบอท <strong>@userinfobot</strong> แล้วกด Start จะได้รับตัวเลข <strong>Id</strong></li>
             <li>นำ Bot Token และ Chat ID มากรอกด้านล่าง แล้วกดทดสอบส่งข้อความ</li>
           </ol>
         </div>
 
-        {/* Input Form */}
+        {/* Input Form with text-base to prevent mobile safari zoom */}
         <div className="space-y-3 mb-4">
           <div>
-            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs font-bold text-gray-700 mb-1">
               1. Telegram Bot Token:
             </label>
             <input
@@ -135,12 +135,12 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
               value={botToken}
               onChange={(e) => setBotToken(e.target.value)}
               placeholder="เช่น 123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
-              className="w-full px-3 py-2 text-xs bg-gray-50 dark:bg-purple-950/80 border border-purple-200 dark:border-purple-800 rounded-xl text-gray-900 dark:text-white font-mono focus:outline-none focus:border-sky-500"
+              className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-gray-50 border border-black/10 rounded-2xl text-[#111318] font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-xs font-bold text-gray-700 mb-1">
               2. Telegram Chat ID:
             </label>
             <input
@@ -148,7 +148,7 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
               value={chatId}
               onChange={(e) => setChatId(e.target.value)}
               placeholder="เช่น 987654321"
-              className="w-full px-3 py-2 text-xs bg-gray-50 dark:bg-purple-950/80 border border-purple-200 dark:border-purple-800 rounded-xl text-gray-900 dark:text-white font-mono focus:outline-none focus:border-sky-500"
+              className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-gray-50 border border-black/10 rounded-2xl text-[#111318] font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
         </div>
@@ -156,10 +156,10 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
         {/* Status result */}
         {testResult && (
           <div
-            className={`p-3 rounded-xl mb-4 text-xs font-bold flex items-center gap-2 ${
+            className={`p-3 rounded-2xl mb-4 text-xs font-bold flex items-center gap-2 ${
               testResult.success
-                ? 'bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300'
-                : 'bg-rose-50 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300'
+                ? 'bg-emerald-50 border border-emerald-300 text-emerald-800'
+                : 'bg-rose-50 border border-rose-300 text-rose-800'
             }`}
           >
             {testResult.success ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
@@ -172,14 +172,14 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
           <button
             onClick={handleTestNotification}
             disabled={loading}
-            className="flex-1 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-blue-600 hover:to-sky-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition disabled:opacity-50"
+            className="flex-1 py-3 bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs rounded-full flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition disabled:opacity-50"
           >
             <Send className="w-3.5 h-3.5" />
             <span>{loading ? 'กำลังส่ง...' : 'ทดสอบส่งข้อความ'}</span>
           </button>
           <button
             onClick={handleSave}
-            className="px-5 py-2.5 bg-gray-200 dark:bg-purple-900 hover:bg-gray-300 dark:hover:bg-purple-800 text-gray-800 dark:text-white font-bold text-xs rounded-xl transition"
+            className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-full transition"
           >
             บันทึก
           </button>
@@ -187,23 +187,23 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
 
         {/* Automated Cron Alert URL */}
         {botToken && chatId && (
-          <div className="p-3 bg-gray-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 rounded-xl text-xs">
-            <span className="font-bold text-gray-700 dark:text-gray-300 block mb-1">
-              🔗 URL สำหรับตั้งเวลาอัตโนมัติ (Vercel Cron / Cron-job.org):
+          <div className="p-3.5 bg-gray-50 border border-black/5 rounded-2xl text-xs">
+            <span className="font-bold text-gray-700 block mb-1">
+              🔗 URL สำหรับตั้งเวลาอัตโนมัติ (เช่น cron-job.org):
             </span>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">
-              สามารถนำ URL นี้ไปใส่ในเว็บตั้งเวลาฟรี เช่น <strong>cron-job.org</strong> ให้เรียกยิงตอน 07:00 น. ทุกวัน
+            <p className="text-[11px] text-gray-500 mb-2">
+              นำ URL นี้ไปใส่ในเว็บตั้งเวลาฟรี ให้เรียกตอน 07:00 น. ทุกวัน
             </p>
             <div className="flex items-center gap-1.5">
               <input
                 type="text"
                 readOnly
                 value={cronUrl}
-                className="w-full px-2 py-1.5 bg-white dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg text-[10px] font-mono text-gray-600 dark:text-gray-300"
+                className="w-full px-2.5 py-1.5 bg-white border border-black/10 rounded-xl text-[11px] font-mono text-gray-600"
               />
               <button
                 onClick={copyCronUrl}
-                className="px-2.5 py-1.5 bg-purple-900 dark:bg-fpl-green text-white dark:text-fpl-purple font-bold text-xs rounded-lg shrink-0 flex items-center gap-1"
+                className="px-3 py-1.5 bg-[#111318] text-white font-bold text-xs rounded-full shrink-0 flex items-center gap-1"
               >
                 <Copy className="w-3 h-3" />
                 <span>{copied ? 'ก๊อปแล้ว!' : 'ก๊อปปี้'}</span>

@@ -50,7 +50,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
     const squadPlayers = buildSquadPlayers(picksData.picks, bootstrap, fixtures, targetGw);
 
     return (
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5">
         <TeamSaveTracker
           id={id}
           name={entry.name}
@@ -58,71 +58,71 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
         />
 
         {/* Action Controls & GW Navigation Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 mb-6">
+        <div className="flex items-center justify-between gap-2">
           <TeamActionButtons />
 
           {/* Gameweek Selector */}
-          <div className="flex items-center gap-1.5 bg-white dark:bg-purple-950/80 border border-purple-200 dark:border-purple-800 rounded-xl p-1 shadow-sm">
+          <div className="flex items-center gap-1 bg-white border border-black/5 rounded-full p-1 shadow-sm">
             {targetGw > 1 ? (
               <Link
                 href={`/team/${id}?gw=${targetGw - 1}`}
-                className="p-1.5 hover:bg-purple-50 dark:hover:bg-purple-900 rounded-lg text-gray-600 dark:text-gray-300 hover:text-purple-900 dark:hover:text-white transition"
+                className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition"
                 title="GW ก่อนหน้า"
               >
                 <ChevronLeft className="w-4 h-4" />
               </Link>
             ) : (
-              <span className="p-1.5 text-gray-300 dark:text-gray-600 cursor-not-allowed">
+              <span className="p-1.5 text-gray-300 cursor-not-allowed">
                 <ChevronLeft className="w-4 h-4" />
               </span>
             )}
 
-            <span className="text-xs sm:text-sm font-black text-gray-900 dark:text-white px-2">
+            <span className="text-xs sm:text-sm font-black text-[#111318] px-2.5">
               GW {targetGw}
             </span>
 
             {targetGw < 38 ? (
               <Link
                 href={`/team/${id}?gw=${targetGw + 1}`}
-                className="p-1.5 hover:bg-purple-50 dark:hover:bg-purple-900 rounded-lg text-gray-600 dark:text-gray-300 hover:text-purple-900 dark:hover:text-white transition"
+                className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition"
                 title="GW ถัดไป"
               >
                 <ChevronRight className="w-4 h-4" />
               </Link>
             ) : (
-              <span className="p-1.5 text-gray-300 dark:text-gray-600 cursor-not-allowed">
+              <span className="p-1.5 text-gray-300 cursor-not-allowed">
                 <ChevronRight className="w-4 h-4" />
               </span>
             )}
           </div>
         </div>
 
-        {/* Team Overview Header */}
-        <TeamHeader entry={entry} picksData={picksData} currentEvent={activeEvent} />
-
-        {/* Price Alerts Radar for this Squad */}
-        <PriceAlertBanner players={squadPlayers} />
-
-        {/* Football Pitch View */}
-        <div className="mt-4">
+        {/* 1. Football Pitch View FIRST (รูปแผนการเล่นและผังสนามขึ้นมาก่อน) */}
+        <div>
           <FootballPitch players={squadPlayers} />
         </div>
+
+        {/* 2. Price Alerts Radar for this Squad */}
+        <PriceAlertBanner players={squadPlayers} />
+
+        {/* 3. Team Overview Header & Stats (แต้ม GW นี้, แต้มสะสม, อันดับโลก อยู่ด้านล่าง) */}
+        <TeamHeader entry={entry} picksData={picksData} currentEvent={activeEvent} />
       </div>
     );
   } catch (err: any) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
-        <div className="p-8 rounded-3xl bg-white dark:bg-purple-950/80 border border-rose-300 dark:border-rose-800/80 shadow-2xl">
-          <div className="w-16 h-16 rounded-2xl bg-rose-100 dark:bg-rose-950/80 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto mb-4 border border-rose-300 dark:border-rose-800">
-            <AlertCircle className="w-8 h-8" />
+      <div className="max-w-md mx-auto px-4 py-16 text-center">
+        <div className="p-8 rounded-4xl bg-white border border-rose-200 shadow-xl">
+          <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-7 h-7" />
           </div>
-          <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">ไม่สามารถดึงข้อมูลทีมได้</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+          <h2 className="text-xl font-black text-[#111318] mb-2">ไม่พบข้อมูลทีม</h2>
+          <p className="text-xs text-gray-500 mb-6">
             {err.message || `ไม่พบข้อมูลสำหรับ FPL Team ID: ${id} กรุณาตรวจสอบหมายเลขทีมอีกครั้ง`}
           </p>
           <Link
             href="/?switch=true"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-900 dark:bg-gradient-to-r dark:from-fpl-green dark:to-emerald-400 text-white dark:text-fpl-purple font-black text-sm hover:scale-105 transition-transform shadow-lg"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#111318] text-white font-black text-xs hover:scale-105 transition-transform shadow-md"
           >
             <Search className="w-4 h-4" />
             <span>กลับไปหน้าค้นหา Team ID</span>
