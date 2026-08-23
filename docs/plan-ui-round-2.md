@@ -325,3 +325,43 @@ sections of one message.
 Batch 1 absorbs the four commits already on `market-ui-tweaks`.
 
 _Interview complete — all 16 items resolved._
+
+---
+
+### Finding while building batch 3: only rebuild finalised gameweeks
+
+The first reconstruction run disagreed with FPL. For one manager,
+`entry/{id}/history/` reported 94 points while the league table reported 93,
+with `event_transfers_cost: 0` — so not a transfer hit.
+
+The cause is that GW1 is still open: `finished: false, data_checked: false`.
+While a gameweek is live FPL is still awarding bonus and correcting stats, and
+its endpoints disagree with each other in the meantime.
+
+The ranking logic was right; the input was provisional. `reconstructLeagueHistory`
+now takes the set of `data_checked` gameweeks and skips everything else, so the
+archive never stores a number FPL is about to change.
+
+Consequence worth expecting: **right now nothing is reconstructable**, because
+no gameweek has been finalised yet this season. The button will report zero
+gameweeks written until GW1 closes.
+
+---
+
+## Batch 3 built — verification notes
+
+**Reconstruction matches FPL exactly.** Run against the user's own 9-member
+private league, the rebuilt GW1 table reproduced every total and every rank
+including the tie — two managers on 23 sharing #5, the next rank skipping to
+#7. The only difference is the display order *within* a tie, since FPL's
+`rank_sort` is not derivable from public data; the shared `rank` is.
+
+**A Firestore query bug, found by the status panel reading zero.**
+`leagues/{id}` documents are never written — only their `gameweeks`
+subcollection is — and Firestore treats such a parent as a *missing document*
+that `collection('leagues').get()` does not return. Two leagues existed and
+the panel reported none. Fixed with `listDocuments()`, which returns
+references regardless.
+
+**Nothing is reconstructable yet, by design.** No gameweek is `data_checked`
+this season, so the button reports zero written and says why.
