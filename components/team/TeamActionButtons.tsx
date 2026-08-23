@@ -10,26 +10,25 @@ export default function TeamActionButtons() {
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <Link
-          href="/?switch=true"
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-white dark:bg-[#171a23] border border-black/5 dark:border-white/10 text-xs font-bold text-[#111318] dark:text-white hover:bg-pastel-bg shadow-sm transition"
-          title="เปลี่ยนไปดูทีมอื่น"
-        >
-          <ArrowRightLeft className="w-3.5 h-3.5" />
-          <span>เปลี่ยนทีม</span>
-        </Link>
+      {/* Left: Change Team (Icon-only logo) */}
+      <Link
+        href="/?switch=true"
+        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white border border-black/5 text-[#38003c] hover:bg-purple-50 shadow-sm flex items-center justify-center transition active:scale-95 shrink-0"
+        title="เปลี่ยนทีม (Change Team)"
+      >
+        <ArrowRightLeft className="w-4 h-4 stroke-[2.5]" />
+      </Link>
 
-        <button
-          onClick={() => setIsTelegramOpen(true)}
-          type="button"
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-sky-100 dark:bg-sky-500/20 border border-sky-200 dark:border-sky-500/30 text-xs font-bold text-sky-800 dark:text-sky-300 hover:bg-sky-200 shadow-sm transition"
-          title="ตั้งค่าแจ้งเตือนเข้า Telegram"
-        >
-          <Send className="w-3.5 h-3.5" />
-          <span>Telegram</span>
-        </button>
-      </div>
+      {/* Center: Telegram Button */}
+      <button
+        onClick={() => setIsTelegramOpen(true)}
+        type="button"
+        className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-sky-100 border border-sky-200 text-xs font-black text-sky-800 hover:bg-sky-200 shadow-sm transition active:scale-95 shrink-0"
+        title="ตั้งค่าแจ้งเตือน Telegram"
+      >
+        <Send className="w-3.5 h-3.5 text-sky-600" />
+        <span>Telegram</span>
+      </button>
 
       <TelegramSettingsModal
         isOpen={isTelegramOpen}

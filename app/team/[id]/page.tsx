@@ -12,7 +12,6 @@ import { FPLPicksResponse } from '@/lib/types';
 import TeamHeader from '@/components/team/TeamHeader';
 import FootballPitch from '@/components/pitch/FootballPitch';
 import TeamPitchTopBar from '@/components/pitch/TeamPitchTopBar';
-import PriceAlertBanner from '@/components/prices/PriceAlertBanner';
 import PrivateLeaguesCard from '@/components/team/PrivateLeaguesCard';
 import TeamSaveTracker from './TeamSaveTracker';
 import TeamActionButtons from '@/components/team/TeamActionButtons';
@@ -69,7 +68,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
     const squadPlayers = buildSquadPlayers(picksData.picks || [], bootstrap, fixtures, activeGw);
 
     return (
-      <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
         <TeamSaveTracker
           id={id}
           entry={entry}
@@ -77,11 +76,12 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           gw={activeGw}
         />
 
-        {/* Action Controls & GW Navigation Bar */}
+        {/* Action Controls: Left (Change Team Icon) | Center (Telegram) | Right (GW Navigation) */}
         <div className="flex items-center justify-between gap-2">
+          {/* Change Team Icon & Telegram Center Button */}
           <TeamActionButtons />
 
-          {/* Gameweek Selector */}
+          {/* Gameweek Selector on the Right */}
           <div className="flex items-center gap-1 bg-white border border-black/5 rounded-full p-1 shadow-sm">
             {activeGw > 1 ? (
               <Link
@@ -117,11 +117,12 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           </div>
         </div>
 
-        {/* 1. Today Safe / Price Alert Header on top of Pitch with Team Name, ID, Manager Name, GW */}
+        {/* 1. Today Safe / Price Alert Header on top of Pitch (Decorated with Avatar + Team + Manager + GW) */}
         <TeamPitchTopBar
           entry={entry}
           gameweek={activeGw}
           players={squadPlayers}
+          activeChip={picksData?.active_chip}
         />
 
         {/* 2. Football Pitch View */}
@@ -129,19 +130,14 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           <FootballPitch players={squadPlayers} />
         </div>
 
-        {/* 3. Detailed Price Alert Banner if any alerts */}
-        <PriceAlertBanner players={squadPlayers} />
-
-        {/* 4. Team Overview Header & Stats (แต้ม GW นี้, แต้มสะสม, อันดับโลก อยู่ด้านล่าง) */}
+        {/* 3. Team Overview Header & Stats (แต้ม GW นี้, แต้มสะสม, อันดับโลก อยู่ด้านล่าง) */}
         <TeamHeader entry={entry} picksData={picksData} currentEvent={activeEvent} />
 
-        {/* 5. Private Leagues Card (ข้อมูล Private Leagues พร้อมปุ่มเลือกบันทึกลง Firebase) */}
+        {/* 4. Private Leagues Card (จัดลำดับขึ้นลงได้ตามต้องการ) */}
         <PrivateLeaguesCard
           leagues={(entry as any).leagues?.classic || []}
           currentTeamId={id}
           currentGw={activeGw}
-          entry={entry}
-          picksData={picksData}
         />
       </div>
     );

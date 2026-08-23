@@ -3,16 +3,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Bell, LogOut, Send, SlidersHorizontal, Shield, Activity, TrendingUp, ChevronDown, Edit3 } from 'lucide-react';
+import { Search, Menu, LogOut, Send, Shield, Activity, TrendingUp, Database, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import TelegramSettingsModal from './telegram/TelegramSettingsModal';
+import FirebaseBackupModal from './team/FirebaseBackupModal';
 import PremierLeagueLogo from './PremierLeagueLogo';
 
 export default function Navbar() {
   const [quickTeamId, setQuickTeamId] = useState('');
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
-  const [isEditMenuOpen, setIsEditMenuOpen] = useState(false);
-  const editMenuRef = useRef<HTMLDivElement>(null);
+  const [isBackupOpen, setIsBackupOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { savedTeamId, logout } = useAuth();
 
@@ -27,8 +29,8 @@ export default function Navbar() {
   // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (editMenuRef.current && !editMenuRef.current.contains(event.target as Node)) {
-        setIsEditMenuOpen(false);
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -46,7 +48,7 @@ export default function Navbar() {
             <PremierLeagueLogo className="w-9 h-9 sm:w-10 sm:h-10 drop-shadow-sm group-hover:scale-105 transition-transform" />
             <div>
               <div className="flex items-center gap-1">
-                <span className="text-lg sm:text-xl font-black text-[#38003c] tracking-tight">
+                <span className="text-xl sm:text-2xl font-black text-[#38003c] tracking-tight">
                   Fanta
                 </span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 ml-0.5"></span>
@@ -72,108 +74,108 @@ export default function Navbar() {
             </button>
           </form>
 
-          {/* Right Action Icons & Edit Dropdown */}
-          <div className="flex items-center gap-2">
-            {/* Telegram Alert Quick Button */}
+          {/* Right Action: Clean Hamburger Menu Button only */}
+          <div className="flex items-center gap-2 relative" ref={menuRef}>
             <button
-              onClick={() => setIsTelegramOpen(true)}
-              className="w-9 h-9 rounded-full bg-gray-50 hover:bg-sky-50 border border-black/5 text-gray-700 hover:text-sky-600 shadow-sm flex items-center justify-center transition hover:scale-105 active:scale-95"
-              title="ตั้งค่าแจ้งเตือน Telegram"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className={`w-10 h-10 rounded-full border border-black/10 flex items-center justify-center transition active:scale-90 shadow-sm ${
+                isMenuOpen
+                  ? 'bg-[#38003c] text-white'
+                  : 'bg-gray-50 hover:bg-purple-50 text-[#38003c]'
+              }`}
+              title="Menu"
               type="button"
             >
-              <Send className="w-4 h-4" />
+              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5 stroke-[2.5]" />}
             </button>
 
-            {/* Notification Bell with indicator */}
-            <Link
-              href="/prices"
-              className="relative w-9 h-9 rounded-full bg-gray-50 hover:bg-purple-50 border border-black/5 text-gray-700 hover:text-[#38003c] shadow-sm flex items-center justify-center transition hover:scale-105 active:scale-95"
-              title="กระดานราคาปรับคืนนี้"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 border border-white"></span>
-            </Link>
+            {/* Dropdown Menu with colorful large items */}
+            {isMenuOpen && (
+              <div className="absolute right-0 top-12 w-52 bg-white border border-black/10 rounded-3xl shadow-2xl p-2 z-50 animate-fadeIn space-y-1">
+                {/* Team */}
+                <Link
+                  href={teamUrl}
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-[#38003c] hover:bg-purple-50 transition"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 text-[#38003c] flex items-center justify-center">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                  <span>Team</span>
+                </Link>
 
-            {/* Edit Menu Dropdown Button (1. Team 2. Radar 3. Market 4. Alert 5. Log out) */}
-            <div className="relative" ref={editMenuRef}>
-              <button
-                onClick={() => setIsEditMenuOpen(!isEditMenuOpen)}
-                className={`px-3 py-1.5 rounded-full border border-black/10 text-xs font-black flex items-center gap-1.5 shadow-sm transition active:scale-95 ${
-                  isEditMenuOpen
-                    ? 'bg-[#38003c] text-white'
-                    : 'bg-gray-50 hover:bg-purple-50 text-[#38003c]'
-                }`}
-                title="เมนู Edit"
-                type="button"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Edit</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isEditMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
+                {/* Radar (links to Home page) */}
+                <Link
+                  href="/?switch=true"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-emerald-800 hover:bg-emerald-50 transition"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <span>Radar</span>
+                </Link>
 
-              {/* Dropdown Menu */}
-              {isEditMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border border-black/10 rounded-2xl shadow-2xl py-2 z-50 animate-fadeIn">
-                  {/* 1. Team */}
-                  <Link
-                    href={teamUrl}
-                    onClick={() => setIsEditMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-purple-50 hover:text-[#38003c] transition"
-                  >
-                    <Shield className="w-4 h-4 text-purple-600" />
-                    <span>1. Team</span>
-                  </Link>
+                {/* Market */}
+                <Link
+                  href="/prices"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-orange-800 hover:bg-orange-50 transition"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <span>Market</span>
+                </Link>
 
-                  {/* 2. Radar */}
-                  <Link
-                    href={teamUrl}
-                    onClick={() => setIsEditMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-purple-50 hover:text-[#38003c] transition"
-                  >
-                    <Activity className="w-4 h-4 text-emerald-600" />
-                    <span>2. Radar</span>
-                  </Link>
+                {/* Alert */}
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsTelegramOpen(true);
+                  }}
+                  type="button"
+                  className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-sky-800 hover:bg-sky-50 transition text-left"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center">
+                    <Send className="w-4 h-4" />
+                  </div>
+                  <span>Alert</span>
+                </button>
 
-                  {/* 3. Market */}
-                  <Link
-                    href="/prices"
-                    onClick={() => setIsEditMenuOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-purple-50 hover:text-[#38003c] transition"
-                  >
-                    <TrendingUp className="w-4 h-4 text-pastel-orangeDark" />
-                    <span>3. Market</span>
-                  </Link>
+                {/* Back Up */}
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsBackupOpen(true);
+                  }}
+                  type="button"
+                  className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-indigo-800 hover:bg-indigo-50 transition text-left"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                    <Database className="w-4 h-4" />
+                  </div>
+                  <span>Back Up</span>
+                </button>
 
-                  {/* 4. Alert */}
-                  <button
-                    onClick={() => {
-                      setIsEditMenuOpen(false);
-                      setIsTelegramOpen(true);
-                    }}
-                    type="button"
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-gray-700 hover:bg-sky-50 hover:text-sky-600 transition text-left"
-                  >
-                    <Send className="w-4 h-4 text-sky-500" />
-                    <span>4. Alert</span>
-                  </button>
+                <div className="my-1 border-t border-black/5" />
 
-                  <div className="my-1 border-t border-black/5" />
-
-                  {/* 5. Log out */}
-                  <button
-                    onClick={() => {
-                      setIsEditMenuOpen(false);
-                      logout();
-                    }}
-                    type="button"
-                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 transition text-left"
-                  >
-                    <LogOut className="w-4 h-4 text-rose-600" />
-                    <span>5. Log out</span>
-                  </button>
-                </div>
-              )}
-            </div>
+                {/* Log out */}
+                <button
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    logout();
+                  }}
+                  type="button"
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-black text-rose-700 hover:bg-rose-50 transition text-left"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                    <LogOut className="w-4 h-4" />
+                  </div>
+                  <span>Log out</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
@@ -181,6 +183,11 @@ export default function Navbar() {
       <TelegramSettingsModal
         isOpen={isTelegramOpen}
         onClose={() => setIsTelegramOpen(false)}
+      />
+
+      <FirebaseBackupModal
+        isOpen={isBackupOpen}
+        onClose={() => setIsBackupOpen(false)}
       />
     </>
   );

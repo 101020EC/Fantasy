@@ -54,13 +54,22 @@ body {
   border-radius: 28px;
 }
 
-/* Pitch Styling */
+/* Modern Pastel Pitch Styling */
 .pastel-pitch {
-  background: linear-gradient(180deg, #1b6338 0%, #144f2b 50%, #0e3b1f 100%);
+  background: linear-gradient(180deg, #2b7a4b 0%, #22663d 50%, #1b5331 100%);
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.03) 0px,
+      rgba(255, 255, 255, 0.03) 40px,
+      transparent 40px,
+      transparent 80px
+    ),
+    linear-gradient(180deg, #2e8250 0%, #23693f 50%, #19522f 100%);
   position: relative;
   border-radius: 32px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 10px 30px -5px rgba(20, 79, 43, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 32px -4px rgba(25, 82, 47, 0.25);
 }
 
 /* Pulse animation */

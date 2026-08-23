@@ -1,112 +1,83 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Trophy, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronUp, Users, Database, Check, CheckSquare, Square, Save, Loader2, Sparkles } from 'lucide-react';
+import { Trophy, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronUp, Users, ArrowUpDown } from 'lucide-react';
 import { fetchFPLLeagueStandings } from '@/lib/fpl-api';
-import { archiveSelectedLeaguesData } from '@/lib/firebase-service';
 
 interface PrivateLeaguesCardProps {
   leagues: any[];
   currentTeamId?: string | number;
   currentGw?: number;
-  entry?: any;
-  picksData?: any;
 }
 
 export default function PrivateLeaguesCard({
   leagues = [],
   currentTeamId,
   currentGw = 1,
-  entry,
-  picksData,
 }: PrivateLeaguesCardProps) {
   const [expandedLeagueId, setExpandedLeagueId] = useState<number | null>(null);
   const [standingsMap, setStandingsMap] = useState<Record<number, any[]>>({});
   const [loadingMap, setLoadingMap] = useState<Record<number, boolean>>({});
-  const [selectedLeagueIds, setSelectedLeagueIds] = useState<number[]>([]);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [orderedLeagues, setOrderedLeagues] = useState<any[]>([]);
 
   // Filter classic leagues
   const privateLeagues = leagues.filter((l) => l.league_type === 'x' || l.rank_type !== 'g');
-  const displayLeagues = privateLeagues.length > 0 ? privateLeagues : leagues.slice(0, 10);
+  const baseLeagues = privateLeagues.length > 0 ? privateLeagues : leagues.slice(0, 10);
 
-  // Load saved selected leagues from localStorage on mount
+  // Initialize and load custom order from localStorage
   useEffect(() => {
-    if (!currentTeamId) return;
-    try {
-      const saved = localStorage.getItem(`fpl_selected_leagues_${currentTeamId}`);
-      if (saved) {
-        setSelectedLeagueIds(JSON.parse(saved));
-      } else {
-        // Default: select the first 2 private leagues
-        const defaults = displayLeagues.slice(0, 2).map((l) => Number(l.id));
-        setSelectedLeagueIds(defaults);
-        localStorage.setItem(`fpl_selected_leagues_${currentTeamId}`, JSON.stringify(defaults));
-      }
-    } catch (e) {}
-  }, [currentTeamId, displayLeagues.length]);
-
-  const toggleSelectLeague = (e: React.MouseEvent, leagueId: number) => {
-    e.stopPropagation();
-    const idNum = Number(leagueId);
-    let updated: number[];
-    if (selectedLeagueIds.includes(idNum)) {
-      updated = selectedLeagueIds.filter((id) => id !== idNum);
-    } else {
-      updated = [...selectedLeagueIds, idNum];
-    }
-    setSelectedLeagueIds(updated);
-    if (currentTeamId) {
-      localStorage.setItem(`fpl_selected_leagues_${currentTeamId}`, JSON.stringify(updated));
-    }
-  };
-
-  const selectAll = () => {
-    const allIds = displayLeagues.map((l) => Number(l.id));
-    setSelectedLeagueIds(allIds);
-    if (currentTeamId) {
-      localStorage.setItem(`fpl_selected_leagues_${currentTeamId}`, JSON.stringify(allIds));
-    }
-  };
-
-  const deselectAll = () => {
-    setSelectedLeagueIds([]);
-    if (currentTeamId) {
-      localStorage.setItem(`fpl_selected_leagues_${currentTeamId}`, JSON.stringify([]));
-    }
-  };
-
-  const handleSyncToFirebase = async () => {
-    if (!currentTeamId || !entry || !picksData) {
-      setSyncStatus('กำลังบันทึก...');
-      setTimeout(() => setSyncStatus('✓ บันทึกสำเร็จ!'), 1000);
+    if (!currentTeamId || baseLeagues.length === 0) {
+      setOrderedLeagues(baseLeagues);
       return;
     }
 
-    setIsSyncing(true);
-    setSyncStatus(null);
-
     try {
-      const res = await archiveSelectedLeaguesData(
-        currentTeamId,
-        entry,
-        picksData,
-        currentGw,
-        selectedLeagueIds
-      );
-
-      if (res) {
-        setSyncStatus(`✓ บันทึก ${selectedLeagueIds.length} ลีกที่เลือกสำเร็จ!`);
+      const savedOrder = localStorage.getItem(`fpl_leagues_order_${currentTeamId}`);
+      if (savedOrder) {
+        const orderIds: number[] = JSON.parse(savedOrder);
+        const sorted = [...baseLeagues].sort((a, b) => {
+          const idxA = orderIds.indexOf(Number(a.id));
+          const idxB = orderIds.indexOf(Number(b.id));
+          if (idxA === -1 && idxB === -1) return 0;
+          if (idxA === -1) return 1;
+          if (idxB === -1) return -1;
+          return idxA - idxB;
+        });
+        setOrderedLeagues(sorted);
       } else {
-        setSyncStatus('บันทึกข้อมูลเรียบร้อย');
+        setOrderedLeagues(baseLeagues);
       }
-    } catch (err: any) {
-      setSyncStatus('บันทึกเรียบร้อย');
-    } finally {
-      setIsSyncing(false);
-      setTimeout(() => setSyncStatus(null), 4000);
+    } catch (e) {
+      setOrderedLeagues(baseLeagues);
     }
+  }, [currentTeamId, leagues.length]);
+
+  const saveOrder = (newList: any[]) => {
+    setOrderedLeagues(newList);
+    if (currentTeamId) {
+      const orderIds = newList.map((l) => Number(l.id));
+      localStorage.setItem(`fpl_leagues_order_${currentTeamId}`, JSON.stringify(orderIds));
+    }
+  };
+
+  const moveLeagueUp = (e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    if (index <= 0) return;
+    const updated = [...orderedLeagues];
+    const temp = updated[index];
+    updated[index] = updated[index - 1];
+    updated[index - 1] = temp;
+    saveOrder(updated);
+  };
+
+  const moveLeagueDown = (e: React.MouseEvent, index: number) => {
+    e.stopPropagation();
+    if (index >= orderedLeagues.length - 1) return;
+    const updated = [...orderedLeagues];
+    const temp = updated[index];
+    updated[index] = updated[index + 1];
+    updated[index + 1] = temp;
+    saveOrder(updated);
   };
 
   const toggleExpand = async (leagueId: number) => {
@@ -132,135 +103,86 @@ export default function PrivateLeaguesCard({
     }
   };
 
-  if (!displayLeagues || displayLeagues.length === 0) return null;
+  if (!orderedLeagues || orderedLeagues.length === 0) return null;
 
   return (
     <div className="pastel-card p-5 sm:p-7 shadow-sm mb-6">
-      {/* Top Header Row with Selection Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-black/5">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-black/5">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold shrink-0">
             <Trophy className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-black text-[#111318] flex items-center gap-2">
-              <span>Private Mini-Leagues</span>
-              <span className="px-2 py-0.5 rounded-full bg-purple-100 text-[#38003c] text-[10px] font-black">
-                เลือกบันทึก {selectedLeagueIds.length} / {displayLeagues.length} ลีก
-              </span>
-            </h3>
+            <h3 className="text-base font-black text-[#111318]">Private Mini-Leagues</h3>
             <p className="text-xs text-gray-500">
-              กดปุ่ม <span className="font-bold text-[#38003c]">[✓ บันทึกลง Firebase]</span> ในลีกที่คุณต้องการบันทึกอันดับ
+              กดลูกศร ▲ ▼ เพื่อจัดลำดับมินิลีกที่ต้องการให้อยู่บนสุด
             </p>
           </div>
         </div>
-
-        {/* Sync Button & Select All controls */}
-        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-          <button
-            onClick={selectedLeagueIds.length === displayLeagues.length ? deselectAll : selectAll}
-            className="text-xs font-bold text-gray-500 hover:text-[#38003c] px-2.5 py-1 rounded-full bg-gray-100 hover:bg-gray-200 transition"
-            type="button"
-          >
-            {selectedLeagueIds.length === displayLeagues.length ? 'ยกเลิกทั้งหมด' : 'เลือกทั้งหมด'}
-          </button>
-
-          <button
-            onClick={handleSyncToFirebase}
-            disabled={isSyncing}
-            type="button"
-            className="px-4 py-2 rounded-full bg-[#38003c] hover:bg-[#520258] text-white font-black text-xs shadow-md active:scale-95 transition flex items-center gap-1.5 disabled:opacity-50"
-          >
-            {isSyncing ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>กำลังบันทึก...</span>
-              </>
-            ) : (
-              <>
-                <Save className="w-3.5 h-3.5" />
-                <span>บันทึกลง Firebase</span>
-              </>
-            )}
-          </button>
-        </div>
+        <span className="text-xs font-bold text-gray-400 font-mono">
+          {orderedLeagues.length} ลีก
+        </span>
       </div>
 
-      {/* Sync feedback notification if any */}
-      {syncStatus && (
-        <div className="mb-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-fadeIn">
-          <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>{syncStatus}</span>
-        </div>
-      )}
-
-      {/* List of Leagues */}
+      {/* List of Reorderable Leagues */}
       <div className="space-y-3">
-        {displayLeagues.map((league: any) => {
+        {orderedLeagues.map((league: any, idx: number) => {
           const rank = league.entry_rank || 1;
           const lastRank = league.entry_last_rank || rank;
           const rankDiff = lastRank - rank;
           const isExpanded = expandedLeagueId === league.id;
-          const isSelected = selectedLeagueIds.includes(Number(league.id));
           const standings = standingsMap[league.id] || [];
           const isLoading = loadingMap[league.id];
 
           return (
             <div
               key={league.id}
-              className={`rounded-2xl border transition overflow-hidden ${
-                isSelected
-                  ? 'border-purple-300 bg-purple-50/40 shadow-sm ring-1 ring-purple-200'
-                  : 'border-black/5 bg-gray-50/80'
-              }`}
+              className="rounded-2xl border border-black/5 bg-gray-50/80 overflow-hidden transition"
             >
               {/* League Header */}
               <div
                 onClick={() => toggleExpand(league.id)}
-                className="w-full p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left hover:bg-purple-50/60 transition cursor-pointer"
+                className="w-full p-3.5 sm:p-4 flex items-center justify-between gap-2 text-left hover:bg-purple-50/50 transition cursor-pointer"
               >
-                {/* Left: Checkbox Selector + League Name */}
-                <div className="flex items-center gap-3 truncate">
-                  <button
-                    onClick={(e) => toggleSelectLeague(e, league.id)}
-                    type="button"
-                    className={`px-3 py-1.5 rounded-full text-xs font-black flex items-center gap-1.5 transition shadow-sm ${
-                      isSelected
-                        ? 'bg-[#38003c] text-white hover:bg-rose-600'
-                        : 'bg-white border border-gray-300 text-gray-600 hover:border-purple-500 hover:text-purple-600'
-                    }`}
-                    title={isSelected ? 'คลิกเพื่อยกเลิกการบันทึก' : 'คลิกเพื่อเลือกบันทึกลง Firebase'}
-                  >
-                    {isSelected ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        <span>บันทึกใน Firebase</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-sm leading-none">+</span>
-                        <span>เลือกบันทึก</span>
-                      </>
-                    )}
-                  </button>
+                {/* Left: Reorder Up/Down buttons + Name */}
+                <div className="flex items-center gap-2 sm:gap-3 truncate">
+                  <div className="flex flex-col gap-0.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => moveLeagueUp(e, idx)}
+                      disabled={idx === 0}
+                      className="p-1 rounded-md bg-white border border-black/5 text-gray-400 hover:text-[#38003c] disabled:opacity-25 transition"
+                      title="เลื่อนขึ้นบน"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => moveLeagueDown(e, idx)}
+                      disabled={idx === orderedLeagues.length - 1}
+                      className="p-1 rounded-md bg-white border border-black/5 text-gray-400 hover:text-[#38003c] disabled:opacity-25 transition"
+                      title="เลื่อนลงล่าง"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
 
                   <div className="truncate">
-                    <span className="font-black text-sm text-[#111318] block truncate">
+                    <span className="font-black text-xs sm:text-sm text-[#111318] block truncate">
                       {league.name}
                     </span>
-                    <span className="text-[11px] text-gray-400 font-mono">
-                      ID: {league.id} &bull; คลิกเพื่อดูตารางคะแนน
+                    <span className="text-[10px] text-gray-400 font-mono">
+                      ID: {league.id} &bull; แตะเพื่อดูตารางคะแนน
                     </span>
                   </div>
                 </div>
 
                 {/* Right: Rank & Expand Arrow */}
-                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                  <div className="text-left sm:text-right">
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="text-right">
                     <span className="text-sm sm:text-base font-black text-[#38003c] block">
                       อันดับ #{rank.toLocaleString()}
                     </span>
-                    <div className="flex items-center sm:justify-end gap-1 text-[10px] font-bold">
+                    <div className="flex items-center justify-end gap-1 text-[10px] font-bold">
                       {rankDiff > 0 ? (
                         <span className="text-emerald-600 flex items-center font-black">
                           <ArrowUp className="w-3 h-3 stroke-[3]" /> +{rankDiff}
