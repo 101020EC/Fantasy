@@ -5,44 +5,64 @@ import { PriceAnalysis } from '@/lib/types';
 import { TrendingUp, TrendingDown, Search, ArrowUpDown } from 'lucide-react';
 import PlayerJersey from '../pitch/PlayerJersey';
 
+const POSITION_IDS: Record<string, number> = { gkp: 1, def: 2, mid: 3, fwd: 4 };
+
 interface PriceMarketTableProps {
   analyses: PriceAnalysis[];
 }
 
 export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<string>('all');
+  // Status and position were one piece of state, so they could not be combined
+  // and picking a position silently cleared the status filter.
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [positionFilter, setPositionFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<'netTransfers' | 'changeScore' | 'currentCost' | 'selectedByPercent'>('netTransfers');
   const [sortAsc, setSortAsc] = useState(false);
 
   const filteredData = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
     return analyses
       .filter((p) => {
-        const matchSearch =
-          p.webName.toLowerCase().includes(search.toLowerCase()) ||
-          p.fullName.toLowerCase().includes(search.toLowerCase()) ||
-          p.team.name.toLowerCase().includes(search.toLowerCase()) ||
-          p.team.short_name.toLowerCase().includes(search.toLowerCase());
+        if (q) {
+          const matchSearch =
+            p.webName.toLowerCase().includes(q) ||
+            p.fullName.toLowerCase().includes(q) ||
+            p.team.name.toLowerCase().includes(q) ||
+            p.team.short_name.toLowerCase().includes(q);
+          if (!matchSearch) return false;
+        }
 
-        if (!matchSearch) return false;
+        if (statusFilter === 'risers' && !['rising_soon', 'likely_riser'].includes(p.status))
+          return false;
+        if (statusFilter === 'critical_risers' && p.status !== 'rising_soon') return false;
+        if (statusFilter === 'fallers' && !['falling_soon', 'likely_faller'].includes(p.status))
+          return false;
+        if (statusFilter === 'critical_fallers' && p.status !== 'falling_soon') return false;
 
-        if (filterType === 'risers') return p.status === 'rising_soon' || p.status === 'likely_riser';
-        if (filterType === 'critical_risers') return p.status === 'rising_soon';
-        if (filterType === 'fallers') return p.status === 'falling_soon' || p.status === 'likely_faller';
-        if (filterType === 'critical_fallers') return p.status === 'falling_soon';
-        if (filterType === 'gkp') return p.elementType.id === 1;
-        if (filterType === 'def') return p.elementType.id === 2;
-        if (filterType === 'mid') return p.elementType.id === 3;
-        if (filterType === 'fwd') return p.elementType.id === 4;
+        if (positionFilter !== 'all' && p.elementType.id !== POSITION_IDS[positionFilter])
+          return false;
 
         return true;
       })
       .sort((a, b) => {
-        let valA = a[sortField];
-        let valB = b[sortField];
+        const valA = a[sortField];
+        const valB = b[sortField];
+        if (valA === valB) return 0;
         return sortAsc ? (valA > valB ? 1 : -1) : valA < valB ? 1 : -1;
       });
-  }, [analyses, search, filterType, sortField, sortAsc]);
+  }, [analyses, search, statusFilter, positionFilter, sortField, sortAsc]);
+
+  const visibleRows = filteredData.slice(0, 100);
+
+  const { criticalRisersCount, criticalFallersCount } = useMemo(
+    () => ({
+      criticalRisersCount: analyses.filter((a) => a.status === 'rising_soon').length,
+      criticalFallersCount: analyses.filter((a) => a.status === 'falling_soon').length,
+    }),
+    [analyses]
+  );
 
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
@@ -53,18 +73,15 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
     }
   };
 
-  const criticalRisersCount = analyses.filter((a) => a.status === 'rising_soon').length;
-  const criticalFallersCount = analyses.filter((a) => a.status === 'falling_soon').length;
-
   return (
     <div className="w-full">
       {/* 2 Main Summary Cards in the Same Row */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
         {/* Left: Green Button (Rising Tonight) */}
         <button
-          onClick={() => setFilterType(filterType === 'critical_risers' ? 'all' : 'critical_risers')}
+          onClick={() => setStatusFilter(statusFilter === 'critical_risers' ? 'all' : 'critical_risers')}
           className={`p-4 sm:p-5 rounded-3xl text-left transition transform hover:scale-[1.01] active:scale-98 shadow-md flex items-center justify-between ${
-            filterType === 'critical_risers'
+            statusFilter === 'critical_risers'
               ? 'bg-emerald-600 text-white ring-4 ring-emerald-300'
               : 'bg-emerald-500 hover:bg-emerald-600 text-white'
           }`}
@@ -85,9 +102,9 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
 
         {/* Right: Red Button (Falling Tonight) */}
         <button
-          onClick={() => setFilterType(filterType === 'critical_fallers' ? 'all' : 'critical_fallers')}
+          onClick={() => setStatusFilter(statusFilter === 'critical_fallers' ? 'all' : 'critical_fallers')}
           className={`p-4 sm:p-5 rounded-3xl text-left transition transform hover:scale-[1.01] active:scale-98 shadow-md flex items-center justify-between ${
-            filterType === 'critical_fallers'
+            statusFilter === 'critical_fallers'
               ? 'bg-rose-700 text-white ring-4 ring-rose-300'
               : 'bg-rose-600 hover:bg-rose-700 text-white'
           }`}
@@ -132,9 +149,9 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setFilterType(filterType === tab.key ? 'all' : tab.key)}
+              onClick={() => setStatusFilter(statusFilter === tab.key ? 'all' : tab.key)}
               className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${
-                filterType === tab.key
+                statusFilter === tab.key
                   ? `${tab.activeClass} shadow-sm ring-1 ring-black/10`
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
@@ -156,9 +173,9 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setFilterType(tab.key)}
+              onClick={() => setPositionFilter(tab.key)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-black transition ${
-                filterType === tab.key
+                positionFilter === tab.key
                   ? 'bg-[#38003c] text-white shadow-sm'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
@@ -217,7 +234,7 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5">
-              {filteredData.slice(0, 100).map((player) => {
+              {visibleRows.map((player) => {
                 return (
                   <tr
                     key={player.elementId}
@@ -343,8 +360,19 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
             </tbody>
           </table>
         </div>
+        {filteredData.length === 0 && (
+          <div className="py-12 text-center">
+            <p className="text-sm font-bold text-gray-500 mb-1">No players match these filters</p>
+            <p className="text-xs text-gray-400">Try a different name, or clear the status and position filters.</p>
+          </div>
+        )}
+
         <div className="p-3 text-center text-xs text-gray-400 border-t border-black/5 bg-gray-50/50">
-          Showing top 100 players matching selected filters
+          {filteredData.length === 0
+            ? 'No matching players'
+            : filteredData.length > visibleRows.length
+            ? `Showing the top ${visibleRows.length} of ${filteredData.length.toLocaleString()} matching players`
+            : `Showing all ${filteredData.length} matching ${filteredData.length === 1 ? 'player' : 'players'}`}
         </div>
       </div>
     </div>

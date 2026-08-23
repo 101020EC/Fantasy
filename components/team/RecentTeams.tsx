@@ -69,7 +69,7 @@ export default function RecentTeams() {
           <Link
             key={team.id}
             href={`/team/${team.id}`}
-            className="group flex items-center gap-1.5 px-3 py-1 rounded-full bg-pastel-bg dark:bg-pastel-darkPill hover:bg-pastel-blueLight dark:hover:bg-pastel-blue/20 transition text-[#111318] dark:text-white text-xs shadow-sm border border-black/5 dark:border-white/5"
+            className="group flex items-center gap-1.5 px-3 py-1 rounded-full bg-pastel-bg hover:bg-pastel-blueLight transition text-[#111318] text-xs shadow-sm border border-black/5"
           >
             <span className="font-bold">
               {team.name || `Team #${team.id}`}

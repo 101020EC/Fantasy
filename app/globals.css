@@ -72,6 +72,37 @@ body {
   box-shadow: 0 10px 28px -4px rgba(70, 155, 105, 0.2);
 }
 
+/* Fade-in used by every modal and dropdown — was referenced in 9 places
+   without ever being defined, so nothing animated. */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.18s ease-out;
+}
+
+/* Hide the scrollbar on the horizontal gameweek strips */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Respect the viewer's motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Pulse animation */
 @keyframes pulse-rise {
   0%, 100% {

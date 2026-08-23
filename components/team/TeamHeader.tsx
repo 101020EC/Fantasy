@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { FPLEntry, FPLPicksResponse, FPLEvent } from '@/lib/types';
 import { Sparkles } from 'lucide-react';
 
@@ -34,7 +35,7 @@ export default function TeamHeader({ entry, picksData, currentEvent }: TeamHeade
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-black/5">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 shadow-md">
-            <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+            <Image src="/logo.png" alt="Fanta" width={48} height={48} className="w-full h-full object-cover" />
           </div>
           <div>
             <div className="flex items-center gap-2 mb-0.5">

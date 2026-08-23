@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 
 interface PlayerJerseyProps {
   teamCode: number;
@@ -14,6 +14,9 @@ export default function PlayerJersey({
   className = "w-10 h-10",
 }: PlayerJerseyProps) {
   const [imgError, setImgError] = useState(false);
+  // Unique per instance: deriving the id from teamCode produced duplicate DOM
+  // ids whenever two players shared a club.
+  const gradientId = useId();
 
   // Official Premier League Shirt CDN URLs
   const officialShirtUrl = isGkp
@@ -22,6 +25,7 @@ export default function PlayerJersey({
 
   if (!imgError && teamCode) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element -- remote shirt art with a runtime SVG fallback; next/image cannot express the onError swap
       <img
         src={officialShirtUrl}
         alt={`Shirt ${teamCode}`}
@@ -49,14 +53,14 @@ export default function PlayerJersey({
   return (
     <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id={`fb-grad-${teamCode}-${isGkp}`} x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stopColor={colors.primary} />
           <stop offset="100%" stopColor={colors.secondary} />
         </linearGradient>
       </defs>
       <path
         d="M25 22 L38 12 C44 17 56 17 62 12 L75 22 L86 38 L72 47 L68 33 L68 88 L32 88 L32 33 L28 47 L14 38 Z"
-        fill={`url(#fb-grad-${teamCode}-${isGkp})`}
+        fill={`url(#${gradientId})`}
         stroke="#ffffff"
         strokeWidth="2.5"
         strokeLinejoin="round"

@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import Image from 'next/image';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/AuthContext';
 import {
   Trophy,
@@ -14,23 +15,25 @@ import {
   AlertCircle,
   CheckCircle2,
   Search,
-  X,
 } from 'lucide-react';
 import PlayerJersey from '@/components/pitch/PlayerJersey';
+import Modal from '@/components/ui/Modal';
 
-export default function HistoryPage() {
+function HistoryView() {
   const { savedTeamId, setSavedTeamId } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Team & History State
   const [entryData, setEntryData] = useState<any>(null);
   const [historyData, setHistoryData] = useState<any>(null);
   const [transfersData, setTransfersData] = useState<any[]>([]);
   const [bootstrapData, setBootstrapData] = useState<any>(null);
-  const [selectedGw, setSelectedGw] = useState<number>(27);
+  const [selectedGw, setSelectedGw] = useState<number>(0);
   const [gwPicks, setGwPicks] = useState<any[]>([]);
   const [gwPicksLoading, setGwPicksLoading] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Team Setup Modal State
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
@@ -38,6 +41,11 @@ export default function HistoryPage() {
   const [previewNewEntry, setPreviewNewEntry] = useState<any>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+
+  // "Change team" links arrive as /?switch=true
+  useEffect(() => {
+    if (searchParams.get('switch') === 'true') setIsSetupModalOpen(true);
+  }, [searchParams]);
 
   // Load Team Data & History
   useEffect(() => {
@@ -47,12 +55,25 @@ export default function HistoryPage() {
       return;
     }
 
+    const ac = new AbortController();
     setLoading(true);
-    Promise.all([
-      fetch(`/api/fpl/entry/${savedTeamId}`).then((r) => (r.ok ? r.json() : null)),
-      fetch('/api/fpl/bootstrap').then((r) => (r.ok ? r.json() : null)),
-    ])
-      .then(async ([entry, bootstrap]) => {
+    setLoadError(null);
+
+    (async () => {
+      try {
+        const [entryRes, bootstrapRes] = await Promise.all([
+          fetch(`/api/fpl/entry/${savedTeamId}`, { signal: ac.signal }),
+          fetch('/api/fpl/bootstrap', { signal: ac.signal }),
+        ]);
+
+        if (!entryRes.ok) {
+          const body = await entryRes.json().catch(() => ({}));
+          throw new Error(body.error || `ไม่พบทีม ID: ${savedTeamId}`);
+        }
+
+        const entry = await entryRes.json();
+        const bootstrap = bootstrapRes.ok ? await bootstrapRes.json() : null;
+
         setEntryData(entry);
         setBootstrapData(bootstrap);
 
@@ -60,45 +81,51 @@ export default function HistoryPage() {
           bootstrap?.events?.find((e: any) => e.is_current) ||
           bootstrap?.events?.find((e: any) => e.is_next) ||
           bootstrap?.events?.[0];
-        const latestGw = entry?.current_event || curEvent?.id || 27;
-        setSelectedGw(latestGw);
+        setSelectedGw(entry?.current_event || curEvent?.id || 1);
 
-        // Fetch History & Transfers
-        try {
-          const histRes = await fetch(`https://fantasy.premierleague.com/api/entry/${savedTeamId}/history/`, {
-            headers: { 'User-Agent': 'Mozilla/5.0' },
-          });
-          if (histRes.ok) {
-            const hist = await histRes.json();
-            setHistoryData(hist);
-          }
-        } catch {}
+        // History & transfers go through our own routes: the FPL API sends no
+        // CORS headers, so calling it straight from the browser always fails.
+        const [hist, trans] = await Promise.all([
+          fetch(`/api/fpl/history/${savedTeamId}`, { signal: ac.signal }).then((r) =>
+            r.ok ? r.json() : null
+          ),
+          fetch(`/api/fpl/transfers/${savedTeamId}`, { signal: ac.signal }).then((r) =>
+            r.ok ? r.json() : []
+          ),
+        ]);
 
-        try {
-          const transRes = await fetch(`https://fantasy.premierleague.com/api/entry/${savedTeamId}/transfers/`, {
-            headers: { 'User-Agent': 'Mozilla/5.0' },
-          });
-          if (transRes.ok) {
-            const trans = await transRes.json();
-            setTransfersData(trans);
-          }
-        } catch {}
-      })
-      .catch((err) => console.error(err))
-      .finally(() => setLoading(false));
+        setHistoryData(hist);
+        setTransfersData(Array.isArray(trans) ? trans : []);
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+        setLoadError(err.message || 'ไม่สามารถโหลดข้อมูลทีมได้');
+      } finally {
+        if (!ac.signal.aborted) setLoading(false);
+      }
+    })();
+
+    return () => ac.abort();
   }, [savedTeamId]);
 
-  // Load Picks whenever selectedGw changes
+  // Load Picks whenever selectedGw changes. Aborting keeps a slow response for
+  // an old gameweek from landing on top of a newer one.
   useEffect(() => {
     if (!savedTeamId || !selectedGw) return;
+
+    const ac = new AbortController();
     setGwPicksLoading(true);
-    fetch(`/api/fpl/picks/${savedTeamId}/${selectedGw}`)
+
+    fetch(`/api/fpl/picks/${savedTeamId}/${selectedGw}`, { signal: ac.signal })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        setGwPicks(data?.picks || []);
+      .then((data) => setGwPicks(data?.picks || []))
+      .catch((err) => {
+        if (err.name !== 'AbortError') setGwPicks([]);
       })
-      .catch(() => setGwPicks([]))
-      .finally(() => setGwPicksLoading(false));
+      .finally(() => {
+        if (!ac.signal.aborted) setGwPicksLoading(false);
+      });
+
+    return () => ac.abort();
   }, [savedTeamId, selectedGw]);
 
   // Preview new team before confirmation
@@ -136,17 +163,62 @@ export default function HistoryPage() {
 
   // Find stats for currently selected GW
   const currentGwStats = historyData?.current?.find((h: any) => h.event === selectedGw);
-  const maxAvailableGw = entryData?.current_event || 27;
+  const maxAvailableGw = entryData?.current_event || selectedGw || 1;
 
-  // Build mapped squad players for selected GW
-  const elementMap = new Map(bootstrapData?.elements?.map((el: any) => [el.id, el]) || []);
-  const teamMap = new Map(bootstrapData?.teams?.map((t: any) => [t.id, t]) || []);
+  // Memoised: rebuilding these from ~700 players on every keystroke was wasteful
+  const elementMap = useMemo(
+    () => new Map<number, any>((bootstrapData?.elements ?? []).map((el: any) => [el.id, el])),
+    [bootstrapData]
+  );
+  const teamMap = useMemo(
+    () => new Map<number, any>((bootstrapData?.teams ?? []).map((t: any) => [t.id, t])),
+    [bootstrapData]
+  );
 
   const starters = gwPicks.filter((p) => p.position <= 11);
   const bench = gwPicks.filter((p) => p.position > 11);
 
   // Transfers for this GW
   const gwTransfers = transfersData.filter((t) => t.event === selectedGw);
+
+  // `loading` used to be tracked but never rendered: users saw a fully-formed
+  // page with "-" in every tile while requests were still in flight.
+  if (loading && savedTeamId) {
+    return (
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
+        <div className="h-32 rounded-3xl bg-amber-100/70 animate-pulse" />
+        <div className="h-16 rounded-3xl bg-gray-200/70 animate-pulse" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="h-24 rounded-2xl bg-gray-200/70 animate-pulse" />
+          ))}
+        </div>
+        <div className="h-64 rounded-3xl bg-gray-200/50 animate-pulse" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-16 text-center">
+        <div className="p-8 rounded-4xl bg-white border border-rose-200 shadow-xl">
+          <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-7 h-7" />
+          </div>
+          <h2 className="text-xl font-black text-[#111318] mb-2">Could not load your team</h2>
+          <p className="text-xs text-gray-500 mb-6 leading-relaxed">{loadError}</p>
+          <button
+            onClick={() => setIsSetupModalOpen(true)}
+            type="button"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#111318] text-white font-black text-xs hover:scale-105 transition-transform shadow-md"
+          >
+            <Search className="w-4 h-4" />
+            <span>Use a different Team ID</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
@@ -156,7 +228,7 @@ export default function HistoryPage() {
           {/* Avatar + Manager Name + Team Name */}
           <div className="flex items-center gap-3.5 sm:gap-4">
             <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden shrink-0 shadow-lg bg-white">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+              <Image src="/logo.png" alt="Fanta" width={64} height={64} className="w-full h-full object-cover" />
             </div>
 
             <div>
@@ -302,8 +374,8 @@ export default function HistoryPage() {
                 <span className="text-xs font-black uppercase text-gray-400 mb-2 block">Starting XI</span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                   {starters.map((p) => {
-                    const el = elementMap.get(p.element) as any;
-                    const team = teamMap.get(el?.team) as any;
+                    const el = elementMap.get(p.element);
+                    const team = teamMap.get(el?.team);
 
                     return (
                       <div
@@ -317,12 +389,12 @@ export default function HistoryPage() {
                               {el?.web_name || `Player #${p.element}`}
                             </span>
                             {p.is_captain && (
-                              <span className="px-1.5 py-0.2 bg-[#38003c] text-white text-[9px] font-black rounded-full">
+                              <span className="px-1.5 py-0.5 bg-[#38003c] text-white text-[9px] font-black rounded-full">
                                 C
                               </span>
                             )}
                             {p.is_vice_captain && (
-                              <span className="px-1.5 py-0.2 bg-amber-500 text-white text-[9px] font-black rounded-full">
+                              <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded-full">
                                 V
                               </span>
                             )}
@@ -342,8 +414,8 @@ export default function HistoryPage() {
                 <span className="text-xs font-black uppercase text-gray-400 mb-2 block">Bench</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {bench.map((p, idx) => {
-                    const el = elementMap.get(p.element) as any;
-                    const team = teamMap.get(el?.team) as any;
+                    const el = elementMap.get(p.element);
+                    const team = teamMap.get(el?.team);
 
                     return (
                       <div
@@ -433,8 +505,8 @@ export default function HistoryPage() {
             </div>
             <div className="space-y-2">
               {gwTransfers.map((t: any, idx: number) => {
-                const elIn = elementMap.get(t.element_in) as any;
-                const elOut = elementMap.get(t.element_out) as any;
+                const elIn = elementMap.get(t.element_in);
+                const elOut = elementMap.get(t.element_out);
 
                 return (
                   <div
@@ -461,22 +533,18 @@ export default function HistoryPage() {
       </div>
 
       {/* 4. Team Setup Modal with Confirmation */}
-      {isSetupModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-md bg-white border border-black/5 rounded-4xl p-6 sm:p-7 shadow-2xl text-[#111318]">
-            <button
-              onClick={() => setIsSetupModalOpen(false)}
-              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-[#111318] rounded-full bg-gray-100 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
+      <Modal
+        isOpen={isSetupModalOpen}
+        onClose={() => setIsSetupModalOpen(false)}
+        labelledBy="team-setup-title"
+        className="max-w-md"
+      >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
                 <ArrowRightLeft className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-xl font-black text-[#111318]">Team Setup</h2>
+                <h2 id="team-setup-title" className="text-xl font-black text-[#111318]">Team Setup</h2>
                 <p className="text-xs text-gray-500">Enter a new FPL Team ID to track</p>
               </div>
             </div>
@@ -553,10 +621,22 @@ export default function HistoryPage() {
                   </button>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-16 flex justify-center">
+          <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
+        </div>
+      }
+    >
+      <HistoryView />
+    </Suspense>
   );
 }

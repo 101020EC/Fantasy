@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { FPLEntry, TeamSquadPlayer } from '@/lib/types';
 import { CheckCircle2, TrendingDown, TrendingUp, ArrowRightLeft, Send } from 'lucide-react';
@@ -92,7 +93,7 @@ export default function TeamPitchTopBar({
         <div className="flex items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/90 overflow-hidden shrink-0 shadow-md">
-              <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
+              <Image src="/logo.png" alt="Fanta" width={56} height={56} className="w-full h-full object-cover" />
             </div>
 
             <div className="min-w-0">

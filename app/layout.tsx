@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import { AuthProvider } from '@/components/AuthContext';
-import PasswordGate from '@/components/PasswordGate';
 
 export const metadata: Metadata = {
   title: 'Fanta | Fantasy Premier League Team & Price Radar',
@@ -15,7 +14,10 @@ export const metadata: Metadata = {
     title: 'Fanta',
   },
   icons: {
-    icon: '/logo.png',
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
     apple: '/apple-touch-icon.png',
   },
 };
@@ -23,8 +25,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Pinch-zoom stays available: blocking it fails WCAG 1.4.4, and the iOS
+  // input auto-zoom it was meant to stop is already handled by text-base inputs.
   viewportFit: 'cover',
   themeColor: '#38003c',
 };
@@ -45,10 +47,8 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-screen flex flex-col bg-pastel-bg text-[#111318] w-full overflow-x-hidden">
         <AuthProvider>
-          <PasswordGate>
-            <Navbar />
-            <div className="flex-1 w-full">{children}</div>
-          </PasswordGate>
+          <Navbar />
+          <div className="flex-1 w-full">{children}</div>
         </AuthProvider>
       </body>
     </html>

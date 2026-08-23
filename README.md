@@ -1,4 +1,4 @@
-# ⚽ FPL Radar Pro - Fantasy Premier League Team Viewer & Price Alert
+# ⚽ Fanta — Fantasy Premier League Team & Price Radar
 
 เว็บแอปพลิเคชันสำหรับผู้เล่น **Fantasy Premier League (FPL)** ที่สามารถระบุ **Team ID** เพื่อดึงข้อมูลทีม, แสดงผล 11 ตัวจริงบนผังสนามฟุตบอล (Pitch View), แต้มสะสม, มูลค่าทีม, เงินคงเหลือ พร้อมฟีเจอร์เด่นคือ **ระบบเรดาร์แจ้งเตือนราคานักเตะขึ้นหรือลง (Price Rise & Fall Predictor)** เพื่อช่วยตัดสินใจวางแผนซื้อขายก่อนราคาปรับในรอบดึก
 
@@ -11,14 +11,12 @@
 1. **🔍 Team ID Search & Quick Switcher**:
    - กรอก FPL Team ID เพื่อดึงข้อมูลทันที
    - บันทึกประวัติทีมที่ดูล่าสุดลงบนเครื่อง (Recent Teams) ทำให้เปิดดูซ้ำได้ในคลิกเดียว
-   - มีปุ่มสุ่มดูทีมตัวอย่างสำหรับทดลองระบบ
 2. **🏟️ แผนผังสนามฟุตบอล (Interactive Pitch View)**:
    - จัดเรียง 11 ตัวจริงตาม Formation อัตโนมัติ (เช่น 3-4-3, 4-3-3, 3-5-2)
    - ระบุกัปตัน (C), รองกัปตัน (V) และรายชื่อตัวสำรอง 1-4 ด้านล่างสนาม
    - คลิกที่ตัวนักเตะเพื่อดูสถิติเชิงลึก (ฟอร์ม, การถือครอง, ยอดซื้อเข้า/ขายออก, โปรแกรมแข่งล่วงหน้าพร้อมค่าความยาก FDR)
 3. **📈 เรดาร์แจ้งเตือนราคาขึ้น/ลง (Price Alerts & Predictor)**:
    - ป้ายเตือน (Badge) บนตัวนักเตะในสนาม (🚀 *ขึ้นคืนนี้*, 🟢 *ขาขึ้น*, ⚠️ *ตกคืนนี้*, 🔴 *ขาลง*)
-   - แถบแจ้งเตือนสรุปรายชื่อนักเตะในทีมที่มีความเสี่ยงราคาตกหรือมีโอกาสราคาขึ้นในคืนนี้
 4. **📊 หน้าตลาดราคาพรีเมียร์ลีก (Full Market Price Radar)**:
    - ตารางสรุปนักเตะทุกคนในลีก คัดกรองตามตำแหน่ง (GK, DEF, MID, FWD) และค้นหาตามชื่อ
    - มีดัชนีทำนายราคา (Price Momentum Score) พร้อมจำนวนการซื้อ-ขายสุทธิ (Net Transfers)
@@ -85,3 +83,36 @@
    https://fantasy.premierleague.com/entry/123456/history
    ```
 5. ตัวเลข `123456` คือ **Team ID** ของคุณ
+
+---
+
+## 🔐 การตั้งค่า Environment
+
+คัดลอก `.env.local.example` เป็น `.env.local` แล้วเติมค่า ทุกตัวเป็น **optional** — แอปรันได้โดยไม่ต้องใส่อะไรเลย แต่ฟีเจอร์ที่เกี่ยวข้องจะปิดตัวเองพร้อมบอกเหตุผลบนหน้าจอ
+
+| ตัวแปร | ใช้ทำอะไร | ไม่ใส่แล้วเป็นอย่างไร |
+|---|---|---|
+| `APP_PASSWORD` | รหัสผ่านเข้าแอป ตรวจฝั่ง server ผ่าน `middleware.ts` | เปิดสาธารณะ ไม่มีหน้า login |
+| `SESSION_SECRET` | คีย์เซ็น session cookie | ใช้ `APP_PASSWORD` แทน |
+| `FIREBASE_SERVICE_ACCOUNT` | service account JSON เข้ารหัส base64 สำหรับเขียน Firestore | ปุ่ม Backup ถูกปิดพร้อมคำอธิบาย |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `TELEGRAM_TEAM_ID` | ส่งแจ้งเตือนราคา | โมดัล Telegram แสดงวิธีตั้งค่า |
+| `CRON_SECRET` | ป้องกัน `/api/cron/price-alert` | endpoint ตอบ 503 |
+
+## 🏗️ สถาปัตยกรรม
+
+**ทุกการเรียก FPL API เกิดฝั่ง server เท่านั้น** — `fantasy.premierleague.com` ไม่ส่ง CORS header
+และตั้ง `cross-origin-resource-policy: same-origin` ดังนั้น browser เรียกตรงไม่ได้เลย
+client ต้องผ่าน route ใน `app/api/fpl/*` เสมอ (`lib/fpl-api.ts` มีคอมเมนต์กำกับว่า server-only)
+
+**Firestore ปิดจาก client สนิท** — `firestore.rules` ปฏิเสธทุก path การเขียนเกิดใน
+`POST /api/archive` ด้วย Admin SDK ซึ่งใช้ service account จึงข้าม rules ได้
+browser ไม่มี Firebase SDK ติดไปด้วยเลย
+
+**Auth อยู่ที่ middleware** — `middleware.ts` กันทุกหน้าและทุก `/api/*` ไว้หลัง httpOnly cookie
+ที่เซ็นด้วย HMAC (Web Crypto ทำงานได้ทั้ง Edge และ Node)
+
+## 🧪 ตรวจสอบก่อน deploy
+
+```bash
+npm run lint && npx tsc --noEmit && npm run build
+```

@@ -72,7 +72,7 @@ export default function PlayerCard({ player, onClick, isBench = false }: PlayerC
         <PlayerJersey
           teamCode={element.team_code}
           isGkp={elementType.id === 1}
-          className="w-10 h-10 sm:w-13 sm:h-13 drop-shadow-md group-hover:scale-105 transition-all"
+          className="w-10 h-10 sm:w-12 sm:h-12 drop-shadow-md group-hover:scale-105 transition-all"
         />
 
         {/* Captain / Vice Captain Badge */}
@@ -93,7 +93,7 @@ export default function PlayerCard({ player, onClick, isBench = false }: PlayerC
         {/* Injury / Doubt flag */}
         {element.status !== 'a' && (
           <span
-            className={`absolute top-0 -left-1 px-1 py-0.2 rounded-full text-[8px] font-bold text-white shadow ${
+            className={`absolute top-0 -left-1 px-1 py-0.5 rounded-full text-[8px] font-bold text-white shadow ${
               element.status === 'd' ? 'bg-amber-500' : 'bg-rose-500'
             }`}
           >
@@ -114,7 +114,7 @@ export default function PlayerCard({ player, onClick, isBench = false }: PlayerC
         {/* Price & GW Points */}
         <div className="px-1 py-0.5 flex items-center justify-between text-[9px] sm:text-[10px] font-bold bg-white">
           <span className="text-gray-600 font-mono">£{priceAnalysis.currentCost.toFixed(1)}</span>
-          <span className="text-[#111318] px-1.5 py-0.2 rounded-full bg-pastel-blueLight font-black text-[9px]">
+          <span className="text-[#111318] px-1.5 py-0.5 rounded-full bg-pastel-blueLight font-black text-[9px]">
             {element.event_points}pt
           </span>
         </div>
@@ -125,7 +125,7 @@ export default function PlayerCard({ player, onClick, isBench = false }: PlayerC
             <span className="text-gray-500 font-semibold truncate">
               {nextFixture.opponent.short_name} ({nextFixture.isHome ? 'H' : 'A'})
             </span>
-            <span className={`px-1 py-0.2 rounded-full font-bold text-[8px] ${getFDRBadgeColor(nextFixture.difficulty)}`}>
+            <span className={`px-1 py-0.5 rounded-full font-bold text-[8px] ${getFDRBadgeColor(nextFixture.difficulty)}`}>
               {nextFixture.difficulty}
             </span>
           </div>

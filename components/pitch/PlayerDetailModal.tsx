@@ -1,7 +1,8 @@
 import React from 'react';
 import { TeamSquadPlayer } from '@/lib/types';
-import { X, TrendingUp, TrendingDown, Minus, Activity, ShieldAlert } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Activity, ShieldAlert } from 'lucide-react';
 import PlayerJersey from './PlayerJersey';
+import Modal from '../ui/Modal';
 
 interface PlayerDetailModalProps {
   player: TeamSquadPlayer | null;
@@ -54,16 +55,7 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-lg bg-white border border-black/5 rounded-3xl p-6 shadow-2xl text-[#111318] max-h-[90vh] overflow-y-auto">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-[#111318] rounded-full bg-gray-100 transition"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
+    <Modal isOpen onClose={onClose} labelledBy="player-detail-title" className="max-w-lg">
         {/* Header with Jersey & Name */}
         <div className="flex items-center gap-4 mb-5">
           <div className="p-3 bg-pastel-bg rounded-2xl">
@@ -86,7 +78,7 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
                 </span>
               )}
             </div>
-            <h2 className="text-xl sm:text-2xl font-black mt-1 text-[#111318]">{priceAnalysis.fullName}</h2>
+            <h2 id="player-detail-title" className="text-xl sm:text-2xl font-black mt-1 text-[#111318]">{priceAnalysis.fullName}</h2>
             <p className="text-xs text-gray-400">ID: {element.id} • {element.web_name}</p>
           </div>
         </div>
@@ -198,7 +190,6 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
