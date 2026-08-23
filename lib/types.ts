@@ -105,9 +105,25 @@ export interface FPLFixture {
   team_a: number;
   team_h_difficulty: number;
   team_a_difficulty: number;
-  event: number;
+  team_h_score: number | null;
+  team_a_score: number | null;
+  event: number | null;
+  /** Kicked off. Scores are live from this point — `finished` lags behind. */
+  started: boolean;
   finished: boolean;
   kickoff_time: string;
+}
+
+export interface SquadFixture {
+  event: number;
+  opponent: FPLTeam;
+  isHome: boolean;
+  /** FPL's 1–5 rating from this player's side. */
+  difficulty: number;
+  started: boolean;
+  /** Populated once the match kicks off; the player's team first. */
+  scoreFor: number | null;
+  scoreAgainst: number | null;
 }
 
 export type PriceStatus = 'rising_soon' | 'likely_riser' | 'stable' | 'likely_faller' | 'falling_soon';
@@ -143,4 +159,6 @@ export interface TeamSquadPlayer {
     isHome: boolean;
     difficulty: number;
   };
+  /** This gameweek onward, up to three — a blank week simply yields fewer. */
+  fixtures: SquadFixture[];
 }

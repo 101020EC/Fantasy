@@ -4,12 +4,14 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FPLEntry, TeamSquadPlayer } from '@/lib/types';
-import { CheckCircle2, TrendingDown, TrendingUp, ArrowRightLeft, Send } from 'lucide-react';
+import { CheckCircle2, TrendingDown, TrendingUp, ArrowRightLeft, Send, ChevronRight, ChevronLeft } from 'lucide-react';
 import TelegramSettingsModal from '../telegram/TelegramSettingsModal';
 
 interface TeamPitchTopBarProps {
   entry: FPLEntry;
   gameweek: number;
+  /** Gameweek the fixture strip is showing; may run ahead of the squad's. */
+  fixtureGw?: number;
   players: TeamSquadPlayer[];
   activeChip?: string | null;
 }
@@ -17,10 +19,12 @@ interface TeamPitchTopBarProps {
 export default function TeamPitchTopBar({
   entry,
   gameweek,
+  fixtureGw,
   players,
   activeChip,
 }: TeamPitchTopBarProps) {
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
+  const shownGw = fixtureGw ?? gameweek;
 
   // Price risk calculation
   const criticalFallers = players.filter((p) => p.priceAnalysis.status === 'falling_soon');
@@ -45,6 +49,26 @@ export default function TeamPitchTopBar({
             <span className="px-3 py-1 rounded-full bg-white/80 text-[#111318] text-[11px] font-black shadow-sm">
               GW {gameweek}
             </span>
+            {shownGw > gameweek && (
+              <Link
+                href={`/team/${entry.id}`}
+                title="Back to this gameweek"
+                className="pl-1.5 pr-2 py-1 rounded-full bg-white/60 text-[#111318] text-[11px] font-black shadow-sm flex items-center gap-0.5 hover:bg-white transition active:scale-95"
+              >
+                <ChevronLeft className="w-3 h-3 stroke-[3]" />
+                GW {shownGw}
+              </Link>
+            )}
+            {shownGw < 38 && (
+              <Link
+                href={`/team/${entry.id}?gw=${shownGw + 1}`}
+                title={`See who this squad faces in GW ${shownGw + 1}`}
+                className="pl-2 pr-1.5 py-1 rounded-full bg-[#111318] text-white text-[11px] font-black shadow-sm flex items-center gap-0.5 hover:bg-[#38003c] transition active:scale-95"
+              >
+                GW {shownGw + 1}
+                <ChevronRight className="w-3 h-3 stroke-[3]" />
+              </Link>
+            )}
             {activeChip && (
               <span className="px-2.5 py-0.5 rounded-full bg-[#38003c] text-white text-[10px] font-black shadow-sm">
                 {activeChip.toUpperCase()}

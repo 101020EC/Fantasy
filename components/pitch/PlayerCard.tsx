@@ -3,14 +3,22 @@ import { TeamSquadPlayer } from '@/lib/types';
 import PlayerJersey from './PlayerJersey';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 
+export type CardMode = 'stats' | 'fixtures';
+
 interface PlayerCardProps {
   player: TeamSquadPlayer;
   onClick: (player: TeamSquadPlayer) => void;
   isBench?: boolean;
+  mode?: CardMode;
 }
 
-export default function PlayerCard({ player, onClick, isBench = false }: PlayerCardProps) {
-  const { element, team, elementType, priceAnalysis, nextFixture, pick } = player;
+export default function PlayerCard({
+  player,
+  onClick,
+  isBench = false,
+  mode = 'stats',
+}: PlayerCardProps) {
+  const { element, team, elementType, priceAnalysis, nextFixture, fixtures, pick } = player;
 
   const renderPriceBadge = () => {
     if (priceAnalysis.status === 'rising_soon') {
@@ -57,6 +65,28 @@ export default function PlayerCard({ player, onClick, isBench = false }: PlayerC
         return 'bg-rose-900 text-rose-100';
       default:
         return 'bg-gray-600 text-white';
+    }
+  };
+
+  /**
+   * Difficulty as colour alone. FPL's 1–5 is already encoded by the shade, and
+   * printing the number beside it just repeats what the colour says in a space
+   * that has to hold an opponent and possibly a scoreline.
+   */
+  const fixtureTone = (diff: number) => {
+    switch (diff) {
+      case 1:
+        return 'bg-emerald-500/90 text-white';
+      case 2:
+        return 'bg-emerald-400/90 text-white';
+      case 3:
+        return 'bg-gray-400/90 text-white';
+      case 4:
+        return 'bg-rose-500/90 text-white';
+      case 5:
+        return 'bg-rose-800/90 text-rose-50';
+      default:
+        return 'bg-gray-300 text-gray-700';
     }
   };
 
@@ -115,23 +145,68 @@ export default function PlayerCard({ player, onClick, isBench = false }: PlayerC
           </span>
         </div>
 
-        {/* Price & GW Points */}
-        <div className="px-1 py-0.5 flex items-center justify-between text-[9px] sm:text-[10px] font-bold bg-white">
-          <span className="text-gray-600 font-mono">£{priceAnalysis.currentCost.toFixed(1)}</span>
-          <span className="text-[#111318] px-1.5 py-0.5 rounded-full bg-pastel-blueLight font-black text-[9px]">
-            {element.event_points}pt
-          </span>
-        </div>
+        {mode === 'stats' ? (
+          <>
+            {/* Price & GW Points */}
+            <div className="px-1 py-0.5 flex items-center justify-between text-[9px] sm:text-[10px] font-bold bg-white">
+              <span className="text-gray-600 font-mono">£{priceAnalysis.currentCost.toFixed(1)}</span>
+              <span className="text-[#111318] px-1.5 py-0.5 rounded-full bg-pastel-blueLight font-black text-[9px]">
+                {element.event_points}pt
+              </span>
+            </div>
 
-        {/* Next Fixture & FDR */}
-        {nextFixture && (
-          <div className="px-1 py-0.5 text-[8px] sm:text-[9px] flex items-center justify-between border-t border-black/5 bg-gray-50/80">
-            <span className="text-gray-500 font-semibold truncate">
-              {nextFixture.opponent.short_name} ({nextFixture.isHome ? 'H' : 'A'})
-            </span>
-            <span className={`px-1 py-0.5 rounded-full font-bold text-[8px] ${getFDRBadgeColor(nextFixture.difficulty)}`}>
-              {nextFixture.difficulty}
-            </span>
+            {/* Next Fixture & FDR */}
+            {nextFixture && (
+              <div className="px-1 py-0.5 text-[8px] sm:text-[9px] flex items-center justify-between border-t border-black/5 bg-gray-50/80">
+                <span className="text-gray-500 font-semibold truncate">
+                  {nextFixture.opponent.short_name} ({nextFixture.isHome ? 'H' : 'A'})
+                </span>
+                <span
+                  className={`px-1 py-0.5 rounded-full font-bold text-[8px] ${getFDRBadgeColor(
+                    nextFixture.difficulty
+                  )}`}
+                >
+                  {nextFixture.difficulty}
+                </span>
+              </div>
+            )}
+          </>
+        ) : (
+          /* Three matches from this gameweek on, difficulty shown as colour */
+          <div className="grid grid-cols-3 divide-x divide-white/25 border-t border-black/5">
+            {[0, 1, 2].map((slot) => {
+              const fx = fixtures[slot];
+              if (!fx) {
+                return (
+                  <div
+                    key={slot}
+                    className="py-1 text-center text-[8px] font-bold bg-gray-100 text-gray-400"
+                    title="No fixture"
+                  >
+                    —
+                  </div>
+                );
+              }
+
+              const played = fx.started && fx.scoreFor !== null && fx.scoreAgainst !== null;
+              return (
+                <div
+                  key={slot}
+                  title={`GW${fx.event} · ${fx.isHome ? 'vs' : 'away to'} ${fx.opponent.name} · difficulty ${fx.difficulty}`}
+                  className={`py-1 text-center leading-tight ${fixtureTone(fx.difficulty)}`}
+                >
+                  <span className="block text-[8px] sm:text-[9px] font-black truncate px-0.5">
+                    {fx.opponent.short_name}
+                    <span className="opacity-70">{fx.isHome ? '' : '·a'}</span>
+                  </span>
+                  {played && (
+                    <span className="block text-[8px] font-black tabular-nums">
+                      {fx.scoreFor}-{fx.scoreAgainst}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

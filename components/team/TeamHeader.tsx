@@ -1,15 +1,12 @@
 import React from 'react';
-import Image from 'next/image';
-import { FPLEntry, FPLPicksResponse, FPLEvent } from '@/lib/types';
-import { Sparkles } from 'lucide-react';
+import { FPLEntry, FPLPicksResponse } from '@/lib/types';
 
 interface TeamHeaderProps {
   entry: FPLEntry;
   picksData: FPLPicksResponse;
-  currentEvent: FPLEvent;
 }
 
-export default function TeamHeader({ entry, picksData, currentEvent }: TeamHeaderProps) {
+export default function TeamHeader({ entry, picksData }: TeamHeaderProps) {
   const history = picksData?.entry_history;
 
   const teamValue = history?.value
@@ -31,50 +28,10 @@ export default function TeamHeader({ entry, picksData, currentEvent }: TeamHeade
 
   return (
     <div className="pastel-card p-5 sm:p-7 shadow-sm mb-6 transition-colors">
-      {/* Top row: Manager Name, Team Name, ID */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-black/5">
-        <div className="flex items-center gap-3.5">
-          <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 shadow-md">
-            <Image src="/logo.png" alt="Fanta" width={48} height={48} className="w-full h-full object-cover" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="px-2.5 py-0.5 rounded-full bg-[#38003c] text-white text-[10px] font-black font-mono">
-                ID #{entry.id}
-              </span>
-              {entry.player_region_name && (
-                <span className="text-[11px] text-gray-500 font-medium">
-                  • {entry.player_region_name}
-                </span>
-              )}
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black text-[#111318] tracking-tight">
-              {entry.name}
-            </h1>
-            <p className="text-xs text-gray-500 font-medium">
-              {entry.player_first_name} {entry.player_last_name}
-            </p>
-          </div>
-        </div>
-
-        {/* Gameweek Badge & Active Chip */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          {picksData?.active_chip && (
-            <div className="px-3 py-1.5 rounded-full bg-pastel-purple text-[#111318] font-black text-xs shadow-sm flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>{picksData.active_chip.toUpperCase()}</span>
-            </div>
-          )}
-          <div className="px-3.5 py-1.5 rounded-full bg-pastel-bg border border-black/5 text-right">
-            <span className="text-xs font-black text-[#111318]">
-              {currentEvent?.name || `Gameweek ${currentEvent?.id || 1}`}
-            </span>
-          </div>
-        </div>
-      </div>
-
+      {/* Identity and gameweek already sit in the hero bar above the pitch;
+          repeating them here pushed the numbers below the fold. */}
       {/* Stats Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 mt-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
         {/* GW Points */}
         <div className="p-3.5 rounded-2xl bg-pastel-blueLight text-center">
           <span className="text-[11px] text-gray-600 block mb-0.5 font-semibold">GW Points</span>
