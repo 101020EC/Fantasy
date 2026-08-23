@@ -46,10 +46,10 @@ export default async function PricesPage() {
           <div className="leading-tight">
             <span className="font-black text-[#111318] block text-[11px] sm:text-xs">Update Window</span>
             <span className="block text-[11px] sm:text-xs font-bold text-[#38003c]">
-              ~08:30 - 09:30 น.
+              08:30 - 09:30 Bangkok
             </span>
             <span className="block text-gray-400 text-[9px] sm:text-[10px]">
-              เวลาไทย · 01:30 - 02:30 UTC
+              01:30 - 02:30 UTC
             </span>
           </div>
         </div>

@@ -54,25 +54,12 @@ export function analyzePlayerPrice(
 
   const changeScore = Math.min(100, Math.max(-100, Math.round(rawScore)));
 
+  // Thresholds on the capped -100..100 score.
   let status: PriceStatus = 'stable';
-  let urgencyLabel = 'ราคาคงที่';
-
-  if (changeScore >= 75) {
-    status = 'rising_soon';
-    urgencyLabel = '🚀 เสี่ยงราคาขึ้นคืนนี้!';
-  } else if (changeScore >= 35) {
-    status = 'likely_riser';
-    urgencyLabel = '🟢 แนวโน้มราคาขึ้น';
-  } else if (changeScore <= -75) {
-    status = 'falling_soon';
-    urgencyLabel = '⚠️ เสี่ยงราคาตกคืนนี้!';
-  } else if (changeScore <= -35) {
-    status = 'likely_faller';
-    urgencyLabel = '🟠 แนวโน้มราคาลง';
-  } else {
-    status = 'stable';
-    urgencyLabel = '⚪ ราคาปกติ';
-  }
+  if (changeScore >= 75) status = 'rising_soon';
+  else if (changeScore >= 35) status = 'likely_riser';
+  else if (changeScore <= -75) status = 'falling_soon';
+  else if (changeScore <= -35) status = 'likely_faller';
 
   let availability: PriceAnalysis['availability'] = 'available';
   if (element.status === 'd') availability = 'doubtful';
@@ -94,7 +81,6 @@ export function analyzePlayerPrice(
     selectedByPercent: ownership,
     status,
     changeScore,
-    urgencyLabel,
     news: element.news,
     availability,
   };

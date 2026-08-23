@@ -45,7 +45,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-black/5 px-4 sm:px-8 py-3 transition-colors shadow-sm">
+      <header className="app-header sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-black/5 px-4 sm:px-8 py-3 transition-colors shadow-sm">
         <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-3">
           {/* Logo links to main screen: Team (or Home if no team saved) */}
           <Link href={teamUrl} className="flex items-center gap-2.5 group shrink-0">

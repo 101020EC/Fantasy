@@ -28,7 +28,7 @@ export async function POST() {
     return NextResponse.json(
       {
         success: false,
-        error: 'ยังไม่ได้ตั้งค่า Telegram บนเซิร์ฟเวอร์ (ต้องกำหนด TELEGRAM_BOT_TOKEN และ TELEGRAM_CHAT_ID)',
+        error: 'Telegram is not configured on the server (set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID)',
       },
       { status: 503 }
     );

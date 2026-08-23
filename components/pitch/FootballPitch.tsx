@@ -28,7 +28,7 @@ export default function FootballPitch({ players }: FootballPitchProps) {
       {/* Pitch Header */}
       <div className="flex items-center justify-between mb-3 px-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-gray-500">แผนการเล่น:</span>
+          <span className="text-xs font-bold text-gray-500">Formation</span>
           <span className="px-3 py-0.5 rounded-full bg-[#111318] text-white text-xs font-black">
             {formation}
           </span>
@@ -36,11 +36,11 @@ export default function FootballPitch({ players }: FootballPitchProps) {
         <div className="flex items-center gap-3 text-[11px] text-gray-600 font-medium">
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-            🚀 ราคาจะขึ้น
+            Rising
           </span>
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
-            ⚠️ ราคาจะตก
+            Falling
           </span>
         </div>
       </div>

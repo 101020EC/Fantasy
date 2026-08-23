@@ -72,7 +72,7 @@ function HistoryView() {
 
         if (!entryRes.ok) {
           const body = await entryRes.json().catch(() => ({}));
-          throw new Error(body.error || `ไม่พบทีม ID: ${savedTeamId}`);
+          throw new Error(body.error || `Team ID ${savedTeamId} was not found`);
         }
 
         const entry = await entryRes.json();
@@ -102,7 +102,7 @@ function HistoryView() {
         setTransfersData(Array.isArray(trans) ? trans : []);
       } catch (err: any) {
         if (err.name === 'AbortError') return;
-        setLoadError(err.message || 'ไม่สามารถโหลดข้อมูลทีมได้');
+        setLoadError(err.message || 'Could not load this team');
       } finally {
         if (!ac.signal.aborted) setLoading(false);
       }
@@ -228,36 +228,38 @@ function HistoryView() {
     <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
       {/* 1. Dark Yellow / Amber Top Banner */}
       <div className="rounded-3xl p-5 sm:p-7 bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-xl relative overflow-hidden transition-all">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-row items-center justify-between gap-3 sm:gap-4">
           {/* Avatar + Manager Name + Team Name */}
-          <div className="flex items-center gap-3.5 sm:gap-4">
+          <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
             <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden shrink-0 shadow-lg bg-white">
               <Image src="/logo.png" alt="Fanta" width={64} height={64} className="w-full h-full object-cover" />
             </div>
 
-            <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <span className="px-3 py-0.5 rounded-full bg-black/30 backdrop-blur-sm text-white text-[11px] font-mono font-black">
+            {/* min-w-0 on every flex ancestor, or truncate below has nothing to
+                shrink against and the long name slides under the button. */}
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1 min-w-0">
+                <span className="px-3 py-0.5 rounded-full bg-black/30 backdrop-blur-sm text-white text-[11px] font-mono font-black shrink-0 whitespace-nowrap">
                   ID #{entryData?.id || savedTeamId || '-'}
                 </span>
                 {entryData?.player_region_name && (
-                  <span className="text-xs text-amber-100 font-semibold">
+                  <span className="text-xs text-amber-100 font-semibold truncate">
                     • {entryData.player_region_name}
                   </span>
                 )}
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight truncate">
                 {entryData?.name || 'My Fantasy Team'}
               </h1>
-              <p className="text-xs sm:text-sm text-amber-100 font-semibold">
+              <p className="text-xs sm:text-sm text-amber-100 font-semibold truncate">
                 {entryData ? `${entryData.player_first_name} ${entryData.player_last_name}` : 'Manager'}
               </p>
             </div>
           </div>
 
           {/* Team Setup Button */}
-          <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div className="flex items-center gap-2 shrink-0 ml-auto">
             <button
               onClick={() => {
                 setNewTeamInput('');
@@ -266,9 +268,9 @@ function HistoryView() {
                 setIsSetupModalOpen(true);
               }}
               type="button"
-              className="px-5 py-2.5 rounded-full bg-white text-[#111318] hover:bg-amber-50 font-black text-xs sm:text-sm shadow-md transition active:scale-95 flex items-center gap-2"
+              className="px-3 py-2 sm:px-5 sm:py-2.5 rounded-full bg-white text-[#111318] hover:bg-amber-50 font-black text-[11px] sm:text-sm shadow-md transition active:scale-95 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap"
             >
-              <ArrowRightLeft className="w-4 h-4 text-amber-600 stroke-[2.5]" />
+              <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 stroke-[2.5] shrink-0" />
               <span>Team Setup</span>
             </button>
           </div>

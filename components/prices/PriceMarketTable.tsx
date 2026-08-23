@@ -1,11 +1,29 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { PriceAnalysis } from '@/lib/types';
-import { TrendingUp, TrendingDown, Search, ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, Leaf, Rocket, Search } from 'lucide-react';
 import PlayerJersey from '../pitch/PlayerJersey';
+import { STATUS_META, StatusPill } from './status-meta';
 
 const POSITION_IDS: Record<string, number> = { gkp: 1, def: 2, mid: 3, fwd: 4 };
+
+// Laid out as two columns so each chip sits under the summary card it narrows:
+// Trending Up below Rising Tonight, Trending Down below Falling Tonight.
+const STATUS_FILTERS = [
+  { key: 'critical_risers', label: 'Rising Tonight', active: 'bg-emerald-600 text-white' },
+  { key: 'critical_fallers', label: 'Falling Tonight', active: 'bg-rose-600 text-white' },
+  { key: 'risers', label: 'Trending Up', active: 'bg-emerald-100 text-emerald-800' },
+  { key: 'fallers', label: 'Trending Down', active: 'bg-rose-100 text-rose-800' },
+];
+
+const POSITION_FILTERS = [
+  { key: 'gkp', label: 'GK' },
+  { key: 'def', label: 'DEF' },
+  { key: 'mid', label: 'MID' },
+  { key: 'fwd', label: 'FWD' },
+  { key: 'all', label: 'All' },
+];
 
 interface PriceMarketTableProps {
   analyses: PriceAnalysis[];
@@ -13,11 +31,13 @@ interface PriceMarketTableProps {
 
 export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
   const [search, setSearch] = useState('');
-  // Status and position were one piece of state, so they could not be combined
-  // and picking a position silently cleared the status filter.
+  // Status and position are separate so they combine; one shared value meant
+  // picking a position silently cleared the status filter.
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [positionFilter, setPositionFilter] = useState<string>('all');
-  const [sortField, setSortField] = useState<'netTransfers' | 'changeScore' | 'currentCost' | 'selectedByPercent'>('netTransfers');
+  const [sortField, setSortField] = useState<
+    'netTransfers' | 'changeScore' | 'currentCost' | 'selectedByPercent'
+  >('netTransfers');
   const [sortAsc, setSortAsc] = useState(false);
 
   const filteredData = useMemo(() => {
@@ -73,14 +93,27 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
     }
   };
 
+  const sortableHeader = (field: typeof sortField, label: string) => (
+    <th
+      onClick={() => handleSort(field)}
+      className="px-3 py-3.5 text-center cursor-pointer hover:text-[#111318] transition"
+    >
+      <div className="flex items-center justify-center gap-1">
+        <span>{label}</span>
+        <ArrowUpDown className="w-3 h-3 text-gray-400" />
+      </div>
+    </th>
+  );
+
   return (
     <div className="w-full">
-      {/* 2 Main Summary Cards in the Same Row */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
-        {/* Left: Green Button (Rising Tonight) */}
+      {/* Summary cards — each is also the filter for its own status */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3">
         <button
-          onClick={() => setStatusFilter(statusFilter === 'critical_risers' ? 'all' : 'critical_risers')}
-          className={`p-4 sm:p-5 rounded-3xl text-left transition transform hover:scale-[1.01] active:scale-98 shadow-md flex items-center justify-between ${
+          onClick={() =>
+            setStatusFilter(statusFilter === 'critical_risers' ? 'all' : 'critical_risers')
+          }
+          className={`p-4 sm:p-5 rounded-3xl text-left transition transform hover:scale-[1.01] active:scale-95 shadow-md flex items-center justify-between ${
             statusFilter === 'critical_risers'
               ? 'bg-emerald-600 text-white ring-4 ring-emerald-300'
               : 'bg-emerald-500 hover:bg-emerald-600 text-white'
@@ -88,22 +121,23 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
         >
           <div>
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-emerald-100">
-              <TrendingUp className="w-4 h-4" />
+              <Rocket className="w-4 h-4" />
               <span>Rising Tonight</span>
             </div>
             <div className="text-2xl sm:text-4xl font-black mt-1">
               {criticalRisersCount} <span className="text-sm font-normal opacity-90">players</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-black text-lg">
-            🚀
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <Rocket className="w-5 h-5 animate-pulse-rise" />
           </div>
         </button>
 
-        {/* Right: Red Button (Falling Tonight) */}
         <button
-          onClick={() => setStatusFilter(statusFilter === 'critical_fallers' ? 'all' : 'critical_fallers')}
-          className={`p-4 sm:p-5 rounded-3xl text-left transition transform hover:scale-[1.01] active:scale-98 shadow-md flex items-center justify-between ${
+          onClick={() =>
+            setStatusFilter(statusFilter === 'critical_fallers' ? 'all' : 'critical_fallers')
+          }
+          className={`p-4 sm:p-5 rounded-3xl text-left transition transform hover:scale-[1.01] active:scale-95 shadow-md flex items-center justify-between ${
             statusFilter === 'critical_fallers'
               ? 'bg-rose-700 text-white ring-4 ring-rose-300'
               : 'bg-rose-600 hover:bg-rose-700 text-white'
@@ -111,22 +145,40 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
         >
           <div>
             <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-rose-100">
-              <TrendingDown className="w-4 h-4" />
+              <Leaf className="w-4 h-4 rotate-[135deg]" />
               <span>Falling Tonight</span>
             </div>
             <div className="text-2xl sm:text-4xl font-black mt-1">
               {criticalFallersCount} <span className="text-sm font-normal opacity-90">players</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-black text-lg">
-            🔻
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+            <Leaf className="w-5 h-5 rotate-[135deg] animate-pulse-fall" />
           </div>
         </button>
       </div>
 
-      {/* Filter and Search Controls */}
+      {/* Same grid and gap as the summary cards above, and outside the padded
+          controls card — otherwise the card's own padding shifts the column
+          split and the chips no longer sit under the card they narrow. */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+        {STATUS_FILTERS.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setStatusFilter(statusFilter === tab.key ? 'all' : tab.key)}
+            className={`px-3 py-2 rounded-full text-xs font-bold transition truncate ${
+              statusFilter === tab.key
+                ? `${tab.active} shadow-sm ring-1 ring-black/10`
+                : 'bg-white text-gray-600 hover:bg-gray-100 border border-black/5 shadow-sm'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Search and position controls */}
       <div className="pastel-card p-4 sm:p-5 shadow-sm mb-4 space-y-3">
-        {/* Search Input */}
         <div className="relative w-full">
           <input
             type="text"
@@ -138,39 +190,11 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
           <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
         </div>
 
-        {/* Row 1: Status Filters */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-black/5">
-          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">Status:</span>
-          {[
-            { key: 'critical_risers', label: '🚀 Rising Tonight', activeClass: 'bg-emerald-600 text-white' },
-            { key: 'critical_fallers', label: '🔻 Falling Tonight', activeClass: 'bg-rose-600 text-white' },
-            { key: 'risers', label: '🟢 Trending Up', activeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-            { key: 'fallers', label: '🔴 Trending Down', activeClass: 'bg-rose-100 text-rose-800 border-rose-300' },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setStatusFilter(statusFilter === tab.key ? 'all' : tab.key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition ${
-                statusFilter === tab.key
-                  ? `${tab.activeClass} shadow-sm ring-1 ring-black/10`
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Row 2: Positions + All */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-black/5">
-          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">Position:</span>
-          {[
-            { key: 'gkp', label: 'GK' },
-            { key: 'def', label: 'DEF' },
-            { key: 'mid', label: 'MID' },
-            { key: 'fwd', label: 'FWD' },
-            { key: 'all', label: 'All' },
-          ].map((tab) => (
+          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">
+            Position
+          </span>
+          {POSITION_FILTERS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setPositionFilter(tab.key)}
@@ -186,122 +210,41 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
         </div>
       </div>
 
-      {/* Table Container */}
       <div className="pastel-card overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-gray-700">
             <thead className="text-[11px] uppercase text-gray-400 border-b border-black/5 font-black tracking-wide">
               <tr>
+                {/* Target % leads: this is a price radar, so the prediction is
+                    the column you scan first. */}
+                {sortableHeader('changeScore', 'Target %')}
                 <th className="px-4 py-3.5 text-left">Player</th>
                 <th className="px-3 py-3.5 text-center">Pos</th>
-                <th
-                  onClick={() => handleSort('currentCost')}
-                  className="px-3 py-3.5 text-center cursor-pointer hover:text-[#111318] transition"
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    <span>Price</span>
-                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('selectedByPercent')}
-                  className="px-3 py-3.5 text-center cursor-pointer hover:text-[#111318] transition"
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    <span>Owned %</span>
-                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('netTransfers')}
-                  className="px-3 py-3.5 text-center cursor-pointer hover:text-[#111318] transition"
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    <span>Net Transfers</span>
-                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                  </div>
-                </th>
-                <th
-                  onClick={() => handleSort('changeScore')}
-                  className="px-3 py-3.5 text-center cursor-pointer hover:text-[#111318] transition"
-                >
-                  <div className="flex items-center justify-center gap-1">
-                    <span>Target %</span>
-                    <ArrowUpDown className="w-3 h-3 text-gray-400" />
-                  </div>
-                </th>
+                {sortableHeader('currentCost', 'Price')}
+                {sortableHeader('selectedByPercent', 'Owned %')}
+                {sortableHeader('netTransfers', 'Net Transfers')}
                 <th className="px-4 py-3.5 text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5">
               {visibleRows.map((player) => {
+                const meta = STATUS_META[player.status];
+
                 return (
-                  <tr
-                    key={player.elementId}
-                    className="hover:bg-purple-50/40 transition group"
-                  >
-                    {/* Player Info without duplicate short name */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-start gap-3">
-                        <PlayerJersey
-                          teamCode={player.team.code}
-                          isGkp={player.elementType.id === 1}
-                          className="w-8 h-8 shrink-0 mt-0.5"
-                        />
-                        <div>
-                          <div className="font-bold text-[#111318] group-hover:text-purple-700 transition">
-                            {player.webName}
-                          </div>
-                          {/* Club Name Only (Removed short name abbreviation) */}
-                          <div className="text-[11px] text-gray-500 font-semibold">
-                            {player.team.name}
-                          </div>
-                          {player.news && (
-                            <div
-                              title={player.news}
-                              className="text-[10px] text-rose-600 mt-1 flex items-center gap-1 font-medium leading-tight whitespace-nowrap"
-                            >
-                              <span className="shrink-0 text-[11px]">⚠️</span>
-                              <span className="truncate max-w-[260px] sm:max-w-[420px] lg:max-w-[560px]">
-                                {player.news}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Position */}
-                    <td className="px-3 py-3 text-center text-xs font-bold text-gray-600">
-                      {player.elementType.singular_name_short}
-                    </td>
-
-                    {/* Current Cost */}
-                    <td className="px-3 py-3 text-center font-black text-[#111318] font-mono">
-                      £{player.currentCost.toFixed(1)}m
-                    </td>
-
-                    {/* Ownership % */}
-                    <td className="px-3 py-3 text-center text-xs text-gray-600 font-mono font-bold">
-                      {player.selectedByPercent}%
-                    </td>
-
-                    {/* Net Transfers */}
-                    <td className="px-3 py-3 text-center font-mono font-bold text-xs">
-                      {player.netTransfers > 0 ? (
-                        <span className="text-emerald-600">+{player.netTransfers.toLocaleString()}</span>
-                      ) : player.netTransfers < 0 ? (
-                        <span className="text-rose-600">{player.netTransfers.toLocaleString()}</span>
-                      ) : (
-                        <span className="text-gray-400">0</span>
-                      )}
-                    </td>
-
-                    {/* Score Bar */}
+                  <tr key={player.elementId} className="hover:bg-purple-50/40 transition group">
+                    {/* Target % — half the previous width */}
                     <td className="px-3 py-3">
-                      <div className="w-28 mx-auto">
-                        <div className="flex justify-between text-[10px] font-bold mb-1">
-                          <span className={player.changeScore > 0 ? 'text-emerald-600' : player.changeScore < 0 ? 'text-rose-600' : 'text-gray-400'}>
+                      <div className="w-14 mx-auto">
+                        <div className="text-[10px] font-bold mb-1 text-center">
+                          <span
+                            className={
+                              player.changeScore > 0
+                                ? 'text-emerald-600'
+                                : player.changeScore < 0
+                                ? 'text-rose-600'
+                                : 'text-gray-400'
+                            }
+                          >
                             {player.changeScore > 0 ? `+${player.changeScore}` : player.changeScore}%
                           </span>
                         </div>
@@ -327,37 +270,63 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                       </div>
                     </td>
 
-                    {/* Status Pill */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-start gap-3">
+                        <PlayerJersey
+                          teamCode={player.team.code}
+                          isGkp={player.elementType.id === 1}
+                          className="w-8 h-8 shrink-0 mt-0.5"
+                        />
+                        <div>
+                          <div className="font-bold text-[#111318] group-hover:text-purple-700 transition">
+                            {player.webName}
+                          </div>
+                          <div className="text-[11px] text-gray-500 font-semibold">
+                            {player.team.name}
+                          </div>
+                          {player.news && (
+                            <div
+                              title={player.news}
+                              className="text-[10px] text-rose-600 mt-1 flex items-center gap-1 font-medium leading-tight whitespace-nowrap"
+                            >
+                              <span className="shrink-0 text-[11px]">⚠️</span>
+                              <span className="truncate max-w-[260px] sm:max-w-[420px] lg:max-w-[560px]">
+                                {player.news}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-3 py-3 text-center text-xs font-bold text-gray-600">
+                      {player.elementType.singular_name_short}
+                    </td>
+
+                    <td className="px-3 py-3 text-center font-black text-[#111318] font-mono">
+                      £{player.currentCost.toFixed(1)}m
+                    </td>
+
+                    <td className="px-3 py-3 text-center text-xs text-gray-600 font-mono font-bold">
+                      {player.selectedByPercent}%
+                    </td>
+
+                    <td className="px-3 py-3 text-center font-mono font-bold text-xs">
+                      {player.netTransfers > 0 ? (
+                        <span className="text-emerald-600">
+                          +{player.netTransfers.toLocaleString()}
+                        </span>
+                      ) : player.netTransfers < 0 ? (
+                        <span className="text-rose-600">
+                          {player.netTransfers.toLocaleString()}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">0</span>
+                      )}
+                    </td>
+
                     <td className="px-4 py-3 text-center">
-                      {player.status === 'rising_soon' && (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-600 text-white text-[11px] font-bold animate-pulse-rise shadow-sm">
-                          <TrendingUp className="w-3 h-3 text-white" />
-                          <span>Rising Tonight</span>
-                        </span>
-                      )}
-                      {player.status === 'likely_riser' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-semibold">
-                          <TrendingUp className="w-3 h-3" />
-                          <span>Trending Up</span>
-                        </span>
-                      )}
-                      {player.status === 'falling_soon' && (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-rose-600 text-white text-[11px] font-bold animate-pulse-fall shadow-sm">
-                          <TrendingDown className="w-3 h-3 text-white" />
-                          <span>Falling Tonight</span>
-                        </span>
-                      )}
-                      {player.status === 'likely_faller' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[11px] font-semibold">
-                          <TrendingDown className="w-3 h-3" />
-                          <span>Trending Down</span>
-                        </span>
-                      )}
-                      {player.status === 'stable' && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gray-100 text-gray-500 text-[11px]">
-                          <span>Neutral</span>
-                        </span>
-                      )}
+                      <StatusPill status={player.status} />
                     </td>
                   </tr>
                 );
@@ -365,10 +334,13 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
             </tbody>
           </table>
         </div>
+
         {filteredData.length === 0 && (
           <div className="py-12 text-center">
             <p className="text-sm font-bold text-gray-500 mb-1">No players match these filters</p>
-            <p className="text-xs text-gray-400">Try a different name, or clear the status and position filters.</p>
+            <p className="text-xs text-gray-400">
+              Try a different name, or clear the status and position filters.
+            </p>
           </div>
         )}
 
@@ -377,7 +349,9 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
             ? 'No matching players'
             : filteredData.length > visibleRows.length
             ? `Showing the top ${visibleRows.length} of ${filteredData.length.toLocaleString()} matching players`
-            : `Showing all ${filteredData.length} matching ${filteredData.length === 1 ? 'player' : 'players'}`}
+            : `Showing all ${filteredData.length} matching ${
+                filteredData.length === 1 ? 'player' : 'players'
+              }`}
         </div>
       </div>
     </div>
