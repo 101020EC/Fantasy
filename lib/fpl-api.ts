@@ -147,3 +147,60 @@ export function buildSquadPlayers(
     })
     .filter(Boolean) as TeamSquadPlayer[];
 }
+
+export async function fetchFPLLeagueStandings(leagueId: number | string): Promise<any> {
+  try {
+    const res = await fetch(`${FPL_BASE}/leagues-classic/${leagueId}/standings/`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)',
+      },
+      next: { revalidate: 300 },
+    });
+
+    if (!res.ok) {
+      return null;
+    }
+
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchFPLHistory(teamId: number | string): Promise<any> {
+  try {
+    const res = await fetch(`${FPL_BASE}/entry/${teamId}/history/`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)',
+      },
+      next: { revalidate: 300 },
+    });
+
+    if (!res.ok) {
+      return null;
+    }
+
+    return res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchFPLTransfers(teamId: number | string): Promise<any[]> {
+  try {
+    const res = await fetch(`${FPL_BASE}/entry/${teamId}/transfers/`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)',
+      },
+      next: { revalidate: 300 },
+    });
+
+    if (!res.ok) {
+      return [];
+    }
+
+    return res.json();
+  } catch {
+    return [];
+  }
+}
