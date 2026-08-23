@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { FPLEntry, TeamSquadPlayer } from '@/lib/types';
-import { CheckCircle2, TrendingDown, ArrowRightLeft, Send } from 'lucide-react';
+import { CheckCircle2, TrendingDown, TrendingUp, ArrowRightLeft, Send } from 'lucide-react';
 import TelegramSettingsModal from '../telegram/TelegramSettingsModal';
 
 interface TeamPitchTopBarProps {
@@ -33,9 +33,9 @@ export default function TeamPitchTopBar({
 
   return (
     <>
-      {/* Periwinkle Blue Card (Matching the Home Hero color) */}
+      {/* Periwinkle Blue Card */}
       <div className="card-pastel-blue p-5 sm:p-6 mb-4 shadow-xl relative overflow-hidden transition-all text-[#111318]">
-        {/* Row 1: Left (ID, GW, Region) & Right (Change Team + Telegram Icons side-by-side attached to right edge) */}
+        {/* Row 1: Left (ID, GW, Region) & Right (Market Icon + Change Team Icon + Telegram Icon attached to right edge) */}
         <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-black/10">
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="px-3 py-1 rounded-full bg-[#111318] text-white text-[11px] font-black font-mono shadow-sm">
@@ -56,8 +56,17 @@ export default function TeamPitchTopBar({
             )}
           </div>
 
-          {/* Right Edge: Change Team (Icon-only) and Telegram (Icon-only) together */}
+          {/* Right Edge: Market (Logo) + Change Team (Logo) + Telegram (Logo) */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Market Icon Button (อยู่หน้าสลับทีม) */}
+            <Link
+              href="/prices"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-orange-600 shadow-sm flex items-center justify-center transition active:scale-95"
+              title="ตลาดราคา (Market)"
+            >
+              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+            </Link>
+
             {/* Change Team Icon Button */}
             <Link
               href="/?switch=true"

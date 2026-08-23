@@ -12,7 +12,6 @@ import { FPLPicksResponse } from '@/lib/types';
 import TeamHeader from '@/components/team/TeamHeader';
 import FootballPitch from '@/components/pitch/FootballPitch';
 import TeamPitchTopBar from '@/components/pitch/TeamPitchTopBar';
-import TeamGameweekScroll from '@/components/team/TeamGameweekScroll';
 import PrivateLeaguesCard from '@/components/team/PrivateLeaguesCard';
 import TeamSaveTracker from './TeamSaveTracker';
 import { AlertCircle, Search } from 'lucide-react';
@@ -77,7 +76,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           gw={activeGw}
         />
 
-        {/* 1. Top Blue Hero Card: Change Team, Telegram, Avatar, Team Name, Today Safe beside name */}
+        {/* 1. Top Blue Hero Card: Market, Change Team, Telegram, Avatar, Team Name, Today Safe beside name */}
         <TeamPitchTopBar
           entry={entry}
           gameweek={activeGw}
@@ -85,22 +84,15 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           activeChip={picksData?.active_chip}
         />
 
-        {/* 2. Full Horizontal Gameweek Capsule Scroll Bar (GW 1 ... GW 38) */}
-        <TeamGameweekScroll
-          teamId={id}
-          activeGw={activeGw}
-          currentGw={currentGwNum}
-        />
-
-        {/* 3. Football Pitch View */}
+        {/* 2. Football Pitch View */}
         <div>
           <FootballPitch players={squadPlayers} />
         </div>
 
-        {/* 4. Team Overview Header & Stats (แต้ม GW นี้, แต้มสะสม, อันดับโลก อยู่ด้านล่าง) */}
+        {/* 3. Team Overview Header & Stats (แต้ม GW นี้, แต้มสะสม, อันดับโลก อยู่ด้านล่าง) */}
         <TeamHeader entry={entry} picksData={picksData} currentEvent={activeEvent} />
 
-        {/* 5. Private Leagues Card (จัดลำดับขึ้นลงได้ตามต้องการ) */}
+        {/* 4. Private Leagues Card (จัดลำดับขึ้นลงได้ตามต้องการ) */}
         <PrivateLeaguesCard
           leagues={(entry as any).leagues?.classic || []}
           currentTeamId={id}

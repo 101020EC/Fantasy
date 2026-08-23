@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Database, Check, Save, Loader2, X, Trophy, AlertCircle } from 'lucide-react';
 import { archiveSelectedLeaguesData } from '@/lib/firebase-service';
 import { useAuth } from '../AuthContext';
-import { fetchFPLEntry, fetchFPLPicks, fetchFPLBootstrap } from '@/lib/fpl-api';
 
 interface FirebaseBackupModalProps {
   isOpen: boolean;
@@ -15,6 +14,7 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
   const { savedTeamId } = useAuth();
   const [leagues, setLeagues] = useState<any[]>([]);
   const [selectedLeagueIds, setSelectedLeagueIds] = useState<number[]>([]);
+  const [entryData, setEntryData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
@@ -22,27 +22,39 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
   useEffect(() => {
     if (!isOpen || !savedTeamId) return;
 
-    // Load leagues from entry API or localStorage
     setLoading(true);
-    fetchFPLEntry(savedTeamId)
-      .then((entry: any) => {
-        const classic = entry.leagues?.classic || [];
-        const privateOnly = classic.filter((l: any) => l.league_type === 'x' || l.rank_type !== 'g');
-        const display = privateOnly.length > 0 ? privateOnly : classic.slice(0, 10);
-        setLeagues(display);
+    setSyncStatus(null);
 
-        // Load saved selection
+    // Fetch via proxy API route to avoid browser CORS restrictions
+    fetch(`/api/fpl/entry/${savedTeamId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('ไม่สามารถโหลดข้อมูลลีกได้');
+        return res.json();
+      })
+      .then((entry: any) => {
+        setEntryData(entry);
+        const classic = entry.leagues?.classic || [];
+        const h2h = entry.leagues?.h2h || [];
+        const allLeagues = [...classic, ...h2h];
+
+        setLeagues(allLeagues);
+
+        // Load saved selection or default to all leagues
         try {
           const saved = localStorage.getItem(`fpl_selected_leagues_${savedTeamId}`);
           if (saved) {
             setSelectedLeagueIds(JSON.parse(saved));
           } else {
-            const defaults = display.map((l: any) => Number(l.id));
+            const defaults = allLeagues.map((l: any) => Number(l.id));
             setSelectedLeagueIds(defaults);
           }
-        } catch (e) {}
+        } catch (e) {
+          setSelectedLeagueIds(allLeagues.map((l: any) => Number(l.id)));
+        }
       })
-      .catch((err) => console.error(err))
+      .catch((err) => {
+        console.error(err);
+      })
       .finally(() => setLoading(false));
   }, [isOpen, savedTeamId]);
 
@@ -78,22 +90,23 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
   };
 
   const handleSync = async () => {
-    if (!savedTeamId) return;
+    if (!savedTeamId || !entryData) return;
     setIsSyncing(true);
     setSyncStatus(null);
 
     try {
-      const [bootstrap, entry] = await Promise.all([
-        fetchFPLBootstrap(),
-        fetchFPLEntry(savedTeamId),
-      ]);
-      const currentEvent = bootstrap.events.find((e) => e.is_current) || bootstrap.events[0];
-      const gw = entry.current_event || currentEvent?.id || 1;
-      const picks = await fetchFPLPicks(savedTeamId, gw);
+      // Fetch latest GW picks via proxy
+      const bootstrapRes = await fetch('/api/fpl/bootstrap');
+      const bootstrap = await bootstrapRes.json();
+      const currentEvent = bootstrap.events?.find((e: any) => e.is_current) || bootstrap.events?.[0];
+      const gw = entryData.current_event || currentEvent?.id || 1;
+
+      const picksRes = await fetch(`/api/fpl/picks/${savedTeamId}/${gw}`);
+      const picks = await picksRes.json();
 
       const res = await archiveSelectedLeaguesData(
         savedTeamId,
-        entry,
+        entryData,
         picks,
         gw,
         selectedLeagueIds
@@ -161,11 +174,11 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
         {loading ? (
           <div className="py-12 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>กำลังโหลดรายชื่อมินิลีก...</span>
+            <span>กำลังโหลดรายชื่อมินิลีกทั้งหมด...</span>
           </div>
         ) : leagues.length === 0 ? (
           <div className="py-8 text-center text-xs text-gray-400">
-            ไม่พบมินิลีกส่วนตัวในทีมนี้ (Team #{savedTeamId})
+            ไม่พบมินิลีกในทีมนี้ (Team #{savedTeamId})
           </div>
         ) : (
           <div className="space-y-2 mb-5 max-h-60 overflow-y-auto pr-1">
@@ -199,7 +212,7 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
                     </div>
                   </div>
                   <span className="text-xs font-black text-[#38003c] shrink-0">
-                    อันดับ #{league.entry_rank || 1}
+                    อันดับ #{league.entry_rank || league.entry_last_rank || 1}
                   </span>
                 </div>
               );
