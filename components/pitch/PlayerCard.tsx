@@ -90,14 +90,18 @@ export default function PlayerCard({ player, onClick, isBench = false }: PlayerC
         {/* Price Trend Radar Badge */}
         {renderPriceBadge()}
 
-        {/* Injury / Doubt flag */}
+        {/* Availability. FPL always sends a 0/25/50/75 estimate with a flag,
+            and the number says more than an exclamation mark: 75% is a
+            different decision from 0%. The sentence behind it is one tap away
+            in the player modal. */}
         {element.status !== 'a' && (
           <span
-            className={`absolute top-0 -left-1 px-1 py-0.5 rounded-full text-[8px] font-bold text-white shadow ${
+            title={element.news || undefined}
+            className={`absolute top-0 -left-1 px-1 py-0.5 rounded-full text-[8px] font-black text-white shadow ${
               element.status === 'd' ? 'bg-amber-500' : 'bg-rose-500'
             }`}
           >
-            !
+            {element.chance_of_playing_next_round ?? 0}%
           </span>
         )}
       </div>

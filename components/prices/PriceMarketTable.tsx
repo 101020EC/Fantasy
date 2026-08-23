@@ -4,7 +4,8 @@ import React, { useMemo, useState } from 'react';
 import { PriceAnalysis } from '@/lib/types';
 import { ArrowUpDown, Leaf, Rocket, Search, Star, AlertCircle } from 'lucide-react';
 import PlayerJersey from '../pitch/PlayerJersey';
-import { StatusPill } from './status-meta';
+import { STATUS_META, StatusPill } from './status-meta';
+import AvailabilityChip from './AvailabilityChip';
 import { useAuth } from '../AuthContext';
 import { useMarketContext } from './useMarketContext';
 
@@ -13,11 +14,11 @@ const POSITION_IDS: Record<string, number> = { gkp: 1, def: 2, mid: 3, fwd: 4 };
 // Laid out as two columns so each chip sits under the summary card it narrows:
 // Trending Up below Rising Tonight, Trending Down below Falling Tonight.
 const STATUS_FILTERS = [
-  { key: 'critical_risers', label: 'Rising Tonight', active: 'bg-emerald-600 text-white' },
-  { key: 'critical_fallers', label: 'Falling Tonight', active: 'bg-rose-600 text-white' },
-  { key: 'risers', label: 'Trending Up', active: 'bg-emerald-100 text-emerald-800' },
-  { key: 'fallers', label: 'Trending Down', active: 'bg-rose-100 text-rose-800' },
-];
+  { key: 'critical_risers', status: 'rising_soon', active: 'bg-emerald-600 text-white' },
+  { key: 'critical_fallers', status: 'falling_soon', active: 'bg-rose-600 text-white' },
+  { key: 'risers', status: 'likely_riser', active: 'bg-emerald-100 text-emerald-800' },
+  { key: 'fallers', status: 'likely_faller', active: 'bg-rose-100 text-rose-800' },
+] as const;
 
 const POSITION_FILTERS = [
   { key: 'gkp', label: 'GK' },
@@ -172,19 +173,28 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
           controls card — otherwise the card's own padding shifts the column
           split and the chips no longer sit under the card they narrow. */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
-        {STATUS_FILTERS.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setStatusFilter(statusFilter === tab.key ? 'all' : tab.key)}
-            className={`px-3 py-2 rounded-full text-xs font-bold transition truncate ${
-              statusFilter === tab.key
-                ? `${tab.active} shadow-sm ring-1 ring-black/10`
-                : 'bg-white text-gray-600 hover:bg-gray-100 border border-black/5 shadow-sm'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+        {STATUS_FILTERS.map((tab) => {
+          const meta = STATUS_META[tab.status];
+          const isOn = statusFilter === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setStatusFilter(isOn ? 'all' : tab.key)}
+              className={`px-3 py-2 rounded-full text-xs font-bold transition truncate flex items-center justify-center gap-1.5 ${
+                isOn
+                  ? `${tab.active} shadow-sm ring-1 ring-black/10`
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-black/5 shadow-sm'
+              }`}
+            >
+              {/* Selected chips invert to a solid fill, so the icon takes the
+                  chip's own colour rather than its usual green or red. */}
+              <meta.Icon
+                className={`w-3.5 h-3.5 shrink-0 ${isOn ? '' : meta.iconClass}`}
+              />
+              <span className="truncate">{meta.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Search and position controls */}
@@ -301,6 +311,10 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
               {visibleRows.map((player) => {
                 const inSquad = squadIds.has(player.elementId);
                 const watched = watchIds.has(player.elementId);
+                const tonight =
+                  player.status === 'rising_soon' || player.status === 'falling_soon'
+                    ? STATUS_META[player.status]
+                    : null;
 
                 // Squad wins the row colour when a player is both — being in
                 // the team is the stronger fact; the star still marks the
@@ -319,7 +333,15 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                     {/* Target % — half the previous width */}
                     <td className="px-3 py-3">
                       <div className="w-14 mx-auto">
-                        <div className="text-[10px] font-bold mb-1 text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1 text-[10px] font-bold">
+                          {/* Only the two "tonight" states are marked — a pulse
+                              on every row would stop meaning anything. */}
+                          {tonight && (
+                            <tonight.Icon
+                              className={`w-3 h-3 shrink-0 ${tonight.iconClass}`}
+                              aria-label={tonight.label}
+                            />
+                          )}
                           <span
                             className={
                               player.changeScore > 0
@@ -396,17 +418,10 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                           <div className="text-[11px] text-gray-500 font-semibold">
                             {player.team.name}
                           </div>
-                          {player.news && (
-                            <div
-                              title={player.news}
-                              className="text-[10px] text-rose-600 mt-1 flex items-center gap-1 font-medium leading-tight whitespace-nowrap"
-                            >
-                              <span className="shrink-0 text-[11px]">⚠️</span>
-                              <span className="truncate max-w-[260px] sm:max-w-[420px] lg:max-w-[560px]">
-                                {player.news}
-                              </span>
-                            </div>
-                          )}
+                          <AvailabilityChip
+                            chance={player.chanceOfPlaying}
+                            news={player.news}
+                          />
                         </div>
                       </div>
                     </td>

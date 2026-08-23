@@ -82,6 +82,7 @@ export function analyzePlayerPrice(
     status,
     changeScore,
     news: element.news,
+    chanceOfPlaying: element.chance_of_playing_next_round,
     availability,
   };
 }
