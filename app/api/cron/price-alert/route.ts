@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { botToken, chatId, teamId: envTeamId, configured } = getTelegramConfig();
+    const { botToken, chatId, teamId: envTeamId, configured } = await getTelegramConfig();
     if (!configured) {
       return NextResponse.json(
         { error: 'TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are not configured' },
