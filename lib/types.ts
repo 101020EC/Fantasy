@@ -127,6 +127,8 @@ export interface PriceAnalysis {
   status: PriceStatus;
   changeScore: number; // -100 to +100 index estimate
   news: string;
+  /** FPL's own 0/25/50/75 estimate; always sent alongside a flag. */
+  chanceOfPlaying: number | null;
   availability: 'available' | 'doubtful' | 'injured' | 'suspended' | 'unavailable';
 }
 
