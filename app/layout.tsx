@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Navbar from '@/components/Navbar';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
   title: 'FPL Radar Pro | Fantasy Premier League Team Viewer & Price Predictor',
@@ -14,10 +15,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="th" className="dark">
-      <body className="bg-[#0d0118] text-gray-100 antialiased min-h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-1">{children}</div>
+    <html lang="th" className="dark" suppressHydrationWarning>
+      <body className="antialiased min-h-screen flex flex-col transition-colors duration-300">
+        <ThemeProvider>
+          <Navbar />
+          <div className="flex-1">{children}</div>
+        </ThemeProvider>
       </body>
     </html>
   );

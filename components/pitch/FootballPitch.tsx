@@ -13,11 +13,9 @@ interface FootballPitchProps {
 export default function FootballPitch({ players }: FootballPitchProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<TeamSquadPlayer | null>(null);
 
-  // Separate starters (first 11 picks, position 1-11) and bench (position 12-15)
   const starters = players.filter((p) => p.pick.position <= 11);
   const bench = players.filter((p) => p.pick.position > 11);
 
-  // Group starters by position: 1 = GKP, 2 = DEF, 3 = MID, 4 = FWD
   const gk = starters.filter((p) => p.elementType.id === 1);
   const def = starters.filter((p) => p.elementType.id === 2);
   const mid = starters.filter((p) => p.elementType.id === 3);
@@ -30,17 +28,17 @@ export default function FootballPitch({ players }: FootballPitchProps) {
       {/* Pitch Header */}
       <div className="flex items-center justify-between mb-3 px-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-gray-300">แผนการเล่น:</span>
-          <span className="px-2 py-0.5 rounded-full bg-fpl-green/20 text-fpl-green border border-fpl-green/40 text-xs font-black">
+          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">แผนการเล่น:</span>
+          <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-fpl-green/20 text-emerald-800 dark:text-fpl-green border border-emerald-300 dark:border-fpl-green/40 text-xs font-black">
             {formation}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-gray-300">
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+        <div className="flex items-center gap-3 text-[11px] text-gray-700 dark:text-gray-300">
+          <span className="flex items-center gap-1 font-semibold">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
             🚀 ราคาจะขึ้น
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1 font-semibold">
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
             ⚠️ ราคาจะตก
           </span>
