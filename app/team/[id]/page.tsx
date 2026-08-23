@@ -12,6 +12,7 @@ import TeamHeader from '@/components/team/TeamHeader';
 import FootballPitch from '@/components/pitch/FootballPitch';
 import PriceAlertBanner from '@/components/prices/PriceAlertBanner';
 import TeamSaveTracker from './TeamSaveTracker';
+import TeamActionButtons from '@/components/team/TeamActionButtons';
 import { AlertCircle, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -49,25 +50,19 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
     const squadPlayers = buildSquadPlayers(picksData.picks, bootstrap, fixtures, targetGw);
 
     return (
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8">
         <TeamSaveTracker
           id={id}
           name={entry.name}
           managerName={`${entry.player_first_name} ${entry.player_last_name}`}
         />
 
-        {/* Back and GW Navigation Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-fpl-green transition"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            <span>ค้นหาทีมอื่น</span>
-          </Link>
+        {/* Action Controls & GW Navigation Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 mb-6">
+          <TeamActionButtons />
 
           {/* Gameweek Selector */}
-          <div className="flex items-center gap-2 bg-white dark:bg-purple-950/80 border border-purple-200 dark:border-purple-800 rounded-xl p-1 shadow-sm">
+          <div className="flex items-center gap-1.5 bg-white dark:bg-purple-950/80 border border-purple-200 dark:border-purple-800 rounded-xl p-1 shadow-sm">
             {targetGw > 1 ? (
               <Link
                 href={`/team/${id}?gw=${targetGw - 1}`}
@@ -83,7 +78,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
             )}
 
             <span className="text-xs sm:text-sm font-black text-gray-900 dark:text-white px-2">
-              Gameweek {targetGw}
+              GW {targetGw}
             </span>
 
             {targetGw < 38 ? (
@@ -126,7 +121,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
             {err.message || `ไม่พบข้อมูลสำหรับ FPL Team ID: ${id} กรุณาตรวจสอบหมายเลขทีมอีกครั้ง`}
           </p>
           <Link
-            href="/"
+            href="/?switch=true"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-900 dark:bg-gradient-to-r dark:from-fpl-green dark:to-emerald-400 text-white dark:text-fpl-purple font-black text-sm hover:scale-105 transition-transform shadow-lg"
           >
             <Search className="w-4 h-4" />

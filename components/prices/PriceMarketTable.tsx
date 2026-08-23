@@ -229,14 +229,15 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                           <div className="font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-fpl-green transition">
                             {player.webName}
                           </div>
-                          <div className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                            <span>{player.team.short_name}</span>
-                            {player.news && (
-                              <span className="text-rose-500 dark:text-rose-400 text-[10px]" title={player.news}>
-                                • ⚠️ {player.news.slice(0, 24)}...
-                              </span>
-                            )}
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400 font-semibold">
+                            {player.team.name} ({player.team.short_name})
                           </div>
+                          {player.news && (
+                            <div className="text-[10px] text-rose-600 dark:text-rose-400 mt-1 flex items-start gap-1 font-medium leading-tight max-w-[200px] sm:max-w-sm">
+                              <span className="shrink-0 text-[11px]">⚠️</span>
+                              <span>{player.news}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>

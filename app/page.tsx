@@ -1,24 +1,32 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { Shield, Search, TrendingUp, Sparkles, Activity, ArrowRight, HelpCircle, CheckCircle2, User, RefreshCw } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Shield, Search, TrendingUp, Sparkles, Activity, ArrowRight, HelpCircle, User, Send } from 'lucide-react';
 import RecentTeams from '@/components/team/RecentTeams';
 import { useAuth } from '@/components/AuthContext';
+import TelegramSettingsModal from '@/components/telegram/TelegramSettingsModal';
 import Link from 'next/link';
 
 export default function HomePage() {
   const { savedTeamId, setSavedTeamId } = useAuth();
+  const searchParams = useSearchParams();
+  const isSwitching = searchParams.get('switch') === 'true';
+
   const [teamId, setTeamId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isTelegramModalOpen, setIsTelegramModalOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
+  // Automatic redirect to saved team if user already has one and is not explicitly switching
   useEffect(() => {
-    if (savedTeamId) {
+    if (savedTeamId && !isSwitching) {
+      router.replace(`/team/${savedTeamId}`);
+    } else if (savedTeamId) {
       setTeamId(savedTeamId);
     }
-  }, [savedTeamId]);
+  }, [savedTeamId, isSwitching, router]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,7 +56,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-[calc(100vh-70px)] flex flex-col justify-between w-full">
-      <main className="w-full max-w-5xl mx-auto px-4 py-8 sm:py-14 text-center">
+      <main className="w-full max-w-5xl mx-auto px-4 py-8 sm:py-12 text-center">
         {/* Top Badge */}
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/60 border border-purple-300 dark:border-purple-700/60 text-purple-800 dark:text-fpl-cyan text-xs font-bold mb-4 shadow-sm">
           <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-fpl-green" />
@@ -61,12 +69,12 @@ export default function HomePage() {
           <br className="hidden sm:inline" /> ดักราคาขึ้น-ลง
         </h1>
 
-        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8 leading-relaxed">
+        <p className="text-sm sm:text-base text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-6 leading-relaxed">
           กรอกเพียง <strong>FPL Team ID</strong> เพื่อดูแผนการเล่น 11 ตัวจริง, ตัวสำรอง, กัปตัน, คะแนนสด
           พร้อมระบบเรดาร์แจ้งเตือนนักเตะที่เสี่ยง <strong>ราคาตก</strong> หรือมีโอกาส <strong>ราคาขึ้น</strong> คืนนี้!
         </p>
 
-        {/* Saved Team Quick Access Alert if user has saved ID */}
+        {/* Saved Team Banner if user is currently switching */}
         {savedTeamId && (
           <div className="max-w-xl mx-auto mb-4 p-3 rounded-2xl bg-purple-50 dark:bg-purple-950/80 border border-purple-200 dark:border-purple-800 flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-2 text-left">
@@ -83,7 +91,7 @@ export default function HomePage() {
               }}
               className="px-3 py-1.5 bg-purple-900 dark:bg-fpl-green text-white dark:text-fpl-purple font-black text-xs rounded-xl hover:scale-105 transition shadow"
             >
-              เปิดดูทีมทันที &rarr;
+              เปิดดูทีมหลัก &rarr;
             </button>
           </div>
         )}
@@ -117,7 +125,7 @@ export default function HomePage() {
               ) : (
                 <>
                   <span>เปิดดูทีม</span>
-                  <ArrowRight className="w-4 h-4" />
+                  <ArrowRight className="w-5 h-5" />
                 </>
               )}
             </button>
@@ -188,27 +196,28 @@ export default function HomePage() {
             </span>
           </Link>
 
-          {/* Card 3: Full Market */}
-          <Link
-            href="/prices"
-            className="p-5 rounded-2xl glass-panel border border-purple-200/80 dark:border-purple-800/60 hover:border-teal-500 dark:hover:border-fpl-cyan/60 active:scale-98 transition group text-left shadow-sm flex flex-col justify-between"
+          {/* Card 3: Telegram Notification Setup */}
+          <button
+            type="button"
+            onClick={() => setIsTelegramModalOpen(true)}
+            className="p-5 rounded-2xl glass-panel border border-purple-200/80 dark:border-purple-800/60 hover:border-sky-500 dark:hover:border-sky-400/60 active:scale-98 transition group text-left shadow-sm flex flex-col justify-between"
           >
             <div>
-              <div className="w-11 h-11 rounded-xl bg-teal-100 dark:bg-fpl-cyan/20 text-teal-700 dark:text-fpl-cyan flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <Activity className="w-5 h-5" />
+              <div className="w-11 h-11 rounded-xl bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <Send className="w-5 h-5" />
               </div>
               <h3 className="text-base font-black text-gray-900 dark:text-white mb-1 flex items-center justify-between">
-                <span>ตลาดราคาเต็มทั้งลีก</span>
-                <ArrowRight className="w-4 h-4 text-teal-600 dark:text-fpl-cyan opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span>แจ้งเตือนผ่าน Telegram</span>
+                <ArrowRight className="w-4 h-4 text-sky-600 dark:text-sky-400 opacity-0 group-hover:opacity-100 transition-opacity" />
               </h3>
               <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
-                ดูรายชื่อ Top Risers และ Top Fallers ทุกตำแหน่ง กรองหาตัวที่กำลังจะขึ้นก่อนราคาแพงขึ้นได้ทันท่วงที
+                เชื่อมต่อบอท Telegram ฟรี เพื่อส่งแจ้งเตือนเตือนราคานักเตะในทีมของคุณถึงมือถือแบบอัตโนมัติ
               </p>
             </div>
-            <span className="text-[11px] font-bold text-teal-600 dark:text-fpl-cyan mt-3 block">
-              สำรวจตลาดนักเตะ &rarr;
+            <span className="text-[11px] font-bold text-sky-600 dark:text-sky-400 mt-3 block">
+              ตั้งค่า Telegram Alert &rarr;
             </span>
-          </Link>
+          </button>
         </div>
 
         {/* How to find Team ID Section */}
@@ -236,6 +245,12 @@ export default function HomePage() {
       <footer className="border-t border-purple-200 dark:border-purple-900/40 py-5 text-center text-xs text-gray-500 dark:text-gray-400">
         <p>Fantasy Premier League Team Viewer & Price Alert &bull; Powered by Next.js & Vercel</p>
       </footer>
+
+      {/* Telegram Modal */}
+      <TelegramSettingsModal
+        isOpen={isTelegramModalOpen}
+        onClose={() => setIsTelegramModalOpen(false)}
+      />
     </div>
   );
 }
