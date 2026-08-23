@@ -13,7 +13,6 @@ import TeamHeader from '@/components/team/TeamHeader';
 import FootballPitch from '@/components/pitch/FootballPitch';
 import TeamPitchTopBar from '@/components/pitch/TeamPitchTopBar';
 import PrivateLeaguesCard from '@/components/team/PrivateLeaguesCard';
-import TeamGameweekScroll from '@/components/team/TeamGameweekScroll';
 import TeamSaveTracker from './TeamSaveTracker';
 import { AlertCircle, Search } from 'lucide-react';
 
@@ -92,19 +91,19 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           activeChip={picksData?.active_chip}
         />
 
-        {/* 2. Gameweek switcher — the page already honoured ?gw=, but nothing
-            in the UI ever linked to it. */}
-        <TeamGameweekScroll teamId={id} activeGw={activeGw} currentGw={currentGwNum} />
+        {/* Gameweek switching lives on the History page, which swaps the squad
+            in place instead of reloading this route. ?gw= still works for
+            direct links. */}
 
-        {/* 3. Football Pitch View */}
+        {/* 2. Football Pitch View */}
         <div>
           <FootballPitch players={squadPlayers} />
         </div>
 
-        {/* 4. Team Overview Header & Stats */}
+        {/* 3. Team Overview Header & Stats */}
         <TeamHeader entry={entry} picksData={picksData} currentEvent={activeEvent} />
 
-        {/* 5. Private Leagues Card */}
+        {/* 4. Private Leagues Card */}
         <PrivateLeaguesCard
           leagues={(entry as any).leagues?.classic || []}
           currentTeamId={id}

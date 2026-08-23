@@ -76,7 +76,7 @@ const getBootstrap = unstable_cache(
       cache: 'no-store',
     });
     if (!res.ok) {
-      throw new Error(`ไม่สามารถโหลดข้อมูลผู้เล่น FPL ได้ (HTTP ${res.status})`);
+      throw new Error(`Could not load FPL player data (HTTP ${res.status})`);
     }
     return trimBootstrap(await res.json());
   },
@@ -95,8 +95,8 @@ export async function fetchFPLEntry(teamId: number | string): Promise<FPLEntry> 
     // "team not found" sent users to re-check an ID that was fine.
     throw new Error(
       res.status === 404
-        ? `ไม่พบทีม ID: ${teamId} (กรุณาตรวจ Team ID)`
-        : `FPL API ขัดข้องชั่วคราว (HTTP ${res.status})`
+        ? `Team ID ${teamId} was not found — check the number`
+        : `The FPL API is temporarily unavailable (HTTP ${res.status})`
     );
   }
   return res.json();
@@ -108,7 +108,7 @@ export async function fetchFPLPicks(
 ): Promise<FPLPicksResponse> {
   const res = await fplFetch(`/entry/${teamId}/event/${eventId}/picks/`, 60);
   if (!res.ok) {
-    throw new Error(`ไม่พบข้อมูลการจัดตัวใน GW ${eventId}`);
+    throw new Error(`No squad found for GW ${eventId}`);
   }
   return res.json();
 }

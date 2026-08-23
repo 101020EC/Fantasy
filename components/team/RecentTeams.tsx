@@ -62,7 +62,7 @@ export default function RecentTeams() {
     <div className="w-full mt-4 text-left">
       <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-2">
         <History className="w-3 h-3 text-pastel-blueDark" />
-        <span>ทีมที่ดูล่าสุด (Recent Teams)</span>
+        <span>Recent Teams</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {recentTeams.map((team) => (
@@ -78,7 +78,7 @@ export default function RecentTeams() {
             <button
               onClick={(e) => removeTeam(e, team.id)}
               className="text-gray-400 hover:text-rose-500 p-0.5 rounded-full"
-              title="ลบออกจากประวัติ"
+              title="Remove from history"
             >
               <X className="w-3 h-3" />
             </button>

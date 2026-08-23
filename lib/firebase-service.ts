@@ -28,7 +28,7 @@ export async function archiveSelectedLeaguesData(
 
   const payload = await res.json();
   if (!res.ok) {
-    throw new Error(payload?.error || 'ไม่สามารถสำรองข้อมูลได้');
+    throw new Error(payload?.error || 'Backup failed');
   }
 
   return payload as ArchiveResult;

@@ -40,7 +40,7 @@ function loadServiceAccount(): { account: ServiceAccount | null; status: AdminCo
         ok: false,
         reason: 'missing',
         detail:
-          'FIREBASE_SERVICE_ACCOUNT ไม่ถูกส่งมาถึงเซิร์ฟเวอร์ — ตรวจว่าตั้งค่าไว้แล้วและติ๊ก environment ให้ตรงกับที่ deploy อยู่ จากนั้น redeploy',
+          'FIREBASE_SERVICE_ACCOUNT never reached the server — check it is set for the environment this deploy runs in, then redeploy',
       },
     };
   }
@@ -67,8 +67,8 @@ function loadServiceAccount(): { account: ServiceAccount | null; status: AdminCo
         ok: false,
         reason: 'not_base64_json',
         detail: repeated
-          ? `FIREBASE_SERVICE_ACCOUNT ยาว ${value.length} ตัวอักษร ซึ่งเป็นค่าเดิมต่อกัน ${repeated} ครั้ง — ตรวจว่าต้นทางไม่มีบรรทัดซ้ำ แล้วลบค่าในช่องให้หมด (⌘A แล้ว Delete) ก่อนวางใหม่ครั้งเดียว`
-          : `FIREBASE_SERVICE_ACCOUNT มีค่าอยู่ (${value.length} ตัวอักษร) แต่อ่านเป็น JSON ไม่ได้ — ค่าน่าจะขาดหายหรือถูกตัดตอนวาง (ปกติยาวประมาณ 3,100 ตัวอักษร)`,
+          ? `FIREBASE_SERVICE_ACCOUNT is ${value.length} characters, which is the same value repeated ${repeated} times — check the source has no duplicate line, then clear the field completely before pasting once`
+          : `FIREBASE_SERVICE_ACCOUNT is set (${value.length} characters) but does not read as JSON — the value looks truncated or damaged in transit (it is normally around 3,100 characters)`,
       },
     };
   }
@@ -80,7 +80,7 @@ function loadServiceAccount(): { account: ServiceAccount | null; status: AdminCo
       status: {
         ok: false,
         reason: 'incomplete',
-        detail: `service account JSON ถอดรหัสได้ แต่ขาด field: ${missing.join(', ')}`,
+        detail: `the service account JSON decoded but is missing: ${missing.join(', ')}`,
       },
     };
   }
@@ -105,7 +105,7 @@ export function getAdminConfigStatus(): AdminConfigStatus {
 }
 
 export const ADMIN_NOT_CONFIGURED =
-  'ยังไม่ได้ตั้งค่า Firebase ฝั่งเซิร์ฟเวอร์ (ต้องกำหนด FIREBASE_SERVICE_ACCOUNT)';
+  'Firebase is not configured on the server (set FIREBASE_SERVICE_ACCOUNT)';
 
 let cachedApp: App | null = null;
 

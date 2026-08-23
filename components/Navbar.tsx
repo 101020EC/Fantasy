@@ -45,7 +45,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-black/5 px-4 sm:px-8 py-3 transition-colors shadow-sm">
+      <header className="app-header sticky top-0 z-40 w-full bg-white/90 backdrop-blur-md border-b border-black/5 px-4 sm:px-8 py-3 transition-colors shadow-sm">
         <div className="w-full max-w-6xl mx-auto flex items-center justify-between gap-3">
           {/* Logo links to main screen: Team (or Home if no team saved) */}
           <Link href={teamUrl} className="flex items-center gap-2.5 group shrink-0">
@@ -108,9 +108,9 @@ export default function Navbar() {
                   <span>Team</span>
                 </Link>
 
-                {/* History (links to Home / search overview) */}
+                {/* History — plain home; only the change-team controls open setup */}
                 <Link
-                  href="/?switch=true"
+                  href="/"
                   onClick={() => setIsMenuOpen(false)}
                   className="flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-emerald-800 hover:bg-emerald-50 transition"
                 >

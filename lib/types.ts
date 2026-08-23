@@ -126,7 +126,6 @@ export interface PriceAnalysis {
   selectedByPercent: number;
   status: PriceStatus;
   changeScore: number; // -100 to +100 index estimate
-  urgencyLabel: string;
   news: string;
   availability: 'available' | 'doubtful' | 'injured' | 'suspended' | 'unavailable';
 }
