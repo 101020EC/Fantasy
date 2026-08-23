@@ -135,11 +135,13 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
         {/* 4. Team Overview Header & Stats (แต้ม GW นี้, แต้มสะสม, อันดับโลก อยู่ด้านล่าง) */}
         <TeamHeader entry={entry} picksData={picksData} currentEvent={activeEvent} />
 
-        {/* 5. Private Leagues Card (ข้อมูล Private Leagues พร้อมตารางคะแนนทุกคนที่บันทึกใน Firebase) */}
+        {/* 5. Private Leagues Card (ข้อมูล Private Leagues พร้อมปุ่มเลือกบันทึกลง Firebase) */}
         <PrivateLeaguesCard
           leagues={(entry as any).leagues?.classic || []}
           currentTeamId={id}
           currentGw={activeGw}
+          entry={entry}
+          picksData={picksData}
         />
       </div>
     );

@@ -1,6 +1,6 @@
 import { db } from './firebase';
-import { doc, setDoc, getDoc, collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { FPLEntry, FPLPicksResponse } from './types';
+import { doc, setDoc } from 'firebase/firestore';
+import { FPLPicksResponse } from './types';
 import { fetchFPLLeagueStandings, fetchFPLHistory, fetchFPLTransfers } from './fpl-api';
 
 export interface LeagueMemberStanding {
@@ -29,7 +29,7 @@ export interface CompleteArchiveData {
   bank: number;
   activeChip: string | null;
   squad: any[];
-  privateLeagues: {
+  selectedPrivateLeagues: {
     id: number;
     name: string;
     myRank: number;
@@ -43,36 +43,31 @@ export interface CompleteArchiveData {
 }
 
 /**
- * Save / Archive EVERYTHING into Firebase Firestore:
- * - Full Team Profile & Season History
- * - Gameweek Lineup & Squad Stats
- * - Transfers History
- * - Private Mini-leagues + Standings of EVERY manager in each league for this GW
+ * Save / Archive into Firebase Firestore for SELECTED leagues only:
  */
-export async function archiveCompleteTeamData(
+export async function archiveSelectedLeaguesData(
   teamId: string | number,
   entry: any,
   picksData: FPLPicksResponse,
   gw: number,
-  bootstrap?: any
+  selectedLeagueIds: number[] = []
 ): Promise<CompleteArchiveData | null> {
   try {
     const id = String(teamId);
 
-    // 1. Fetch Full Season History & Transfers in parallel
+    // 1. Fetch History & Transfers
     const [historyData, transfersData] = await Promise.all([
       fetchFPLHistory(id),
       fetchFPLTransfers(id),
     ]);
 
-    // 2. Identify private leagues
+    // 2. Filter ONLY user-selected leagues
     const classicLeagues = entry.leagues?.classic || [];
-    const privateLeaguesList = classicLeagues.filter(
-      (l: any) => l.league_type === 'x' || l.rank_type !== 'g'
+    const targetLeagues = classicLeagues.filter((l: any) =>
+      selectedLeagueIds.includes(Number(l.id))
     );
-    const targetLeagues = privateLeaguesList.length > 0 ? privateLeaguesList : classicLeagues.slice(0, 5);
 
-    // 3. Fetch full standings of EVERY manager in each private league
+    // 3. Fetch full standings of EVERY member only for selected leagues
     const leagueStandingsPromises = targetLeagues.map(async (league: any) => {
       const standingsRes = await fetchFPLLeagueStandings(league.id);
       const results: any[] = standingsRes?.standings?.results || [];
@@ -99,7 +94,7 @@ export async function archiveCompleteTeamData(
       };
     });
 
-    const fullPrivateLeagues = await Promise.all(leagueStandingsPromises);
+    const fullSelectedLeagues = await Promise.all(leagueStandingsPromises);
 
     // 4. Build Complete Archive Object
     const completeArchive: CompleteArchiveData = {
@@ -108,21 +103,21 @@ export async function archiveCompleteTeamData(
       managerName: `${entry.player_first_name} ${entry.player_last_name}`,
       region: entry.player_region_name || '',
       gameweek: gw,
-      overallPoints: picksData.entry_history?.total_points ?? entry.summary_overall_points ?? 0,
-      overallRank: picksData.entry_history?.overall_rank ?? entry.summary_overall_rank ?? null,
-      gwPoints: picksData.entry_history?.points ?? entry.summary_event_points ?? 0,
-      gwRank: picksData.entry_history?.rank ?? entry.summary_event_rank ?? null,
-      teamValue: (picksData.entry_history?.value ?? entry.last_deadline_value ?? 1000) / 10,
-      bank: (picksData.entry_history?.bank ?? entry.last_deadline_bank ?? 0) / 10,
-      activeChip: picksData.active_chip,
-      squad: picksData.picks || [],
-      privateLeagues: fullPrivateLeagues,
+      overallPoints: picksData?.entry_history?.total_points ?? entry.summary_overall_points ?? 0,
+      overallRank: picksData?.entry_history?.overall_rank ?? entry.summary_overall_rank ?? null,
+      gwPoints: picksData?.entry_history?.points ?? entry.summary_event_points ?? 0,
+      gwRank: picksData?.entry_history?.rank ?? entry.summary_event_rank ?? null,
+      teamValue: (picksData?.entry_history?.value ?? entry.last_deadline_value ?? 1000) / 10,
+      bank: (picksData?.entry_history?.bank ?? entry.last_deadline_bank ?? 0) / 10,
+      activeChip: picksData?.active_chip || null,
+      squad: picksData?.picks || [],
+      selectedPrivateLeagues: fullSelectedLeagues,
       seasonHistory: historyData,
       transfersHistory: transfersData,
       lastSynced: new Date().toISOString(),
     };
 
-    // 5. Store in Firestore Collections:
+    // 5. Store in Firestore:
     // A. Team Gameweek Document: teams/{teamId}/gameweeks/gw_{gw}
     const gwDocRef = doc(db, 'teams', id, 'gameweeks', `gw_${gw}`);
     await setDoc(gwDocRef, completeArchive, { merge: true });
@@ -138,13 +133,14 @@ export async function archiveCompleteTeamData(
         overallPoints: completeArchive.overallPoints,
         overallRank: completeArchive.overallRank,
         lastUpdatedGw: gw,
+        selectedLeagueIds,
         lastSynced: completeArchive.lastSynced,
       },
       { merge: true }
     );
 
-    // C. Store Each League's Standings for this Gameweek: leagues/{leagueId}/gameweeks/gw_{gw}
-    for (const league of fullPrivateLeagues) {
+    // C. Store Each Selected League's Standings: leagues/{leagueId}/gameweeks/gw_{gw}
+    for (const league of fullSelectedLeagues) {
       if (league.standings.length > 0) {
         const leagueGwRef = doc(db, 'leagues', String(league.id), 'gameweeks', `gw_${gw}`);
         await setDoc(
@@ -164,7 +160,7 @@ export async function archiveCompleteTeamData(
 
     return completeArchive;
   } catch (error) {
-    console.warn('Complete Firebase Archive error/skipped:', error);
+    console.warn('Firebase selected league archive error:', error);
     return null;
   }
 }

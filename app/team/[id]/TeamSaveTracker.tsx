@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { saveRecentTeam } from '@/components/team/RecentTeams';
 import { useAuth } from '@/components/AuthContext';
-import { archiveCompleteTeamData } from '@/lib/firebase-service';
+import { archiveSelectedLeaguesData } from '@/lib/firebase-service';
 
 interface TeamSaveTrackerProps {
   id: string;
@@ -20,10 +20,14 @@ export default function TeamSaveTracker({ id, entry, picksData, gw }: TeamSaveTr
     saveRecentTeam(id, entry.name, managerName);
     setSavedTeamId(id);
 
-    // Background Complete Sync to Firebase Firestore (Team Profile + GW Picks + All Private Leagues Standings)
-    archiveCompleteTeamData(id, entry, picksData, gw).catch((err) => {
-      console.warn('Firebase background sync notice:', err);
-    });
+    // Sync only user's selected leagues (if any selected in localStorage)
+    try {
+      const savedLeaguesRaw = localStorage.getItem(`fpl_selected_leagues_${id}`);
+      const selectedIds: number[] = savedLeaguesRaw ? JSON.parse(savedLeaguesRaw) : [];
+      if (selectedIds.length > 0) {
+        archiveSelectedLeaguesData(id, entry, picksData, gw, selectedIds).catch(() => {});
+      }
+    } catch {}
   }, [id, entry, picksData, gw, setSavedTeamId]);
 
   return null;
