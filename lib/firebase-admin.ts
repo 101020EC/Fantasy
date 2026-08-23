@@ -11,6 +11,16 @@ import { getFirestore, Firestore } from 'firebase-admin/firestore';
  */
 type ServiceAccount = { projectId: string; clientEmail: string; privateKey: string };
 
+/** Returns how many times the value repeats itself, or null if it does not. */
+function detectRepeat(value: string): number | null {
+  for (let parts = 2; parts <= 10; parts++) {
+    if (value.length % parts !== 0) continue;
+    const unit = value.slice(0, value.length / parts);
+    if (unit.repeat(parts) === value) return parts;
+  }
+  return null;
+}
+
 /**
  * Why the credential is unusable, so a misconfigured deploy says which of
  * "never arrived" and "arrived damaged" it is — the difference between an
@@ -35,16 +45,30 @@ function loadServiceAccount(): { account: ServiceAccount | null; status: AdminCo
     };
   }
 
+  // Whitespace survives a copy-paste into a web form more often than not.
+  const value = encoded.trim();
+
+  // Accept either the base64 form or the service account JSON pasted directly —
+  // both are things people reasonably reach for, and guessing wrong costs a
+  // redeploy to find out.
   let json: any;
   try {
-    json = JSON.parse(Buffer.from(encoded, 'base64').toString('utf8'));
+    json = JSON.parse(
+      value.startsWith('{') ? value : Buffer.from(value.replace(/\s/g, ''), 'base64').toString('utf8')
+    );
   } catch {
+    // An exact multiple of a workable length means the same value got
+    // concatenated with itself — a repeated paste into a field that hides what
+    // it already holds, or a copy command that matched a duplicated env line.
+    const repeated = detectRepeat(value);
     return {
       account: null,
       status: {
         ok: false,
         reason: 'not_base64_json',
-        detail: `FIREBASE_SERVICE_ACCOUNT มีค่าอยู่ (${encoded.length} ตัวอักษร) แต่ถอดรหัส base64 เป็น JSON ไม่ได้ — ค่าน่าจะขาดหายหรือถูกตัดตอนวาง (ปกติยาวประมาณ 3,100 ตัวอักษร)`,
+        detail: repeated
+          ? `FIREBASE_SERVICE_ACCOUNT ยาว ${value.length} ตัวอักษร ซึ่งเป็นค่าเดิมต่อกัน ${repeated} ครั้ง — ตรวจว่าต้นทางไม่มีบรรทัดซ้ำ แล้วลบค่าในช่องให้หมด (⌘A แล้ว Delete) ก่อนวางใหม่ครั้งเดียว`
+          : `FIREBASE_SERVICE_ACCOUNT มีค่าอยู่ (${value.length} ตัวอักษร) แต่อ่านเป็น JSON ไม่ได้ — ค่าน่าจะขาดหายหรือถูกตัดตอนวาง (ปกติยาวประมาณ 3,100 ตัวอักษร)`,
       },
     };
   }
