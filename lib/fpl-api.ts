@@ -1,6 +1,7 @@
 import { unstable_cache } from 'next/cache';
 import {
   FPLBootstrap,
+  SquadFixture,
   FPLElement,
   FPLElementType,
   FPLEntry,
@@ -159,10 +160,11 @@ export function buildSquadPlayers(
   const teamMap = new Map(bootstrap.teams.map((t) => [t.id, t]));
   const typeMap = new Map(bootstrap.element_types.map((et) => [et.id, et]));
 
-  // Prefer a fixture in the current gameweek; fall back to the next one.
+  // This gameweek onward, in playing order. Kickoff breaks ties inside a
+  // double gameweek; a blank week just contributes nothing.
   const upcoming = fixtures
-    .filter((f) => f.event === currentEventId || f.event === currentEventId + 1)
-    .sort((a, b) => a.event - b.event);
+    .filter((f) => f.event !== null && f.event >= currentEventId)
+    .sort((a, b) => a.event! - b.event! || a.kickoff_time.localeCompare(b.kickoff_time));
 
   return (picks || [])
     .map((pick) => {
@@ -185,26 +187,34 @@ export function buildSquadPlayers(
         singular_name_short: 'PLY',
       };
 
-      const nextFix = upcoming.find(
-        (f) => f.team_h === element.team || f.team_a === element.team
-      );
+      const playerFixtures: SquadFixture[] = upcoming
+        .filter((f) => f.team_h === element.team || f.team_a === element.team)
+        .slice(0, 3)
+        .map((f) => {
+          const isHome = f.team_h === element.team;
+          const opponentId = isHome ? f.team_a : f.team_h;
+          return {
+            event: f.event!,
+            opponent: teamMap.get(opponentId) || {
+              id: opponentId,
+              name: 'Opponent',
+              short_name: 'OPP',
+              code: 0,
+              strength: 3,
+            },
+            isHome,
+            difficulty: isHome ? f.team_h_difficulty : f.team_a_difficulty,
+            started: Boolean(f.started),
+            scoreFor: isHome ? f.team_h_score : f.team_a_score,
+            scoreAgainst: isHome ? f.team_a_score : f.team_h_score,
+          };
+        });
 
-      let nextFixture;
-      if (nextFix) {
-        const isHome = nextFix.team_h === element.team;
-        const opponentId = isHome ? nextFix.team_a : nextFix.team_h;
-        nextFixture = {
-          opponent: teamMap.get(opponentId) || {
-            id: opponentId,
-            name: 'Opponent',
-            short_name: 'OPP',
-            code: 0,
-            strength: 3,
-          },
-          isHome,
-          difficulty: isHome ? nextFix.team_h_difficulty : nextFix.team_a_difficulty,
-        };
-      }
+      // Kept for the existing card layout, which shows only the next match.
+      const first = playerFixtures[0];
+      const nextFixture = first
+        ? { opponent: first.opponent, isHome: first.isHome, difficulty: first.difficulty }
+        : undefined;
 
       return {
         pick,
@@ -213,6 +223,7 @@ export function buildSquadPlayers(
         elementType,
         priceAnalysis: analyzePlayerPrice(element, bootstrap),
         nextFixture,
+        fixtures: playerFixtures,
       };
     })
     .filter(Boolean) as TeamSquadPlayer[];

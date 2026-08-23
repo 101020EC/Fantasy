@@ -185,6 +185,16 @@ function HistoryView() {
   // Transfers for this GW
   const gwTransfers = transfersData.filter((t) => t.event === selectedGw);
 
+  // Every league, invitational ones first — those are the ones with people you
+  // know in them. FPL only ever returns 'x' (invitational) and 's' (enrolled).
+  const allLeagues = useMemo(() => {
+    const classic = (entryData as any)?.leagues?.classic ?? [];
+    return [...classic].sort((a: any, b: any) => {
+      const rank = (l: any) => (l.league_type === 'x' ? 0 : 1);
+      return rank(a) - rank(b);
+    });
+  }, [entryData]);
+
   // `loading` used to be tracked but never rendered: users saw a fully-formed
   // page with "-" in every tile while requests were still in flight.
   if (loading && savedTeamId) {
@@ -454,14 +464,16 @@ function HistoryView() {
                 <Trophy className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-base font-black text-[#111318]">Private Mini-Leagues</h3>
-                <p className="text-xs text-gray-500">Live standings in your private leagues</p>
+                <h3 className="text-base font-black text-[#111318]">Leagues</h3>
+                <p className="text-xs text-gray-500">
+                  Your position in every league on this team
+                </p>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-            {((entryData as any)?.leagues?.classic || []).slice(0, 8).map((league: any) => {
+            {allLeagues.map((league: any) => {
               const rank = league.entry_rank || 1;
               const lastRank = league.entry_last_rank || rank;
               const rankDiff = lastRank - rank;
@@ -472,7 +484,14 @@ function HistoryView() {
                   className="p-3.5 rounded-2xl bg-gray-50 border border-black/5 flex items-center justify-between gap-2"
                 >
                   <div className="truncate">
-                    <span className="font-bold text-xs text-[#111318] block truncate">{league.name}</span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="font-bold text-xs text-[#111318] truncate">{league.name}</span>
+                      {league.league_type === 'x' && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[9px] font-black shrink-0">
+                          PRIVATE
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[10px] text-gray-400 font-mono">ID: {league.id}</span>
                   </div>
 

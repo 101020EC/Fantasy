@@ -48,6 +48,12 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
         ? parsedGw
         : entry.current_event || currentGwNum;
 
+    // Which gameweek's fixtures to show. A future gameweek has no squad yet —
+    // its deadline has not passed — so the squad falls back while the fixture
+    // view still honours the request. Pressing "GW n+1" is asking who this
+    // squad plays next, not for a squad that does not exist.
+    const fixtureGw = initialGw;
+
     let activeGw = initialGw;
     let picksData: FPLPicksResponse | null = null;
 
@@ -73,7 +79,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
 
     const fixtures = await fetchFPLFixtures();
     const activeEvent = bootstrap.events.find((e) => e.id === activeGw) || currentEvent;
-    const squadPlayers = buildSquadPlayers(picksData.picks || [], bootstrap, fixtures, activeGw);
+    const squadPlayers = buildSquadPlayers(picksData.picks || [], bootstrap, fixtures, fixtureGw);
 
     return (
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
@@ -88,6 +94,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
         <TeamPitchTopBar
           entry={entry}
           gameweek={activeGw}
+          fixtureGw={fixtureGw}
           players={squadPlayers}
           activeChip={picksData?.active_chip}
         />
@@ -102,7 +109,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
         </div>
 
         {/* 3. Team Overview Header & Stats */}
-        <TeamHeader entry={entry} picksData={picksData} currentEvent={activeEvent} />
+        <TeamHeader entry={entry} picksData={picksData} />
 
         {/* 4. Private Leagues Card */}
         <PrivateLeaguesCard

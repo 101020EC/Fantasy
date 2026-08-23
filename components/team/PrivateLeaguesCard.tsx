@@ -116,42 +116,39 @@ export default function PrivateLeaguesCard({
   return (
     <div className="pastel-card p-5 sm:p-7 shadow-sm mb-6">
       {/* Header with Private Mini-Leagues and Edit button */}
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-black/5">
-        <div className="flex items-center gap-2.5">
+      <div className="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-black/5">
+        <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold shrink-0">
             <Trophy className="w-5 h-5" />
           </div>
-          <div className="flex items-center gap-2.5">
-            <h3 className="text-base font-black text-[#111318]">Private Mini-Leagues</h3>
-            
-            {/* Edit Button */}
-            <button
-              onClick={() => setIsReorderMode(!isReorderMode)}
-              type="button"
-              className={`px-3 py-1 rounded-full text-xs font-black flex items-center gap-1.5 transition active:scale-95 shadow-sm ${
-                isReorderMode
-                  ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                  : 'bg-gray-100 hover:bg-purple-100 text-[#38003c]'
-              }`}
-            >
-              {isReorderMode ? (
-                <>
-                  <Check className="w-3.5 h-3.5 stroke-[3]" />
-                  <span>Done</span>
-                </>
-              ) : (
-                <>
-                  <Edit3 className="w-3.5 h-3.5" />
-                  <span>Edit</span>
-                </>
-              )}
-            </button>
-          </div>
+          <h3 className="text-base font-black text-[#111318] truncate">Private Mini-Leagues</h3>
         </div>
 
-        <span className="text-xs font-bold text-gray-400 font-mono shrink-0">
-          {orderedLeagues.length} leagues
-        </span>
+        {/* Count, with the reorder toggle directly beneath it — icon only, since
+            the two states are already obvious from its colour and shape. */}
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <span className="text-xs font-bold text-gray-400 font-mono">
+            {orderedLeagues.length} leagues
+          </span>
+          <button
+            onClick={() => setIsReorderMode(!isReorderMode)}
+            type="button"
+            aria-pressed={isReorderMode}
+            aria-label={isReorderMode ? 'Finish reordering' : 'Reorder leagues'}
+            title={isReorderMode ? 'Done' : 'Reorder leagues'}
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition active:scale-95 shadow-sm ${
+              isReorderMode
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                : 'bg-gray-100 hover:bg-purple-100 text-[#38003c]'
+            }`}
+          >
+            {isReorderMode ? (
+              <Check className="w-3.5 h-3.5 stroke-[3]" />
+            ) : (
+              <Edit3 className="w-3.5 h-3.5" />
+            )}
+          </button>
+        </div>
       </div>
 
       {isEmpty && (

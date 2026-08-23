@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { TeamSquadPlayer } from '@/lib/types';
-import PlayerCard from './PlayerCard';
+import PlayerCard, { CardMode } from './PlayerCard';
 import BenchList from './BenchList';
 import PlayerDetailModal from './PlayerDetailModal';
 
@@ -12,6 +12,7 @@ interface FootballPitchProps {
 
 export default function FootballPitch({ players }: FootballPitchProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<TeamSquadPlayer | null>(null);
+  const [mode, setMode] = useState<CardMode>('stats');
 
   const starters = players.filter((p) => p.pick.position <= 11);
   const bench = players.filter((p) => p.pick.position > 11);
@@ -26,16 +27,41 @@ export default function FootballPitch({ players }: FootballPitchProps) {
   return (
     <div className="w-full">
       {/* Pitch Header */}
-      <div className="flex items-center justify-between mb-3 px-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-gray-500">Formation</span>
+      <div className="flex items-center justify-between gap-2 mb-3 px-2">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs font-bold text-gray-500 hidden sm:inline">Formation</span>
           <span className="px-3 py-0.5 rounded-full bg-[#111318] text-white text-xs font-black">
             {formation}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-gray-600 font-medium">
+
+        {/* What the strip under each shirt shows */}
+        <div className="flex items-center rounded-full bg-gray-100 p-0.5 shrink-0">
+          {(
+            [
+              { key: 'stats', label: 'A', title: 'Price, points and next opponent' },
+              { key: 'fixtures', label: 'B', title: 'The next three matches' },
+            ] as const
+          ).map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setMode(opt.key)}
+              title={opt.title}
+              aria-pressed={mode === opt.key}
+              className={`w-7 h-7 rounded-full text-xs font-black transition ${
+                mode === opt.key
+                  ? 'bg-[#38003c] text-white shadow-sm'
+                  : 'text-gray-500 hover:text-[#38003c]'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3 text-[11px] text-gray-600 font-medium shrink-0">
           <span className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0"></span>
             Rising
           </span>
           <span className="flex items-center gap-1">
@@ -58,34 +84,34 @@ export default function FootballPitch({ players }: FootballPitchProps) {
         {/* Row 1: Goalkeeper */}
         <div className="relative z-10 flex justify-center items-center py-1">
           {gk.map((player) => (
-            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} />
+            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} />
           ))}
         </div>
 
         {/* Row 2: Defenders */}
         <div className="relative z-10 flex justify-around items-center py-1 gap-1">
           {def.map((player) => (
-            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} />
+            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} />
           ))}
         </div>
 
         {/* Row 3: Midfielders */}
         <div className="relative z-10 flex justify-around items-center py-1 gap-1">
           {mid.map((player) => (
-            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} />
+            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} />
           ))}
         </div>
 
         {/* Row 4: Forwards */}
         <div className="relative z-10 flex justify-around items-center py-1 gap-1">
           {fwd.map((player) => (
-            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} />
+            <PlayerCard key={player.element.id} player={player} onClick={setSelectedPlayer} mode={mode} />
           ))}
         </div>
       </div>
 
       {/* Bench */}
-      <BenchList benchPlayers={bench} onPlayerClick={setSelectedPlayer} />
+      <BenchList benchPlayers={bench} onPlayerClick={setSelectedPlayer} mode={mode} />
 
       {/* Player Modal */}
       <PlayerDetailModal
