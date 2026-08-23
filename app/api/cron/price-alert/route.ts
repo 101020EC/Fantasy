@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFPLBootstrap, fetchFPLEntry, fetchFPLPicks, buildSquadPlayers } from '@/lib/fpl-api';
-import { escapeMarkdown, sendTelegramMessage, getTelegramConfig } from '@/lib/telegram';
+import {
+  escapeMarkdown,
+  sendTelegramMessage,
+  getTelegramConfig,
+  nextDeadline,
+  formatBangkok,
+} from '@/lib/telegram';
 import { getAdminDb, isAdminConfigured } from '@/lib/firebase-admin';
+import { recordNotification, pruneNotifications } from '@/lib/notifications';
 import { analyzePlayerPrice } from '@/lib/price-calculator';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +28,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { botToken, chatId, teamId: envTeamId, configured } = await getTelegramConfig();
+    const { botToken, chatId, teamId: envTeamId, alerts, configured } = await getTelegramConfig();
     if (!configured) {
       return NextResponse.json(
         { error: 'TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are not configured' },
@@ -51,7 +58,7 @@ export async function GET(req: NextRequest) {
     // 2. Watchlist. Kept in Firestore precisely so this job can read it —
     //    there is no browser here to hold a local list.
     let watchedPlayers: { name: string; short: string; analysis: ReturnType<typeof analyzePlayerPrice> }[] = [];
-    if (isAdminConfigured) {
+    if (isAdminConfigured && alerts.watchlist) {
       const snap = await getAdminDb().collection('watchlists').doc(String(teamId)).get();
       const watchIds: number[] = snap.data()?.elementIds ?? [];
       const teamMap = new Map(bootstrap.teams.map((t) => [t.id, t]));
@@ -70,13 +77,43 @@ export async function GET(req: NextRequest) {
     }
 
     // 3. Which players are about to move
-    const risers = squadPlayers.filter((p) => p.priceAnalysis.status === 'rising_soon');
-    const fallers = squadPlayers.filter((p) => p.priceAnalysis.status === 'falling_soon');
-    const watchMovers = watchedPlayers.filter(
-      (p) => p.analysis.status === 'rising_soon' || p.analysis.status === 'falling_soon'
-    );
+    const risingStates = alerts.trends
+      ? ['rising_soon', 'likely_riser']
+      : ['rising_soon'];
+    const fallingStates = alerts.trends
+      ? ['falling_soon', 'likely_faller']
+      : ['falling_soon'];
 
-    if (risers.length === 0 && fallers.length === 0 && watchMovers.length === 0) {
+    const risers = alerts.priceMoves
+      ? squadPlayers.filter((p) => risingStates.includes(p.priceAnalysis.status))
+      : [];
+    const fallers = alerts.priceMoves
+      ? squadPlayers.filter((p) => fallingStates.includes(p.priceAnalysis.status))
+      : [];
+
+    // Players carrying a fitness flag, so a squad problem is not missed just
+    // because nobody's price is moving.
+    const injured = alerts.injuries
+      ? squadPlayers.filter((p) => p.element.status !== 'a' && p.element.news)
+      : [];
+
+    const deadline = alerts.deadlineHours
+      ? nextDeadline(bootstrap.events, alerts.deadlineHours)
+      : null;
+    const watchMovers = alerts.priceMoves
+      ? watchedPlayers.filter(
+          (p) =>
+            risingStates.includes(p.analysis.status) || fallingStates.includes(p.analysis.status)
+        )
+      : [];
+
+    if (
+      risers.length === 0 &&
+      fallers.length === 0 &&
+      watchMovers.length === 0 &&
+      injured.length === 0 &&
+      !deadline
+    ) {
       return NextResponse.json({
         alertSent: false,
         message: 'No price change alerts tonight.',
@@ -116,10 +153,42 @@ export async function GET(req: NextRequest) {
       text += `\n`;
     }
 
+    if (injured.length > 0) {
+      text += `🏥 *Fitness concerns:*\n`;
+      injured.forEach((p) => {
+        const chance = p.element.chance_of_playing_next_round ?? 0;
+        text += `• *${escapeMarkdown(p.element.web_name)}* \\(${escapeMarkdown(
+          String(chance)
+        )}%\\) — ${escapeMarkdown(p.element.news)}\n`;
+      });
+      text += `\n`;
+    }
+
+    if (deadline) {
+      const hours = Math.round(deadline.hoursAway);
+      text += `⏳ *Deadline GW${escapeMarkdown(deadline.event)}* in ${escapeMarkdown(
+        String(hours)
+      )}h — ${escapeMarkdown(formatBangkok(deadline.at))} Bangkok\n\n`;
+    }
+
     text += `⏰ _Prices update daily ~01:30 \\- 02:30 UTC_`;
 
     // 4. Deliver, and report Telegram's verdict honestly
     const result = await sendTelegramMessage(botToken, chatId, text);
+    if (result.ok) {
+      await recordNotification({
+        kind: 'alert',
+        summary: {
+          risers: risers.length,
+          fallers: fallers.length,
+          watchlist: watchMovers.length,
+          injuries: injured.length,
+          deadlineIn: deadline ? Math.round(deadline.hoursAway) : null,
+        },
+        text,
+      });
+      await pruneNotifications();
+    }
     if (!result.ok) {
       return NextResponse.json(
         { alertSent: false, error: `Telegram rejected the message: ${result.description}` },
@@ -132,6 +201,8 @@ export async function GET(req: NextRequest) {
       risersCount: risers.length,
       fallersCount: fallers.length,
       watchlistCount: watchMovers.length,
+      injuredCount: injured.length,
+      deadlineIn: deadline ? Math.round(deadline.hoursAway) : null,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Error executing cron job' }, { status: 500 });

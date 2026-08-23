@@ -79,6 +79,9 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
 
     const fixtures = await fetchFPLFixtures();
     const activeEvent = bootstrap.events.find((e) => e.id === activeGw) || currentEvent;
+    // The requested gameweek runs ahead of the squad's when its deadline has
+    // not passed — there is no squad or points for it yet, only fixtures.
+    const isPreview = fixtureGw > activeGw;
     const squadPlayers = buildSquadPlayers(picksData.picks || [], bootstrap, fixtures, fixtureGw);
 
     return (
@@ -105,11 +108,11 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
 
         {/* 2. Football Pitch View */}
         <div>
-          <FootballPitch players={squadPlayers} />
+          <FootballPitch players={squadPlayers} isPreview={isPreview} />
         </div>
 
         {/* 3. Team Overview Header & Stats */}
-        <TeamHeader entry={entry} picksData={picksData} />
+        <TeamHeader entry={entry} picksData={picksData} isPreview={isPreview} />
 
         {/* 4. Private Leagues Card */}
         <PrivateLeaguesCard

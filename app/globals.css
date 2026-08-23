@@ -112,6 +112,20 @@ body {
   }
 }
 
+/* Blink for icons. The pulse below animates `transform`, which collides with
+   any Tailwind transform on the same element — a rotated leaf ends up stuck at
+   identity, neither rotated nor pulsing — and its visible part is a box-shadow
+   ring that reads as nothing on a transparent SVG. Fading opacity has neither
+   problem and is what "blinking" actually describes. */
+@keyframes blink-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+.animate-blink {
+  animation: blink-soft 1.3s ease-in-out infinite;
+}
+
 /* Pulse animation */
 @keyframes pulse-rise {
   0%, 100% {

@@ -37,10 +37,33 @@ export async function sendTelegramMessage(
   return { ok: true };
 }
 
+/** Which kinds of alert the nightly job should send. */
+export interface AlertToggles {
+  /** Score at or beyond ±75 — a change expected in tonight's window. */
+  priceMoves: boolean;
+  /** ±35 and up: earlier warning, less certain. */
+  trends: boolean;
+  /** A squad player picking up an injury flag. */
+  injuries: boolean;
+  /** Include watchlist players, not just the squad. */
+  watchlist: boolean;
+  /** Hours before a squad deadline to start mentioning it. */
+  deadlineHours: number;
+}
+
+export const DEFAULT_ALERTS: AlertToggles = {
+  priceMoves: true,
+  trends: false,
+  injuries: true,
+  watchlist: true,
+  deadlineHours: 36,
+};
+
 export interface TelegramSettings {
   botToken: string;
   chatId: string;
   teamId: string;
+  alerts: AlertToggles;
   configured: boolean;
   /** Where the values came from, so the UI can explain what it is editing. */
   source: 'firestore' | 'env' | 'none';
@@ -69,6 +92,7 @@ export async function getTelegramConfig(): Promise<TelegramSettings> {
           botToken: String(d.botToken),
           chatId: String(d.chatId),
           teamId: String(d.teamId ?? ''),
+          alerts: { ...DEFAULT_ALERTS, ...(d.alerts ?? {}) },
           configured: true,
           source: 'firestore',
         };
@@ -82,13 +106,21 @@ export async function getTelegramConfig(): Promise<TelegramSettings> {
   const chatId = process.env.TELEGRAM_CHAT_ID || '';
   const teamId = process.env.TELEGRAM_TEAM_ID || '';
   const configured = Boolean(botToken && chatId);
-  return { botToken, chatId, teamId, configured, source: configured ? 'env' : 'none' };
+  return {
+    botToken,
+    chatId,
+    teamId,
+    alerts: DEFAULT_ALERTS,
+    configured,
+    source: configured ? 'env' : 'none',
+  };
 }
 
 export async function saveTelegramConfig(settings: {
   botToken: string;
   chatId: string;
   teamId: string;
+  alerts: AlertToggles;
 }) {
   await getAdminDb()
     .collection(SETTINGS_DOC.collection)
@@ -98,6 +130,40 @@ export async function saveTelegramConfig(settings: {
 
 export async function clearTelegramConfig() {
   await getAdminDb().collection(SETTINGS_DOC.collection).doc(SETTINGS_DOC.doc).delete();
+}
+
+/**
+ * Hours until the next squad deadline, or null when none is close enough to
+ * mention. Deadlines move around — Saturday 00:30, 17:00 and 19:30 Bangkok all
+ * occur — so a fixed daily job can only ever say "in N hours", not fire at a
+ * chosen offset.
+ */
+export function nextDeadline(
+  events: { id: number; deadline_time: string; finished: boolean }[],
+  withinHours: number,
+  now: Date = new Date()
+): { event: number; hoursAway: number; at: Date } | null {
+  const upcoming = events
+    .map((e) => ({ event: e.id, at: new Date(e.deadline_time) }))
+    .filter((e) => e.at.getTime() > now.getTime())
+    .sort((a, b) => a.at.getTime() - b.at.getTime())[0];
+
+  if (!upcoming) return null;
+  const hoursAway = (upcoming.at.getTime() - now.getTime()) / 3_600_000;
+  return hoursAway <= withinHours ? { ...upcoming, hoursAway } : null;
+}
+
+/** Bangkok time, since that is where this is read. */
+export function formatBangkok(at: Date): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Bangkok',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(at);
 }
 
 /** Last four digits only — enough to recognise, useless if intercepted. */

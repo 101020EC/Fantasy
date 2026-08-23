@@ -10,14 +10,30 @@ interface TelegramSettingsModalProps {
   onClose: () => void;
 }
 
+interface Alerts {
+  priceMoves: boolean;
+  trends: boolean;
+  injuries: boolean;
+  watchlist: boolean;
+  deadlineHours: number;
+}
+
 interface Status {
   configured: boolean;
   source: 'firestore' | 'env' | 'none';
   botTokenMask: string | null;
   chatId: string;
   teamId: string;
+  alerts: Alerts;
   storable: boolean;
 }
+
+const ALERT_ROWS: { key: keyof Alerts; label: string; hint: string }[] = [
+  { key: 'priceMoves', label: 'Price changes tonight', hint: 'Players at the edge of a rise or fall' },
+  { key: 'trends', label: 'Early trends', hint: 'Sooner warning, less certain' },
+  { key: 'injuries', label: 'Fitness news', hint: 'A squad player picking up a flag' },
+  { key: 'watchlist', label: 'Include watchlist', hint: 'Not just your squad' },
+];
 
 export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSettingsModalProps) {
   const { savedTeamId } = useAuth();
@@ -29,6 +45,13 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
   const [botToken, setBotToken] = useState('');
   const [chatId, setChatId] = useState('');
   const [teamId, setTeamId] = useState('');
+  const [alerts, setAlerts] = useState<Alerts>({
+    priceMoves: true,
+    trends: false,
+    injuries: true,
+    watchlist: true,
+    deadlineHours: 36,
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -41,6 +64,7 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
       // banner offers to move the alerts across, and Save has to actually do
       // that rather than write the old id straight back.
       setTeamId(savedTeamId || data.teamId || '');
+      if (data.alerts) setAlerts(data.alerts);
       setBotToken('');
     } catch {
       setStatus(null);
@@ -70,7 +94,7 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
       const res = await fetch('/api/telegram/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ botToken, chatId, teamId }),
+        body: JSON.stringify({ botToken, chatId, teamId, alerts }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not save');
@@ -113,8 +137,9 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
     }
   };
 
+  // text-base on phones: iOS zooms into any input under 16px on focus.
   const field =
-    'w-full px-4 py-2.5 bg-gray-50 border border-black/10 rounded-2xl text-xs font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500';
+    'w-full px-4 py-2.5 bg-gray-50 border border-black/10 rounded-2xl text-base sm:text-xs font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500';
 
   return (
     <Modal isOpen onClose={onClose} labelledBy="telegram-settings-title" className="max-w-md">
@@ -235,6 +260,52 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
                   required
                   className={`${field} font-mono`}
                 />
+              </div>
+            </div>
+
+            <div className="pt-1 border-t border-black/5">
+              <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block mb-2">
+                What to send
+              </span>
+              <div className="space-y-1.5">
+                {ALERT_ROWS.map((row) => (
+                  <label
+                    key={row.key}
+                    className="flex items-start gap-2.5 cursor-pointer group"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={Boolean(alerts[row.key])}
+                      onChange={(e) =>
+                        setAlerts((a) => ({ ...a, [row.key]: e.target.checked }))
+                      }
+                      className="mt-0.5 w-4 h-4 shrink-0 accent-[#38003c] cursor-pointer"
+                    />
+                    <span className="min-w-0">
+                      <span className="block text-xs font-bold text-[#111318] group-hover:text-[#38003c] transition">
+                        {row.label}
+                      </span>
+                      <span className="block text-[10px] text-gray-400">{row.hint}</span>
+                    </span>
+                  </label>
+                ))}
+
+                <label className="flex items-center gap-2.5 pt-1">
+                  <input
+                    type="checkbox"
+                    checked={alerts.deadlineHours > 0}
+                    onChange={(e) =>
+                      setAlerts((a) => ({ ...a, deadlineHours: e.target.checked ? 36 : 0 }))
+                    }
+                    className="w-4 h-4 shrink-0 accent-[#38003c] cursor-pointer"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-bold text-[#111318]">Squad deadline</span>
+                    <span className="block text-[10px] text-gray-400">
+                      Mentioned once it is within 36 hours
+                    </span>
+                  </span>
+                </label>
               </div>
             </div>
 

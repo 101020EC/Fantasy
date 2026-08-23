@@ -6,9 +6,15 @@ interface BenchListProps {
   benchPlayers: TeamSquadPlayer[];
   onPlayerClick: (player: TeamSquadPlayer) => void;
   mode?: CardMode;
+  isPreview?: boolean;
 }
 
-export default function BenchList({ benchPlayers, onPlayerClick, mode = 'stats' }: BenchListProps) {
+export default function BenchList({
+  benchPlayers,
+  onPlayerClick,
+  mode = 'stats',
+  isPreview = false,
+}: BenchListProps) {
   return (
     <div className="mt-4 p-4 sm:p-5 rounded-3xl pastel-card shadow-sm transition-colors">
       <div className="flex items-center justify-between mb-3 px-2">
@@ -25,7 +31,7 @@ export default function BenchList({ benchPlayers, onPlayerClick, mode = 'stats' 
             <div className="text-[10px] font-black text-gray-400 mb-1">
               {idx === 0 ? 'GK' : `Sub ${idx}`}
             </div>
-            <PlayerCard player={player} onClick={onPlayerClick} isBench={true} mode={mode} />
+            <PlayerCard player={player} onClick={onPlayerClick} isBench={true} mode={mode} isPreview={isPreview} />
           </div>
         ))}
       </div>

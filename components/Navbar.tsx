@@ -3,15 +3,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X } from 'lucide-react';
+import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X, Bell } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import TelegramSettingsModal from './telegram/TelegramSettingsModal';
 import PremierLeagueLogo from './PremierLeagueLogo';
+import NotificationsModal from './notifications/NotificationsModal';
 
 export default function Navbar() {
   const [quickTeamId, setQuickTeamId] = useState('');
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
@@ -78,6 +80,18 @@ export default function Navbar() {
 
           {/* Right Action: Clean Hamburger Menu Button only */}
           <div className="flex items-center gap-2 relative" ref={menuRef}>
+            {/* Sits before the menu: it is a thing you check, not a setting you
+                change, so it earns its own tap rather than a menu row. */}
+            <button
+              onClick={() => setIsNotifOpen(true)}
+              type="button"
+              title="Notifications"
+              aria-label="Notifications"
+              className="w-10 h-10 rounded-full border border-black/10 bg-gray-50 hover:bg-purple-50 text-[#38003c] flex items-center justify-center transition active:scale-90 shadow-sm"
+            >
+              <Bell className="w-4 h-4 stroke-[2.5]" />
+            </button>
+
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className={`w-10 h-10 rounded-full border border-black/10 flex items-center justify-center transition active:scale-90 shadow-sm ${
@@ -183,6 +197,8 @@ export default function Navbar() {
         isOpen={isTelegramOpen}
         onClose={() => setIsTelegramOpen(false)}
       />
+
+      <NotificationsModal isOpen={isNotifOpen} onClose={() => setIsNotifOpen(false)} />
 
     </>
   );
