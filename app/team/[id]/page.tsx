@@ -8,6 +8,7 @@ import {
   fetchFPLFixtures,
   buildSquadPlayers,
 } from '@/lib/fpl-api';
+import { FPLPicksResponse } from '@/lib/types';
 import TeamHeader from '@/components/team/TeamHeader';
 import FootballPitch from '@/components/pitch/FootballPitch';
 import PriceAlertBanner from '@/components/prices/PriceAlertBanner';
@@ -39,15 +40,31 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       bootstrap.events.find((e) => e.is_next) ||
       bootstrap.events[0];
 
-    const targetGw = queryGw ? parseInt(queryGw) : (entry.current_event || currentEvent.id);
+    const initialGw = queryGw ? parseInt(queryGw) : (entry.current_event || currentEvent?.id || 1);
 
-    const [picksData, fixtures] = await Promise.all([
-      fetchFPLPicks(id, targetGw),
-      fetchFPLFixtures(),
-    ]);
+    let activeGw = initialGw;
+    let picksData: FPLPicksResponse | null = null;
 
-    const activeEvent = bootstrap.events.find((e) => e.id === targetGw) || currentEvent;
-    const squadPlayers = buildSquadPlayers(picksData.picks, bootstrap, fixtures, targetGw);
+    // Try fetching the requested GW, fallback to previous GWs if deadline not passed yet
+    try {
+      picksData = await fetchFPLPicks(id, activeGw);
+    } catch (err) {
+      for (let fallbackGw = activeGw - 1; fallbackGw >= 1; fallbackGw--) {
+        try {
+          picksData = await fetchFPLPicks(id, fallbackGw);
+          activeGw = fallbackGw;
+          break;
+        } catch {}
+      }
+    }
+
+    if (!picksData) {
+      throw new Error(`ไม่พบข้อมูลการจัดตัวของทีมนี้ (กรุณาตรวจ Team ID)`);
+    }
+
+    const fixtures = await fetchFPLFixtures();
+    const activeEvent = bootstrap.events.find((e) => e.id === activeGw) || currentEvent;
+    const squadPlayers = buildSquadPlayers(picksData.picks || [], bootstrap, fixtures, activeGw);
 
     return (
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5">
@@ -63,9 +80,9 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
 
           {/* Gameweek Selector */}
           <div className="flex items-center gap-1 bg-white border border-black/5 rounded-full p-1 shadow-sm">
-            {targetGw > 1 ? (
+            {activeGw > 1 ? (
               <Link
-                href={`/team/${id}?gw=${targetGw - 1}`}
+                href={`/team/${id}?gw=${activeGw - 1}`}
                 className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition"
                 title="GW ก่อนหน้า"
               >
@@ -78,12 +95,12 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
             )}
 
             <span className="text-xs sm:text-sm font-black text-[#111318] px-2.5">
-              GW {targetGw}
+              GW {activeGw}
             </span>
 
-            {targetGw < 38 ? (
+            {activeGw < 38 ? (
               <Link
-                href={`/team/${id}?gw=${targetGw + 1}`}
+                href={`/team/${id}?gw=${activeGw + 1}`}
                 className="p-1.5 hover:bg-gray-100 rounded-full text-gray-600 transition"
                 title="GW ถัดไป"
               >
@@ -117,7 +134,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
             <AlertCircle className="w-7 h-7" />
           </div>
           <h2 className="text-xl font-black text-[#111318] mb-2">ไม่พบข้อมูลทีม</h2>
-          <p className="text-xs text-gray-500 mb-6">
+          <p className="text-xs text-gray-500 mb-6 leading-relaxed">
             {err.message || `ไม่พบข้อมูลสำหรับ FPL Team ID: ${id} กรุณาตรวจสอบหมายเลขทีมอีกครั้ง`}
           </p>
           <Link
