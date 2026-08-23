@@ -1,84 +1,63 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
-
-// Default passcode if not configured in environment
-const DEFAULT_PASSWORD = 'fpl';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
-  isAuthenticated: boolean;
-  login: (password: string) => boolean;
-  logout: () => void;
+  logout: () => Promise<void>;
   savedTeamId: string;
   setSavedTeamId: (id: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const TEAM_ID_KEY = 'fpl_persistent_team_id';
+
+/**
+ * Holds the team the user is tracking. Authentication itself lives in an
+ * httpOnly session cookie enforced by middleware.ts — the browser cannot read
+ * it, and nothing here can grant access.
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [savedTeamId, setSavedTeamIdState] = useState<string>('');
+  const router = useRouter();
 
   useEffect(() => {
     try {
-      // Check auth status in localStorage
-      const auth = localStorage.getItem('fpl_authenticated');
-      if (auth === 'true') {
-        setIsAuthenticated(true);
-      } else {
-        setIsAuthenticated(false);
-      }
-
-      // Load persistent team ID
-      const teamId = localStorage.getItem('fpl_persistent_team_id');
-      if (teamId) {
-        setSavedTeamIdState(teamId);
-      }
+      const teamId = localStorage.getItem(TEAM_ID_KEY);
+      if (teamId) setSavedTeamIdState(teamId);
     } catch (e) {
-      console.error(e);
-      setIsAuthenticated(false);
+      console.warn('Could not read the saved team id:', e);
     }
   }, []);
 
-  const login = (password: string): boolean => {
-    // Check password
-    if (password.trim() === DEFAULT_PASSWORD || password.trim() === 'fantasy' || password.trim() === '1234') {
-      try {
-        localStorage.setItem('fpl_authenticated', 'true');
-      } catch (e) {}
-      setIsAuthenticated(true);
-      return true;
-    }
-    return false;
-  };
-
-  const logout = () => {
-    try {
-      localStorage.removeItem('fpl_authenticated');
-    } catch (e) {}
-    setIsAuthenticated(false);
-  };
-
-  const setSavedTeamId = (id: string) => {
+  // Stable identities: rebuilding these on every render re-fired consumer
+  // effects, which fired the Firestore archive twice on each page view.
+  const setSavedTeamId = useCallback((id: string) => {
     setSavedTeamIdState(id);
     try {
-      localStorage.setItem('fpl_persistent_team_id', id);
-    } catch (e) {}
-  };
+      localStorage.setItem(TEAM_ID_KEY, id);
+    } catch (e) {
+      console.warn('Could not persist the team id:', e);
+    }
+  }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated: isAuthenticated ?? false,
-        login,
-        logout,
-        savedTeamId,
-        setSavedTeamId,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const logout = useCallback(async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {
+      console.warn('Logout request failed:', e);
+    }
+    router.replace('/login');
+    router.refresh();
+  }, [router]);
+
+  const value = useMemo(
+    () => ({ logout, savedTeamId, setSavedTeamId }),
+    [logout, savedTeamId, setSavedTeamId]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

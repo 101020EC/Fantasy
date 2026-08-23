@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import TelegramSettingsModal from './telegram/TelegramSettingsModal';
@@ -16,6 +16,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
   const { savedTeamId, logout } = useAuth();
 
   const handleSearch = (e: React.FormEvent) => {
@@ -36,6 +37,9 @@ export default function Navbar() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // The login screen stands alone — no chrome around it.
+  if (pathname === '/login') return null;
 
   const teamUrl = savedTeamId ? `/team/${savedTeamId}` : '/?switch=true';
 

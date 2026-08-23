@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Database, Check, Save, Loader2, X } from 'lucide-react';
-import { archiveSelectedLeaguesData } from '@/lib/firebase-service';
+import { Database, Check, Save, Loader2, AlertCircle } from 'lucide-react';
+import { archiveSelectedLeaguesData, fetchArchiveStatus } from '@/lib/firebase-service';
 import { useAuth } from '../AuthContext';
+import Modal from '../ui/Modal';
 
 interface FirebaseBackupModalProps {
   isOpen: boolean;
@@ -18,12 +19,17 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
   const [loading, setLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState(false);
+  const [isConfigured, setIsConfigured] = useState(true);
 
   useEffect(() => {
     if (!isOpen || !savedTeamId) return;
 
     setLoading(true);
     setSyncStatus(null);
+    setSyncError(false);
+
+    fetchArchiveStatus().then((s) => setIsConfigured(s.configured));
 
     // Fetch via proxy API route to avoid browser CORS restrictions
     fetch(`/api/fpl/entry/${savedTeamId}`)
@@ -93,64 +99,59 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
     if (!savedTeamId || !entryData) return;
     setIsSyncing(true);
     setSyncStatus(null);
+    setSyncError(false);
 
     try {
-      // Fetch latest GW picks via proxy
       const bootstrapRes = await fetch('/api/fpl/bootstrap');
+      if (!bootstrapRes.ok) throw new Error('Could not load the current gameweek');
       const bootstrap = await bootstrapRes.json();
-      const currentEvent = bootstrap.events?.find((e: any) => e.is_current) || bootstrap.events?.[0];
+      const currentEvent =
+        bootstrap.events?.find((e: any) => e.is_current) || bootstrap.events?.[0];
       const gw = entryData.current_event || currentEvent?.id || 1;
 
-      const picksRes = await fetch(`/api/fpl/picks/${savedTeamId}/${gw}`);
-      const picks = await picksRes.json();
+      // The archive route gathers picks, history, transfers and standings
+      // server-side, then this writes the result to Firestore.
+      const archive = await archiveSelectedLeaguesData(savedTeamId, gw, selectedLeagueIds);
 
-      const res = await archiveSelectedLeaguesData(
-        savedTeamId,
-        entryData,
-        picks,
-        gw,
-        selectedLeagueIds
+      setSyncStatus(
+        `Backed up ${archive.leaguesArchived} leagues ` +
+          `(${archive.membersArchived.toLocaleString()} members) for GW ${archive.gameweek}.`
       );
-
-      if (res) {
-        setSyncStatus(`✓ Successfully backed up ${selectedLeagueIds.length} leagues to Firebase!`);
-      } else {
-        setSyncStatus('Backup complete.');
-      }
     } catch (e: any) {
-      setSyncStatus(`Backup complete.`);
+      setSyncError(true);
+      setSyncStatus(e.message || 'Backup failed. Please try again.');
     } finally {
       setIsSyncing(false);
-      setTimeout(() => setSyncStatus(null), 4000);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-lg bg-white border border-black/5 rounded-4xl p-6 sm:p-7 shadow-2xl text-[#111318] max-h-[90vh] overflow-y-auto">
-        {/* Close */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-[#111318] rounded-full bg-gray-100 transition"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
+    <Modal isOpen onClose={onClose} labelledBy="firebase-backup-title" className="max-w-lg">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <div className="w-11 h-11 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
             <Database className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-black text-[#111318]">Firebase Backup</h2>
+            <h2 id="firebase-backup-title" className="text-xl font-black text-[#111318]">Firebase Backup</h2>
             <p className="text-xs text-gray-500">Select Private Mini-Leagues to sync with Firebase Firestore</p>
           </div>
         </div>
 
         {/* Status Notification */}
         {syncStatus && (
-          <div className="mb-4 p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2">
-            <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+          <div
+            className={`mb-4 p-3 rounded-2xl border text-xs font-bold flex items-start gap-2 ${
+              syncError
+                ? 'bg-rose-50 border-rose-300 text-rose-800'
+                : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+            }`}
+          >
+            {syncError ? (
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            ) : (
+              <Check className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            )}
             <span>{syncStatus}</span>
           </div>
         )}
@@ -220,10 +221,22 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
           </div>
         )}
 
+        {/* Firebase not set up yet */}
+        {!isConfigured && (
+          <div className="mb-3 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+            <span>
+              Backup is unavailable until the server has Firebase credentials. Add
+              <code className="mx-1 px-1 rounded bg-white/80 font-mono">FIREBASE_SERVICE_ACCOUNT</code>
+              to your environment, then restart.
+            </span>
+          </div>
+        )}
+
         {/* Sync Button */}
         <button
           onClick={handleSync}
-          disabled={isSyncing || selectedLeagueIds.length === 0}
+          disabled={isSyncing || selectedLeagueIds.length === 0 || !isConfigured}
           className="w-full py-3.5 bg-[#38003c] hover:bg-[#520258] text-white font-black text-sm rounded-full shadow-lg flex items-center justify-center gap-2 active:scale-95 transition disabled:opacity-50"
         >
           {isSyncing ? (
@@ -238,7 +251,6 @@ export default function FirebaseBackupModal({ isOpen, onClose }: FirebaseBackupM
             </>
           )}
         </button>
-      </div>
-    </div>
+    </Modal>
   );
 }

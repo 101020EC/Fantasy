@@ -1,4 +1,25 @@
-import { FPLBootstrap, FPLElement, PriceAnalysis, PriceStatus } from './types';
+import { FPLBootstrap, FPLElement, FPLElementType, FPLTeam, PriceAnalysis, PriceStatus } from './types';
+
+const FALLBACK_TEAM: FPLTeam = { id: 0, name: 'Unknown', short_name: 'UNK', code: 0, strength: 3 };
+const FALLBACK_TYPE: FPLElementType = {
+  id: 0,
+  plural_name: 'Players',
+  plural_name_short: 'PLY',
+  singular_name: 'Player',
+  singular_name_short: 'PLY',
+};
+
+interface Lookups {
+  teams: Map<number, FPLTeam>;
+  types: Map<number, FPLElementType>;
+}
+
+function buildLookups(bootstrap: FPLBootstrap): Lookups {
+  return {
+    teams: new Map(bootstrap.teams.map((t) => [t.id, t])),
+    types: new Map(bootstrap.element_types.map((t) => [t.id, t])),
+  };
+}
 
 /**
  * Calculates price change trends, prediction score, and alert status for FPL players
@@ -6,22 +27,13 @@ import { FPLBootstrap, FPLElement, PriceAnalysis, PriceStatus } from './types';
  */
 export function analyzePlayerPrice(
   element: FPLElement,
-  bootstrap: FPLBootstrap
+  bootstrap: FPLBootstrap,
+  lookups: Lookups = buildLookups(bootstrap)
 ): PriceAnalysis {
-  const team = bootstrap.teams.find((t) => t.id === element.team) || {
-    id: element.team,
-    name: 'Unknown',
-    short_name: 'UNK',
-    code: 0,
-    strength: 3,
-  };
-
-  const elementType = bootstrap.element_types.find((t) => t.id === element.element_type) || {
+  const team = lookups.teams.get(element.team) || { ...FALLBACK_TEAM, id: element.team };
+  const elementType = lookups.types.get(element.element_type) || {
+    ...FALLBACK_TYPE,
     id: element.element_type,
-    plural_name: 'Players',
-    plural_name_short: 'PLY',
-    singular_name: 'Player',
-    singular_name_short: 'PLY',
   };
 
   const currentCost = element.now_cost / 10;
@@ -34,15 +46,13 @@ export function analyzePlayerPrice(
   const baselineThreshold = Math.max(25000, ownership * 12000);
   let rawScore = (netTransfers / baselineThreshold) * 100;
 
-  // Cap score between -100 and +100
-  let changeScore = Math.min(100, Math.max(-100, Math.round(rawScore)));
-
-  // If player is injured/suspended, transfer out velocity is intensified
-  if (element.status !== 'a') {
-    if (changeScore < 0) {
-      changeScore = Math.max(-100, changeScore * 1.25);
-    }
+  // Injured or suspended players are sold off faster than transfers alone show.
+  // Applied before rounding, so the score stays a whole number in the UI.
+  if (element.status !== 'a' && rawScore < 0) {
+    rawScore *= 1.25;
   }
+
+  const changeScore = Math.min(100, Math.max(-100, Math.round(rawScore)));
 
   let status: PriceStatus = 'stable';
   let urgencyLabel = 'ราคาคงที่';
@@ -91,5 +101,7 @@ export function analyzePlayerPrice(
 }
 
 export function getAllMarketPriceAnalyses(bootstrap: FPLBootstrap): PriceAnalysis[] {
-  return bootstrap.elements.map((el) => analyzePlayerPrice(el, bootstrap));
+  // Build the lookups once rather than scanning teams and positions per player.
+  const lookups = buildLookups(bootstrap);
+  return bootstrap.elements.map((el) => analyzePlayerPrice(el, bootstrap, lookups));
 }

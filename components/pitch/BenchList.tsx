@@ -11,7 +11,7 @@ export default function BenchList({ benchPlayers, onPlayerClick }: BenchListProp
   return (
     <div className="mt-4 p-4 sm:p-5 rounded-3xl pastel-card shadow-sm transition-colors">
       <div className="flex items-center justify-between mb-3 px-2">
-        <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#111318] dark:text-white flex items-center gap-2">
+        <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[#111318] flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-pastel-orange"></span>
           ตัวสำรอง (Substitutes)
         </h3>

@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Trophy, ArrowUp, ArrowDown, Minus, ChevronDown, ChevronUp, Users, Edit3, Check } from 'lucide-react';
-import { fetchFPLLeagueStandings } from '@/lib/fpl-api';
 
 interface PrivateLeaguesCardProps {
   leagues: any[];
@@ -22,8 +21,12 @@ export default function PrivateLeaguesCard({
   const [isReorderMode, setIsReorderMode] = useState(false);
 
   // Filter classic leagues
-  const privateLeagues = leagues.filter((l) => l.league_type === 'x' || l.rank_type !== 'g');
-  const baseLeagues = privateLeagues.length > 0 ? privateLeagues : leagues.slice(0, 10);
+  // league_type 'x' is FPL's marker for an invitational league. The previous
+  // `|| rank_type !== 'g'` let global and club-supporter leagues through.
+  const baseLeagues = useMemo(() => {
+    const privateLeagues = leagues.filter((l) => l.league_type === 'x');
+    return privateLeagues.length > 0 ? privateLeagues : leagues.slice(0, 10);
+  }, [leagues]);
 
   // Initialize and load custom order from localStorage
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function PrivateLeaguesCard({
     } catch (e) {
       setOrderedLeagues(baseLeagues);
     }
-  }, [currentTeamId, leagues.length]);
+  }, [currentTeamId, baseLeagues]);
 
   const saveOrder = (newList: any[]) => {
     setOrderedLeagues(newList);
@@ -94,7 +97,9 @@ export default function PrivateLeaguesCard({
     if (!standingsMap[leagueId]) {
       setLoadingMap((prev) => ({ ...prev, [leagueId]: true }));
       try {
-        const data = await fetchFPLLeagueStandings(leagueId);
+        // Through our own route — the FPL API is not reachable from the browser.
+        const res = await fetch(`/api/fpl/league/${leagueId}`);
+        const data = res.ok ? await res.json() : null;
         if (data?.standings?.results) {
           setStandingsMap((prev) => ({ ...prev, [leagueId]: data.standings.results }));
         }
@@ -277,7 +282,7 @@ export default function PrivateLeaguesCard({
 
                             return (
                               <tr
-                                key={member.id}
+                                key={member.entry}
                                 className={`transition ${
                                   isMe
                                     ? 'bg-purple-50 font-bold text-[#38003c]'
@@ -302,7 +307,7 @@ export default function PrivateLeaguesCard({
                                   <div className="font-bold truncate max-w-[150px] sm:max-w-xs">
                                     {member.entry_name}
                                     {isMe && (
-                                      <span className="ml-1.5 px-1.5 py-0.2 bg-[#38003c] text-white text-[9px] rounded-full">
+                                      <span className="ml-1.5 px-1.5 py-0.5 bg-[#38003c] text-white text-[9px] rounded-full">
                                         You
                                       </span>
                                     )}

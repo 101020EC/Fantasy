@@ -28,12 +28,12 @@ export default function FootballPitch({ players }: FootballPitchProps) {
       {/* Pitch Header */}
       <div className="flex items-center justify-between mb-3 px-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400">แผนการเล่น:</span>
-          <span className="px-3 py-0.5 rounded-full bg-[#111318] text-white dark:bg-white dark:text-[#111318] text-xs font-black">
+          <span className="text-xs font-bold text-gray-500">แผนการเล่น:</span>
+          <span className="px-3 py-0.5 rounded-full bg-[#111318] text-white text-xs font-black">
             {formation}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-[11px] text-gray-600 dark:text-gray-300 font-medium">
+        <div className="flex items-center gap-3 text-[11px] text-gray-600 font-medium">
           <span className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
             🚀 ราคาจะขึ้น

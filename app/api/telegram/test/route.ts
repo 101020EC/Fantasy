@@ -1,49 +1,49 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { escapeMarkdown, sendTelegramMessage, getTelegramConfig } from '@/lib/telegram';
+import { requireSession } from '@/lib/auth-server';
 
-export async function POST(req: NextRequest) {
-  try {
-    const { botToken, chatId, teamId } = await req.json();
+export const dynamic = 'force-dynamic';
 
-    if (!botToken || !chatId) {
-      return NextResponse.json(
-        { success: false, error: 'Missing botToken or chatId' },
-        { status: 400 }
-      );
-    }
+/** Reports whether the server can send alerts, without revealing the token. */
+export async function GET() {
+  const { configured, chatId, teamId } = getTelegramConfig();
+  return NextResponse.json({
+    configured,
+    chatId: chatId ? `…${chatId.slice(-4)}` : null,
+    teamId: teamId || null,
+  });
+}
 
-    const message =
-      `🎉 *Fanta Telegram Alert Connected!*\n\n` +
-      `✅ Your Telegram bot is connected successfully.\n` +
-      `👤 Tracking Team ID: *${teamId || 'Not specified'}*\n\n` +
-      `_You will receive notifications if players in your squad are predicted to rise or fall in price!_ 🚀🔻`;
+/**
+ * Sends a test alert using the server's own bot. The token is never accepted
+ * from the client — that turned this route into an open relay to Telegram.
+ */
+export async function POST() {
+  if (!(await requireSession())) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
 
-    const res = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: message,
-        parse_mode: 'Markdown',
-      }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok || !data.ok) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: data.description || 'Failed to send message via Telegram API',
-        },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({ success: true, message: 'Test message sent successfully' });
-  } catch (err: any) {
+  const { botToken, chatId, teamId, configured } = getTelegramConfig();
+  if (!configured) {
     return NextResponse.json(
-      { success: false, error: err.message || 'Internal Server Error' },
-      { status: 500 }
+      {
+        success: false,
+        error: 'ยังไม่ได้ตั้งค่า Telegram บนเซิร์ฟเวอร์ (ต้องกำหนด TELEGRAM_BOT_TOKEN และ TELEGRAM_CHAT_ID)',
+      },
+      { status: 503 }
     );
   }
+
+  const message =
+    `🎉 *Fanta Telegram Alert Connected\\!*\n\n` +
+    `✅ Your Telegram bot is connected successfully\\.\n` +
+    `👤 Tracking Team ID: *${escapeMarkdown(teamId || 'not set')}*\n\n` +
+    `_You will receive notifications if players in your squad are predicted to rise or fall in price\\!_ 🚀🔻`;
+
+  const result = await sendTelegramMessage(botToken, chatId, message);
+  if (!result.ok) {
+    return NextResponse.json({ success: false, error: result.description }, { status: 502 });
+  }
+
+  return NextResponse.json({ success: true, message: 'Test message sent successfully' });
 }

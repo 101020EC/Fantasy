@@ -20,14 +20,19 @@ export default function TeamSaveTracker({ id, entry, picksData, gw }: TeamSaveTr
     saveRecentTeam(id, entry.name, managerName);
     setSavedTeamId(id);
 
-    // Sync only user's selected leagues (if any selected in localStorage)
+    // Background sync of the leagues the user picked in the Backup modal.
+    // Returns 503 harmlessly when the server has no Firebase credentials.
     try {
       const savedLeaguesRaw = localStorage.getItem(`fpl_selected_leagues_${id}`);
       const selectedIds: number[] = savedLeaguesRaw ? JSON.parse(savedLeaguesRaw) : [];
       if (selectedIds.length > 0) {
-        archiveSelectedLeaguesData(id, entry, picksData, gw, selectedIds).catch(() => {});
+        archiveSelectedLeaguesData(id, gw, selectedIds).catch((err) =>
+          console.warn('Background archive failed:', err.message)
+        );
       }
-    } catch {}
+    } catch (err) {
+      console.warn('Could not read saved league selection:', err);
+    }
   }, [id, entry, picksData, gw, setSavedTeamId]);
 
   return null;

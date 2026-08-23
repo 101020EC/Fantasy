@@ -13,6 +13,7 @@ import TeamHeader from '@/components/team/TeamHeader';
 import FootballPitch from '@/components/pitch/FootballPitch';
 import TeamPitchTopBar from '@/components/pitch/TeamPitchTopBar';
 import PrivateLeaguesCard from '@/components/team/PrivateLeaguesCard';
+import TeamGameweekScroll from '@/components/team/TeamGameweekScroll';
 import TeamSaveTracker from './TeamSaveTracker';
 import { AlertCircle, Search } from 'lucide-react';
 
@@ -40,8 +41,12 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       bootstrap.events.find((e) => e.is_next) ||
       bootstrap.events[0];
 
-    const currentGwNum = currentEvent?.id || 27;
-    const initialGw = queryGw ? parseInt(queryGw) : (entry.current_event || currentGwNum);
+    const currentGwNum = currentEvent?.id || 1;
+    const parsedGw = queryGw ? parseInt(queryGw, 10) : NaN;
+    const initialGw =
+      Number.isFinite(parsedGw) && parsedGw >= 1 && parsedGw <= 38
+        ? parsedGw
+        : entry.current_event || currentGwNum;
 
     let activeGw = initialGw;
     let picksData: FPLPicksResponse | null = null;
@@ -49,8 +54,11 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
     // Try fetching the requested GW, fallback to previous GWs if deadline not passed yet
     try {
       picksData = await fetchFPLPicks(id, activeGw);
-    } catch (err) {
-      for (let fallbackGw = activeGw - 1; fallbackGw >= 1; fallbackGw--) {
+    } catch {
+      // Walk back a few gameweeks for a squad — enough to cover a deadline that
+      // has not passed yet. Scanning all 38 meant up to 37 blocking requests.
+      const floor = Math.max(1, activeGw - 3);
+      for (let fallbackGw = activeGw - 1; fallbackGw >= floor; fallbackGw--) {
         try {
           picksData = await fetchFPLPicks(id, fallbackGw);
           activeGw = fallbackGw;
@@ -84,15 +92,19 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           activeChip={picksData?.active_chip}
         />
 
-        {/* 2. Football Pitch View */}
+        {/* 2. Gameweek switcher — the page already honoured ?gw=, but nothing
+            in the UI ever linked to it. */}
+        <TeamGameweekScroll teamId={id} activeGw={activeGw} currentGw={currentGwNum} />
+
+        {/* 3. Football Pitch View */}
         <div>
           <FootballPitch players={squadPlayers} />
         </div>
 
-        {/* 3. Team Overview Header & Stats */}
+        {/* 4. Team Overview Header & Stats */}
         <TeamHeader entry={entry} picksData={picksData} currentEvent={activeEvent} />
 
-        {/* 4. Private Leagues Card */}
+        {/* 5. Private Leagues Card */}
         <PrivateLeaguesCard
           leagues={(entry as any).leagues?.classic || []}
           currentTeamId={id}

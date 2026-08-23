@@ -1,25 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchFPLBootstrap, fetchFPLEntry, fetchFPLPicks, buildSquadPlayers } from '@/lib/fpl-api';
+import { escapeMarkdown, sendTelegramMessage, getTelegramConfig } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Nightly price-change alert. Scheduled by vercel.json, which sends
+ * `Authorization: Bearer $CRON_SECRET`. Credentials come from the environment
+ * only — accepting them from the query string would make this an open relay.
+ */
 export async function GET(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const teamId = searchParams.get('teamId');
-    const botToken = searchParams.get('token') || process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = searchParams.get('chatId') || process.env.TELEGRAM_CHAT_ID;
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      return NextResponse.json({ error: 'CRON_SECRET is not configured' }, { status: 503 });
+    }
+    if (req.headers.get('authorization') !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!teamId || !botToken || !chatId) {
+    const { botToken, chatId, teamId: envTeamId, configured } = getTelegramConfig();
+    if (!configured) {
       return NextResponse.json(
-        { error: 'Missing teamId, token, or chatId parameters' },
+        { error: 'TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are not configured' },
+        { status: 503 }
+      );
+    }
+
+    const teamId = new URL(req.url).searchParams.get('teamId') || envTeamId;
+    if (!teamId || isNaN(Number(teamId))) {
+      return NextResponse.json(
+        { error: 'No team to check — set TELEGRAM_TEAM_ID or pass ?teamId=' },
         { status: 400 }
       );
     }
 
     // 1. Fetch FPL data
-    const bootstrap = await fetchFPLBootstrap();
-    const entry = await fetchFPLEntry(teamId);
+    const [bootstrap, entry] = await Promise.all([fetchFPLBootstrap(), fetchFPLEntry(teamId)]);
     const currentEvent =
       bootstrap.events.find((e) => e.is_current) ||
       bootstrap.events.find((e) => e.is_next) ||
@@ -28,63 +45,55 @@ export async function GET(req: NextRequest) {
     const picksData = await fetchFPLPicks(teamId, entry.current_event || currentEvent.id);
     const squadPlayers = buildSquadPlayers(picksData.picks, bootstrap, [], currentEvent.id);
 
-    // 2. Analyze price alerts
+    // 2. Which players are about to move
     const risers = squadPlayers.filter((p) => p.priceAnalysis.status === 'rising_soon');
     const fallers = squadPlayers.filter((p) => p.priceAnalysis.status === 'falling_soon');
 
     if (risers.length === 0 && fallers.length === 0) {
       return NextResponse.json({
+        alertSent: false,
         message: 'No price change alerts for squad tonight.',
         checkedPlayersCount: squadPlayers.length,
       });
     }
 
-    // 3. Format Telegram Message
-    let text = `🚨 *Fanta: Price Alert Warning!*\n\n`;
-    text += `👤 *Team:* ${entry.name} (#${entry.id})\n\n`;
+    // 3. Build the message. Every interpolated value is escaped: manager and
+    //    player names routinely contain characters MarkdownV2 reserves.
+    const line = (p: (typeof squadPlayers)[number], sign: string) =>
+      `• *${escapeMarkdown(p.element.web_name)}* \\(${escapeMarkdown(p.team.short_name)}\\) \\| Net: ${escapeMarkdown(
+        sign + p.priceAnalysis.netTransfers.toLocaleString()
+      )}\n`;
+
+    let text = `🚨 *Fanta: Price Alert Warning\\!*\n\n`;
+    text += `👤 *Team:* ${escapeMarkdown(entry.name)} \\(\\#${escapeMarkdown(entry.id)}\\)\n\n`;
 
     if (risers.length > 0) {
-      text += `🚀 *Expected Price Rise (£+0.1m):*\n`;
-      risers.forEach((p) => {
-        text += `• *${p.element.web_name}* (${p.team.short_name}) | Net: +${p.priceAnalysis.netTransfers.toLocaleString()}\n`;
-      });
+      text += `🚀 *Expected Price Rise \\(£\\+0\\.1m\\):*\n`;
+      risers.forEach((p) => (text += line(p, '+')));
       text += `\n`;
     }
-
     if (fallers.length > 0) {
-      text += `🔻 *At Risk of Price Fall (£-0.1m):*\n`;
-      fallers.forEach((p) => {
-        text += `• *${p.element.web_name}* (${p.team.short_name}) | Net: ${p.priceAnalysis.netTransfers.toLocaleString()}\n`;
-      });
+      text += `🔻 *At Risk of Price Fall \\(£\\-0\\.1m\\):*\n`;
+      fallers.forEach((p) => (text += line(p, '')));
       text += `\n`;
     }
+    text += `⏰ _Prices update daily ~01:30 \\- 02:30 UTC_`;
 
-    text += `⏰ _Prices update daily ~01:30 - 02:30 UTC_`;
-
-    // 4. Send to Telegram
-    const telegramRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text: text,
-        parse_mode: 'Markdown',
-      }),
-    });
-
-    const tgData = await telegramRes.json();
+    // 4. Deliver, and report Telegram's verdict honestly
+    const result = await sendTelegramMessage(botToken, chatId, text);
+    if (!result.ok) {
+      return NextResponse.json(
+        { alertSent: false, error: `Telegram rejected the message: ${result.description}` },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({
-      success: true,
       alertSent: true,
       risersCount: risers.length,
       fallersCount: fallers.length,
-      telegramResponse: tgData,
     });
   } catch (err: any) {
-    return NextResponse.json(
-      { error: err.message || 'Error executing cron job' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: err.message || 'Error executing cron job' }, { status: 500 });
   }
 }
