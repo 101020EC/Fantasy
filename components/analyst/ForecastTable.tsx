@@ -170,8 +170,8 @@ export default function ForecastTable({
         <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
         <p>
           <strong className="text-black/60">xPts</strong> is a deterministic projection for GW{gameweek}
-          from minutes, xG, xA, expected goals conceded, opponent strength and FPL&apos;s own scoring
-          rules — no language model is involved in producing it. <strong className="text-black/60">Range</strong>{' '}
+          from minutes, xG, xA, expected goals conceded, FPL&apos;s own fixture difficulty for the opponent and
+          venue, and FPL&apos;s own scoring rules — no language model is involved in producing it. <strong className="text-black/60">Range</strong>{' '}
           widens when the model knows less. <strong className="text-black/60">FPL ep</strong> is FPL&apos;s
           published estimate, shown as the benchmark to beat rather than as a target to match.
         </p>

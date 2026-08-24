@@ -12,7 +12,7 @@ import { FeatureSet, FPLScoring, FPLTeam, GameweekForecast, PlayerForecast } fro
  * the language model's job is to explain these numbers, never to generate them.
  */
 
-export const COMPUTE_VERSION = 1;
+export const COMPUTE_VERSION = 2;
 
 /** element_type -> the key FPL uses in its own scoring table. */
 const POSITION_KEY: Record<number, 'GKP' | 'DEF' | 'MID' | 'FWD'> = {
@@ -62,8 +62,6 @@ const PRIORS = {
   benchAppearanceMinutes: 20,
   /** Probability a starter lasts the 60 minutes that turn 1 appearance point into 2. */
   starterReaches60: 0.88,
-  /** League-average team strength, used to normalise the fixture adjustment. */
-  averageStrength: 1100,
   /** Fixture adjustment is clamped here — no single matchup should dominate. */
   fixtureAdjustmentRange: [0.65, 1.55] as [number, number],
 
@@ -71,9 +69,47 @@ const PRIORS = {
   defaultConceded: 1.35,
 };
 
+/**
+ * Fixture difficulty, from FPL's own per-team FDR on each fixture.
+ *
+ * This replaces the team `strength_attack_*` / `strength_defence_*` splits the
+ * model was originally built on. FPL ships those as **0 for all 20 clubs** in
+ * 2026/27 and moved `strength_overall_home/away` to a 1-5 scale, so the old
+ * normalisation against ~1100 collapsed every matchup to the same clamped
+ * value: away at the champions scored identically to a home tie against the
+ * bottom club, and the flat 0.65 applied to expected goals conceded inflated
+ * clean sheets for every defender in the league.
+ *
+ * FDR is coarser than a strength split — one number per team per fixture
+ * rather than separate attack and defence ratings — but it is real, it is
+ * published per venue, and it moves. Baseline is 3, so an average fixture
+ * leaves the projection untouched.
+ *
+ * These multipliers are UNFITTED, like the rest of PRIORS. The first backtest
+ * with enough gameweeks should replace them with fitted values.
+ */
+const FDR_ATTACK: Record<number, number> = { 1: 1.25, 2: 1.14, 3: 1.0, 4: 0.87, 5: 0.74 };
+const FDR_CONCEDE: Record<number, number> = { 1: 0.72, 2: 0.85, 3: 1.0, 4: 1.18, 5: 1.38 };
+const DEFAULT_DIFFICULTY = 3;
+
+/**
+ * Home advantage on top of FDR. FPL's rating already differs by venue (Coventry
+ * rate Arsenal 4 at home and 5 away), but only in whole steps, so it cannot
+ * express the roughly two-tenths-of-a-goal edge playing at home is worth. Kept
+ * small precisely because part of the effect is already in the FDR.
+ */
+const HOME_ATTACK = 1.06;
+const HOME_CONCEDE = 0.94;
+
 export interface ForecastContext {
   fixtures: SeasonFixtures | null;
-  teams: FPLTeam[];
+  /**
+   * Unused since the move to FDR — FPL zeroed every attack/defence strength
+   * split for 2026/27. Kept on the interface so callers stay unchanged and so
+   * the model can go back to strength splits if FPL starts publishing them
+   * again, which would be the better signal.
+   */
+  teams?: FPLTeam[];
   /** FPL's live scoring table. Falls back to the 2026/27 rules when absent. */
   scoring?: FPLScoring;
 }
@@ -98,6 +134,8 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 interface TargetFixture {
   opponent: number;
   isHome: boolean;
+  /** FPL's difficulty rating for THIS club in this fixture, 1 (easy) to 5. */
+  difficulty: number;
 }
 
 /** Every fixture a club plays in the target gameweek: 0 = blank, 2+ = double. */
@@ -111,6 +149,16 @@ function fixturesForGameweek(
   const iEvent = F('event');
   const iHome = F('team_h');
   const iAway = F('team_a');
+  const iHomeDiff = F('team_h_difficulty');
+  const iAwayDiff = F('team_a_difficulty');
+
+  // A stored fixture set from before difficulty was captured has no such
+  // column; reading -1 out of the array would silently yield undefined, so
+  // fall back to the neutral rating rather than to a wrong one.
+  const rating = (values: (string | number | boolean | null)[], index: number) => {
+    const v = index >= 0 ? Number(values[index]) : NaN;
+    return Number.isFinite(v) && v >= 1 && v <= 5 ? v : DEFAULT_DIFFICULTY;
+  };
 
   for (const values of Object.values(fixtures.fixtures)) {
     if (Number(values[iEvent]) !== gameweek) continue;
@@ -118,8 +166,8 @@ function fixturesForGameweek(
     const away = Number(values[iAway]);
     if (!out.has(home)) out.set(home, []);
     if (!out.has(away)) out.set(away, []);
-    out.get(home)!.push({ opponent: away, isHome: true });
-    out.get(away)!.push({ opponent: home, isHome: false });
+    out.get(home)!.push({ opponent: away, isHome: true, difficulty: rating(values, iHomeDiff) });
+    out.get(away)!.push({ opponent: home, isHome: false, difficulty: rating(values, iAwayDiff) });
   }
   return out;
 }
@@ -135,7 +183,6 @@ export function forecast(
 
   const scoring = context.scoring ?? FALLBACK_SCORING;
   const byClub = fixturesForGameweek(context.fixtures, fs.targetGameweek);
-  const teams = new Map(context.teams.map((t) => [t.id, t]));
   const [adjLo, adjHi] = PRIORS.fixtureAdjustmentRange;
 
   const predictions: Record<string, PlayerForecast> = {};
@@ -167,31 +214,16 @@ export function forecast(
         Math.max(0, pAppear - pStart) * PRIORS.benchAppearanceMinutes;
       totalMinutes += expMinutes;
 
-      const me = teams.get(club);
-      const opp = teams.get(fixture.opponent);
-
-      // Attack is helped by a weak opponent defence and by playing at home;
-      // the reverse for keeping a clean sheet. Both are normalised against the
-      // league average so the numbers stay interpretable as multipliers.
-      const myAttack = me
-        ? fixture.isHome ? me.strength_attack_home : me.strength_attack_away
-        : PRIORS.averageStrength;
-      const oppDefence = opp
-        ? fixture.isHome ? opp.strength_defence_away : opp.strength_defence_home
-        : PRIORS.averageStrength;
-      const myDefence = me
-        ? fixture.isHome ? me.strength_defence_home : me.strength_defence_away
-        : PRIORS.averageStrength;
-      const oppAttack = opp
-        ? fixture.isHome ? opp.strength_attack_away : opp.strength_attack_home
-        : PRIORS.averageStrength;
-
+      // Attacking output is scaled down by a hard fixture and up by an easy
+      // one; expected goals conceded moves the other way, which is what
+      // actually drives the clean-sheet term for defenders and keepers.
+      const fdr = fixture.difficulty;
       const attackAdj = clamp(
-        (myAttack / PRIORS.averageStrength) * (PRIORS.averageStrength / (oppDefence || PRIORS.averageStrength)),
+        (FDR_ATTACK[fdr] ?? 1) * (fixture.isHome ? HOME_ATTACK : 1 / HOME_ATTACK),
         adjLo, adjHi
       );
       const defenceAdj = clamp(
-        (oppAttack / PRIORS.averageStrength) * (PRIORS.averageStrength / (myDefence || PRIORS.averageStrength)),
+        (FDR_CONCEDE[fdr] ?? 1) * (fixture.isHome ? HOME_CONCEDE : 1 / HOME_CONCEDE),
         adjLo, adjHi
       );
 
