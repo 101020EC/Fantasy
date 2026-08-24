@@ -1,6 +1,6 @@
-import { FPLBootstrap, FPLElement, FPLElementType, FPLTeam, PriceAnalysis, PriceStatus } from './types';
+import { FPLBootstrap, FPLElement, FPLElementType, FPLTeam, PriceAnalysis, PriceStatus, placeholderTeam } from './types';
 
-const FALLBACK_TEAM: FPLTeam = { id: 0, name: 'Unknown', short_name: 'UNK', code: 0, strength: 3 };
+const FALLBACK_TEAM: FPLTeam = placeholderTeam();
 const FALLBACK_TYPE: FPLElementType = {
   id: 0,
   plural_name: 'Players',

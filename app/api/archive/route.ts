@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { buildArchivePayload, CompleteArchiveData } from '@/lib/archive';
+import { buildArchivePayload, writeArchive } from '@/lib/archive';
 import {
-  getAdminDb,
   getAdminConfigStatus,
   isAdminConfigured,
   ADMIN_NOT_CONFIGURED,
@@ -34,54 +33,6 @@ export async function GET() {
     cronSecret: Boolean(process.env.CRON_SECRET),
     appPassword: Boolean(process.env.APP_PASSWORD),
   });
-}
-
-async function writeArchive(archive: CompleteArchiveData) {
-  const db = getAdminDb();
-  const id = String(archive.teamId);
-  const gw = archive.gameweek;
-
-  const batch = db.batch();
-
-  // A. Team gameweek snapshot: teams/{teamId}/gameweeks/gw_{gw}
-  batch.set(db.collection('teams').doc(id).collection('gameweeks').doc(`gw_${gw}`), archive, {
-    merge: true,
-  });
-
-  // B. Team root document: teams/{teamId}
-  batch.set(
-    db.collection('teams').doc(id),
-    {
-      teamName: archive.teamName,
-      managerName: archive.managerName,
-      region: archive.region,
-      overallPoints: archive.overallPoints,
-      overallRank: archive.overallRank,
-      lastUpdatedGw: gw,
-      selectedLeagueIds: archive.selectedPrivateLeagues.map((l) => l.id),
-      lastSynced: archive.lastSynced,
-    },
-    { merge: true }
-  );
-
-  // C. Standings per selected league: leagues/{leagueId}/gameweeks/gw_{gw}
-  for (const league of archive.selectedPrivateLeagues) {
-    if (league.standings.length === 0) continue;
-    batch.set(
-      db.collection('leagues').doc(String(league.id)).collection('gameweeks').doc(`gw_${gw}`),
-      {
-        leagueId: league.id,
-        leagueName: league.name,
-        gameweek: gw,
-        totalMembers: league.membersCount,
-        standings: league.standings,
-        updatedAt: archive.lastSynced,
-      },
-      { merge: true }
-    );
-  }
-
-  await batch.commit();
 }
 
 /**

@@ -10,6 +10,7 @@ import {
   FPLPicksResponse,
   FPLTeam,
   TeamSquadPlayer,
+  placeholderTeam,
 } from './types';
 import { analyzePlayerPrice } from './price-calculator';
 
@@ -35,12 +36,17 @@ function fplFetch(path: string, revalidate: number) {
 // declares brings it to ~270KB, which caches — and which is also what the
 // /api/fpl/bootstrap proxy hands to the browser.
 const ELEMENT_FIELDS: (keyof FPLElement)[] = [
-  'id', 'web_name', 'first_name', 'second_name', 'team', 'team_code', 'element_type',
+  'id', 'code', 'web_name', 'first_name', 'second_name', 'team', 'team_code', 'element_type',
   'now_cost', 'cost_change_event', 'cost_change_start', 'transfers_in_event',
   'transfers_out_event', 'selected_by_percent', 'total_points', 'event_points', 'form',
   'status', 'news', 'chance_of_playing_next_round', 'ep_this', 'ep_next',
 ];
-const TEAM_FIELDS: (keyof FPLTeam)[] = ['id', 'name', 'short_name', 'code', 'strength'];
+const TEAM_FIELDS: (keyof FPLTeam)[] = [
+  'id', 'name', 'short_name', 'code', 'strength',
+  'strength_overall_home', 'strength_overall_away',
+  'strength_attack_home', 'strength_attack_away',
+  'strength_defence_home', 'strength_defence_away',
+];
 const EVENT_FIELDS: (keyof FPLEvent)[] = [
   'id', 'name', 'deadline_time', 'is_previous', 'is_current', 'is_next', 'finished', 'data_checked',
 ];
@@ -62,6 +68,8 @@ function trimBootstrap(raw: any): FPLBootstrap {
     teams: project<FPLTeam>(raw?.teams, TEAM_FIELDS),
     elements: project<FPLElement>(raw?.elements, ELEMENT_FIELDS),
     element_types: project<FPLElementType>(raw?.element_types, ELEMENT_TYPE_FIELDS),
+    // ~1KB, and it is FPL stating its own rules — worth far more than it costs.
+    scoring: raw?.game_config?.scoring ?? undefined,
   };
 }
 
@@ -150,6 +158,27 @@ export async function fetchFPLTransfers(teamId: number | string): Promise<any[]>
   }
 }
 
+/**
+ * Per-fixture history for one player: minutes, goals, xG/xA/xGI/xGC, bps, bonus,
+ * value and ownership at settlement, plus `history_past` season aggregates and
+ * upcoming fixtures with a per-player difficulty.
+ *
+ * Unlike price and ownership — which the FPL API only ever reports for today,
+ * which is why market/{date} exists — this endpoint is retroactive for the
+ * whole season, so a missed day costs nothing here.
+ *
+ * Returns null rather than throwing: a full sweep is ~600 requests and one
+ * failure must not abandon the other 599.
+ */
+export async function fetchElementSummary(elementId: number | string): Promise<any | null> {
+  try {
+    const res = await fplFetch(`/element-summary/${elementId}/`, 3600);
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function buildSquadPlayers(
   picks: FPLPicksResponse['picks'] = [],
   bootstrap: FPLBootstrap,
@@ -171,13 +200,7 @@ export function buildSquadPlayers(
       const element = elementMap.get(pick.element);
       if (!element) return null;
 
-      const team = teamMap.get(element.team) || {
-        id: element.team,
-        name: 'Club',
-        short_name: 'CLB',
-        code: 0,
-        strength: 3,
-      };
+      const team = teamMap.get(element.team) || placeholderTeam(element.team, 'Club', 'CLB');
 
       const elementType = typeMap.get(element.element_type) || {
         id: element.element_type,
@@ -195,13 +218,7 @@ export function buildSquadPlayers(
           const opponentId = isHome ? f.team_a : f.team_h;
           return {
             event: f.event!,
-            opponent: teamMap.get(opponentId) || {
-              id: opponentId,
-              name: 'Opponent',
-              short_name: 'OPP',
-              code: 0,
-              strength: 3,
-            },
+            opponent: teamMap.get(opponentId) || placeholderTeam(opponentId, 'Opponent', 'OPP'),
             isHome,
             difficulty: isHome ? f.team_h_difficulty : f.team_a_difficulty,
             started: Boolean(f.started),

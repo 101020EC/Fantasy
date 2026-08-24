@@ -1,5 +1,10 @@
 export interface FPLElement {
   id: number;
+  /**
+   * Stable across seasons, unlike `id`. Cross-season joins must resolve
+   * through this — see Risk F-9.
+   */
+  code: number;
   web_name: string;
   first_name: string;
   second_name: string;
@@ -28,6 +33,27 @@ export interface FPLTeam {
   short_name: string;
   code: number;
   strength: number;
+  // Attack/defence splits the forecast engine needs for opponent difficulty.
+  // The single `strength` above is too coarse to model a fixture with.
+  strength_overall_home: number;
+  strength_overall_away: number;
+  strength_attack_home: number;
+  strength_attack_away: number;
+  strength_defence_home: number;
+  strength_defence_away: number;
+}
+
+/**
+ * Stand-in for a club the bootstrap did not return. Exists so the strength
+ * fields only have to be defaulted in one place.
+ */
+export function placeholderTeam(id = 0, name = 'Unknown', short_name = 'UNK'): FPLTeam {
+  return {
+    id, name, short_name, code: 0, strength: 3,
+    strength_overall_home: 1000, strength_overall_away: 1000,
+    strength_attack_home: 1000, strength_attack_away: 1000,
+    strength_defence_home: 1000, strength_defence_away: 1000,
+  };
 }
 
 export interface FPLEvent {
@@ -49,11 +75,37 @@ export interface FPLElementType {
   singular_name_short: string;
 }
 
+/**
+ * FPL's own scoring rules, shipped in bootstrap-static under game_config.
+ *
+ * Read rather than hardcoded: goalkeeper goals are worth 10 and defensive
+ * contribution 2, both of which are recent changes, and a model with last
+ * season's constants baked in would be quietly wrong every time the rules move.
+ */
+export interface FPLScoring {
+  long_play: number;
+  short_play: number;
+  goals_scored: Record<'GKP' | 'DEF' | 'MID' | 'FWD', number>;
+  clean_sheets: Record<'GKP' | 'DEF' | 'MID' | 'FWD', number>;
+  goals_conceded: Record<'GKP' | 'DEF' | 'MID' | 'FWD', number>;
+  defensive_contribution: Record<'GKP' | 'DEF' | 'MID' | 'FWD', number>;
+  assists: number;
+  saves: number;
+  bonus: number;
+  yellow_cards: number;
+  red_cards: number;
+  own_goals: number;
+  penalties_saved: number;
+  penalties_missed: number;
+}
+
 export interface FPLBootstrap {
   events: FPLEvent[];
   teams: FPLTeam[];
   elements: FPLElement[];
   element_types: FPLElementType[];
+  /** Absent only if FPL stops shipping it; the engine falls back to defaults. */
+  scoring?: FPLScoring;
 }
 
 export interface FPLEntry {
@@ -161,4 +213,224 @@ export interface TeamSquadPlayer {
   };
   /** This gameweek onward, up to three — a blank week simply yields fewer. */
   fixtures: SquadFixture[];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Analyst extension — elite cohort, features, forecasts, scoring.
+//
+// Naming rule, applied everywhere including UI strings: this is the "Elite
+// Cohort", never "Top 1K". It is ~20 self-selected managers whose qualification
+// is a PAST season's rank — a small, survivorship-biased, mutually-correlated
+// sample. It is evidence about what strong managers did, which is a different
+// thing from what was correct.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface EliteManager {
+  managerId: number;
+  teamName: string;
+  managerName: string;
+  region: string;
+  addedAt: string;
+  /** Why this manager is in the cohort, e.g. "Top 1K 2024/25". Free text. */
+  qualification: string;
+  priorSeasons: { season: string; rank: number; totalPoints: number }[];
+}
+
+export interface EliteCohort {
+  season: string;
+  /** Managers the cohort is DEFINED to contain. Not the same as availableManagerCount. */
+  cohortSize: number;
+  managerIds: number[];
+  startedAt: string;
+  updatedAt: string;
+  notes: string;
+  managers: Record<string, EliteManager>;
+}
+
+/** Attached to every derived artefact. Without it a stored number cannot be trusted later. */
+export interface SignalProvenance {
+  /** The gameweek the numbers were computed FROM. Must be < any forecast target. */
+  sourceGameweek: number;
+  generatedAt: string;
+  dataChecked: boolean;
+  cohortSize: number;
+  /** Managers actually captured — the denominator for every percentage. */
+  availableManagerCount: number;
+  /** Managers absent this gameweek. Never treated as 0% ownership. */
+  missing: number[];
+  /** Bumped when a formula changes, so stale documents are identifiable. */
+  computeVersion: number;
+}
+
+type AnalystCell = string | number | boolean | null;
+
+export interface EliteManagerGameweek {
+  /** Positional, per the document's entryFields. */
+  entry: AnalystCell[];
+  /** 15 x pickFields.length, row-major. */
+  picks: AnalystCell[];
+  /** automatic_subs, flattened per subFields. */
+  subs: AnalystCell[];
+  /** Transfers made INTO this gameweek, flattened per transferFields. */
+  transfers: AnalystCell[];
+  activeChip: string | null;
+}
+
+/** RAW capture. Immutable once written — the derived layer is what gets recomputed. */
+export interface EliteGameweekSnapshot {
+  season: string;
+  gameweek: number;
+  capturedAt: string;
+  dataChecked: boolean;
+  cohortSize: number;
+  availableManagerCount: number;
+  missing: number[];
+  entryFields: string[];
+  pickFields: string[];
+  subFields: string[];
+  transferFields: string[];
+  managers: Record<string, EliteManagerGameweek>;
+}
+
+export const ELITE_DERIVED_FIELDS = [
+  'owned', 'captained', 'viceCaptained', 'startedXI', 'benched',
+  'transferredIn', 'transferredOut', 'ownerCount',
+] as const;
+
+/**
+ * DERIVED signals. Stores integer COUNTS, never percentages.
+ *
+ * With 20 managers a percentage is a lossy re-encoding of a small integer, and
+ * it goes silently wrong the moment availableManagerCount differs from the value
+ * it was computed against: 12/20 = 60.0%, then 11/18 = 61.1% next week — but a
+ * stored 11/20 would read 55.0% and show a 6-point drop that never happened.
+ * A count stays true forever. pct = count / availableManagerCount at read time.
+ */
+export interface EliteDerivedGameweek extends SignalProvenance {
+  season: string;
+  gameweek: number;
+  fields: string[];
+  /** element id -> counts in `fields` order */
+  players: Record<string, number[]>;
+  chips: Record<string, number>;
+  consensus: {
+    captainEntropy: number;
+    xiOverlapMean: number;
+    uniqueOwnedCount: number;
+  };
+}
+
+/**
+ * In-memory only, never persisted — so changing a definition later needs no
+ * migration and no re-capture, only a recompute from the raw snapshots.
+ *
+ * null means "not computable", NEVER "zero". A gap in capture and "no elite
+ * manager owns this player" are different facts and only one is information.
+ */
+export interface EliteSignals {
+  elite_ownership_pct: number | null;
+  elite_ownership_change_1gw: number | null;   // percentage points
+  elite_ownership_change_3gw: number | null;   // percentage points
+  elite_captain_pct: number | null;
+  elite_captain_change_1gw: number | null;     // percentage points
+  elite_transfer_in_rate: number | null;
+  elite_transfer_out_rate: number | null;
+  /** Effective elite ownership minus general selected_by_percent, in points. */
+  delta_eo: number | null;
+  delta_eo_change_1gw: number | null;
+  /**
+   * (freehit + wildcard) / availableManagerCount. Those chips produce a
+   * one-week squad that reverts, so when this is high the change features
+   * describe a chip, not a trend.
+   */
+  chipVolatility: number | null;
+}
+
+export interface FeatureSources {
+  playerStats: number[];
+  elite: number[];
+  market: string[];
+  fixtures: string;
+}
+
+export interface PlayerFeatures {
+  elementId: number;
+  base: Record<string, number | null>;
+  /** Present only when includeElite is true. */
+  elite?: EliteSignals;
+}
+
+export interface FeatureSet {
+  season: string;
+  targetGameweek: number;
+  /**
+   * Deadline of the target gameweek, ISO. Market snapshots are dated rather
+   * than numbered, so this is what makes "before the deadline" checkable.
+   */
+  targetDeadline: string | null;
+  includeElite: boolean;
+  sources: FeatureSources;
+  /** e.g. 'stale_elite_data', 'low_cohort_availability', 'high_chip_volatility' */
+  qualityFlags: string[];
+  players: PlayerFeatures[];
+}
+
+export interface PlayerForecast {
+  xPts: number;
+  floor: number;
+  ceiling: number;
+  minutesProb: number;
+  confidence: number;
+}
+
+export interface GameweekForecast {
+  season: string;
+  gameweek: number;
+  generatedAt: string;
+  model: 'base' | 'elite' | 'ep_next';
+  computeVersion: number;
+  includeElite: boolean;
+  featureSources: FeatureSources;
+  qualityFlags: string[];
+  predictions: Record<string, PlayerForecast>;
+}
+
+export interface ModelScore {
+  mae: number;
+  rmse: number;
+  /** Spearman rank correlation — the ordering is what a manager acts on. */
+  spearman: number;
+  top10Hit: number;
+  top20Hit: number;
+  n: number;
+  computeVersion: number;
+}
+
+export interface GameweekAccuracy {
+  season: string;
+  gameweek: number;
+  scoredAt: string;
+  /** Declared, and identical across every model variant. */
+  population: string;
+  n: number;
+  models: Partial<Record<'base' | 'elite' | 'ep_next', ModelScore>>;
+  /**
+   * Manager-level, unlike the player-level scores above — never plot them on
+   * one axis. Mean and median both, because one Triple Captain haul drags the
+   * mean of 20 managers several points.
+   */
+  eliteActual: {
+    mean: number;
+    median: number;
+    min: number;
+    max: number;
+    availableManagerCount: number;
+  } | null;
+}
+
+export class LookaheadError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LookaheadError';
+  }
 }
