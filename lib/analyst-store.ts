@@ -2,7 +2,13 @@ import { getAdminDb } from './firebase-admin';
 import { gwDocId } from './analyst';
 import { SeasonFixtures } from './fixtures-store';
 import { PlayerPriors, PlayerStatsGameweek } from './player-stats';
-import { EliteCohort, EliteDerivedGameweek, EliteGameweekSnapshot } from './types';
+import {
+  EliteCohort,
+  EliteDerivedGameweek,
+  EliteGameweekSnapshot,
+  GameweekAccuracy,
+  GameweekForecast,
+} from './types';
 
 /**
  * Firestore access for the analyst collections. Nothing here touches an
@@ -109,6 +115,66 @@ export async function readEliteDerived(
     .doc(gwDocId(gameweek))
     .get();
   return snap.exists ? (snap.data() as EliteDerivedGameweek) : null;
+}
+
+export async function readEliteSnapshot(
+  season: string,
+  gameweek: number
+): Promise<EliteGameweekSnapshot | null> {
+  const snap = await getAdminDb()
+    .doc(analystPaths.eliteCohort(season))
+    .collection('gameweeks')
+    .doc(gwDocId(gameweek))
+    .get();
+  return snap.exists ? (snap.data() as EliteGameweekSnapshot) : null;
+}
+
+export async function readForecast(
+  season: string,
+  gameweek: number
+): Promise<GameweekForecast | null> {
+  const snap = await getAdminDb()
+    .doc(analystPaths.forecasts(season))
+    .collection('gameweeks')
+    .doc(gwDocId(gameweek))
+    .get();
+  return snap.exists ? (snap.data() as GameweekForecast) : null;
+}
+
+export async function writeForecast(doc: GameweekForecast): Promise<void> {
+  const db = getAdminDb();
+  const parent = db.doc(analystPaths.forecasts(doc.season));
+  const batch = db.batch();
+  batch.set(
+    parent,
+    { season: doc.season, updatedAt: doc.generatedAt, lastGameweek: doc.gameweek },
+    { merge: true }
+  );
+  batch.set(parent.collection('gameweeks').doc(gwDocId(doc.gameweek)), doc);
+  await batch.commit();
+}
+
+export async function writeAccuracy(doc: GameweekAccuracy): Promise<void> {
+  const db = getAdminDb();
+  const parent = db.doc(analystPaths.forecastAccuracy(doc.season));
+  const batch = db.batch();
+  batch.set(
+    parent,
+    { season: doc.season, updatedAt: doc.scoredAt, lastGameweek: doc.gameweek },
+    { merge: true }
+  );
+  batch.set(parent.collection('gameweeks').doc(gwDocId(doc.gameweek)), doc);
+  await batch.commit();
+}
+
+export async function readAccuracyHistory(season: string): Promise<GameweekAccuracy[]> {
+  const snap = await getAdminDb()
+    .doc(analystPaths.forecastAccuracy(season))
+    .collection('gameweeks')
+    .get();
+  return snap.docs
+    .map((d) => d.data() as GameweekAccuracy)
+    .sort((a, b) => a.gameweek - b.gameweek);
 }
 
 export async function storedEliteGameweeks(season: string): Promise<number[]> {

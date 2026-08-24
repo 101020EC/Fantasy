@@ -4,12 +4,15 @@ import { Brain, Users, Database, AlertCircle } from 'lucide-react';
 import { fetchFPLBootstrap } from '@/lib/fpl-api';
 import { isAdminConfigured } from '@/lib/firebase-admin';
 import { ANALYST_ENABLED, currentEvent, finalisedEvents, seasonKey } from '@/lib/analyst';
-import { readEliteCohort, storedEliteGameweeks, storedPlayerStatGameweeks } from '@/lib/analyst-store';
+import { readAccuracyHistory, readEliteCohort, storedEliteGameweeks, storedPlayerStatGameweeks } from '@/lib/analyst-store';
 import { loadFeatureInputs } from '@/lib/forecast-inputs';
 import { buildFeatures } from '@/lib/feature-builder';
 import { forecast } from '@/lib/forecast-engine';
 import ForecastTable, { ForecastRow } from '@/components/analyst/ForecastTable';
 import AnalysisPanel from '@/components/analyst/AnalysisPanel';
+import AccuracyPanel from '@/components/analyst/AccuracyPanel';
+import TransferSuggestions from '@/components/analyst/TransferSuggestions';
+import { evaluatePromotion } from '@/lib/backtest';
 import { getLLMConfig } from '@/lib/openai';
 import { getTelegramConfig } from '@/lib/telegram';
 
@@ -55,6 +58,7 @@ export default async function AnalystPage() {
         readEliteCohort(season).catch(() => null),
         getLLMConfig().catch(() => null),
       ]);
+      const accuracy = await readAccuracyHistory(season).catch(() => []);
 
       // The team the app already tracks, rather than a second place to
       // configure one. Absent simply means the prose covers the forecast
@@ -136,6 +140,10 @@ export default async function AnalystPage() {
               </p>
             </div>
           )}
+
+          {trackedTeamId && <TransferSuggestions teamId={trackedTeamId} />}
+
+          <AccuracyPanel history={accuracy} promotion={evaluatePromotion(accuracy)} />
 
           <ForecastTable rows={rows} qualityFlags={result.qualityFlags} gameweek={target} />
         </>

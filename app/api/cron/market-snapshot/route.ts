@@ -5,9 +5,22 @@ import { getAdminDb, isAdminConfigured, ADMIN_NOT_CONFIGURED } from '@/lib/fireb
 import { ANALYST_ENABLED, finalisedEvents, seasonKey } from '@/lib/analyst';
 import { buildSeasonFixtures } from '@/lib/fixtures-store';
 import { buildPlayerPriors, buildPlayerStatsDoc, sweepPlayerStats } from '@/lib/player-stats';
-import { captureEliteGameweek, computeEliteDerived } from '@/lib/elite-cohort';
+import { captureEliteGameweek, computeEliteDerived, ENTRY_FIELDS } from '@/lib/elite-cohort';
+import { buildArchivePayload, writeArchive } from '@/lib/archive';
+import { getTelegramConfig } from '@/lib/telegram';
+import { loadFeatureInputs } from '@/lib/forecast-inputs';
+import { buildFeatures } from '@/lib/feature-builder';
+import { forecast } from '@/lib/forecast-engine';
+import { scoreGameweek } from '@/lib/backtest';
+import { PlayerStatsGameweek } from '@/lib/player-stats';
+import { GameweekForecast } from '@/lib/types';
 import {
+  analystPaths,
+  readAccuracyHistory,
   readEliteCohort,
+  readEliteSnapshot,
+  writeAccuracy,
+  writeForecast,
   storedEliteGameweeks,
   storedPlayerStatGameweeks,
   writeEliteGameweek,
@@ -175,6 +188,117 @@ async function runAnalystSteps(bootstrap: any) {
     }
   } catch (err: any) {
     results.eliteCohort = { error: err.message };
+  }
+
+  // Risk F-1: the team archive had no scheduled trigger at all — it only ran
+  // from a useEffect when someone opened the team page with leagues selected.
+  // A gameweek nobody looked at was never archived, and FPL keeps serving the
+  // picks, so the gap was silent and a backtest over "my squad each week" had
+  // holes by construction.
+  try {
+    const teamId = (await getTelegramConfig()).teamId;
+    if (!teamId) {
+      results.teamArchive = { skipped: 'no tracked team configured' };
+    } else {
+      const db = getAdminDb();
+      const missing: number[] = [];
+      for (const gw of finalised) {
+        const doc = await db.collection('teams').doc(String(teamId)).collection('gameweeks').doc(`gw_${gw}`).get();
+        // Re-archive a snapshot taken while the gameweek was still live: FPL
+        // revises those, and merge:true would otherwise leave the wrong value.
+        if (!doc.exists || doc.data()?.dataChecked !== true) missing.push(gw);
+      }
+      const batch = missing.slice(0, 3);
+      for (const gw of batch) {
+        const existing = await db.collection('teams').doc(String(teamId)).get();
+        const leagueIds: number[] = existing.data()?.selectedLeagueIds ?? [];
+        const payload = await buildArchivePayload(teamId, gw, leagueIds);
+        await writeArchive(payload, { dataChecked: true, source: 'cron' });
+      }
+      results.teamArchive = { teamId, archived: batch, remaining: missing.length - batch.length };
+    }
+  } catch (err: any) {
+    results.teamArchive = { error: err.message };
+  }
+
+  // A forecast for the next gameweek, stored so it can be scored later. A
+  // prediction nobody wrote down cannot be measured against anything.
+  try {
+    const next = bootstrap.events.find((e: any) => e.is_next)?.id;
+    if (!next) {
+      results.forecast = { skipped: 'no next gameweek' };
+    } else {
+      const inputs = await loadFeatureInputs(bootstrap, season, next, { includeElite: false });
+      const features = buildFeatures(inputs, { includeElite: false });
+      const result = forecast(features, {
+        fixtures: inputs.fixtures,
+        teams: bootstrap.teams,
+        scoring: bootstrap.scoring,
+      });
+      await writeForecast(result);
+      results.forecast = { gameweek: next, players: Object.keys(result.predictions).length, flags: result.qualityFlags };
+    }
+  } catch (err: any) {
+    results.forecast = { error: err.message };
+  }
+
+  // Score any finalised gameweek not yet scored. Both model variants, on one
+  // population, every week — the elite variant is a hypothesis under test and
+  // only sustained evidence promotes it.
+  try {
+    const history = await readAccuracyHistory(season).catch(() => []);
+    const done = new Set(history.map((h) => h.gameweek));
+    const pending = finalised.filter((gw) => gw >= 2 && !done.has(gw));
+    if (!pending.length) {
+      results.backtest = { upToDate: true, scored: history.length };
+    } else {
+      const db = getAdminDb();
+      const gameweek = pending[0];
+      const statsSnap = await db.doc(analystPaths.playerStats(season)).collection('gameweeks').doc(`gw_${gameweek}`).get();
+      if (!statsSnap.exists) {
+        results.backtest = { gameweek, skipped: 'player stats not captured yet' };
+      } else {
+        const forecasts: Record<string, GameweekForecast> = {};
+        let epNext: Record<string, number> | null = null;
+        for (const includeElite of [false, true]) {
+          const inputs = await loadFeatureInputs(bootstrap, season, gameweek, { includeElite });
+          const features = buildFeatures(inputs, { includeElite });
+          forecasts[includeElite ? 'elite' : 'base'] = forecast(features, {
+            fixtures: inputs.fixtures, teams: bootstrap.teams, scoring: bootstrap.scoring,
+          });
+          if (!includeElite && inputs.market) {
+            const i = inputs.market.fields.indexOf('ep_next');
+            if (i !== -1) {
+              epNext = {};
+              for (const [id, v] of Object.entries(inputs.market.players)) {
+                const n = Number(v[i]);
+                if (!Number.isNaN(n)) epNext[id] = n;
+              }
+            }
+          }
+        }
+        const snapshot = await readEliteSnapshot(season, gameweek).catch(() => null);
+        const pi = ENTRY_FIELDS.indexOf('points');
+        const accuracy = scoreGameweek({
+          season, gameweek,
+          stats: statsSnap.data() as PlayerStatsGameweek,
+          forecasts, epNext,
+          eliteManagerPoints: snapshot
+            ? Object.values(snapshot.managers).map((m) => Number(m.entry[pi]) || 0)
+            : undefined,
+          eliteAvailableManagerCount: snapshot?.availableManagerCount,
+        });
+        await writeAccuracy(accuracy);
+        results.backtest = {
+          gameweek, n: accuracy.n,
+          base: accuracy.models.base?.mae, elite: accuracy.models.elite?.mae,
+          epNext: accuracy.models.ep_next?.mae,
+          remaining: pending.length - 1,
+        };
+      }
+    }
+  } catch (err: any) {
+    results.backtest = { error: err.message };
   }
 
   return results;

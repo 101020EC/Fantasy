@@ -1,3 +1,4 @@
+import { getAdminDb } from './firebase-admin';
 import { FPLPicksResponse } from './types';
 import {
   fetchFPLEntry,
@@ -130,4 +131,72 @@ export async function buildArchivePayload(
     transfersHistory: transfersData,
     lastSynced: new Date().toISOString(),
   };
+}
+
+/**
+ * Writes a gameweek snapshot to three places in one batch.
+ *
+ * Lives here rather than in the route so the nightly cron can archive a
+ * finalised gameweek too. Risk F-1: the only trigger used to be a useEffect on
+ * the team page, so a gameweek nobody opened was never archived — and FPL keeps
+ * serving the picks, so the gap was silent. A backtest over "my squad each
+ * week" therefore had holes by construction.
+ */
+export async function writeArchive(
+  archive: CompleteArchiveData,
+  opts: { dataChecked?: boolean; source?: 'live' | 'cron' } = {}
+) {
+  const dataChecked = opts.dataChecked ?? false;
+  const source = opts.source ?? 'live';
+  const db = getAdminDb();
+  const id = String(archive.teamId);
+  const gw = archive.gameweek;
+
+  const batch = db.batch();
+
+  // A. Team gameweek snapshot: teams/{teamId}/gameweeks/gw_{gw}
+  // Risk F-2: the archive used to store whatever FPL reported at the moment a
+  // page was open, including provisional scores it later contradicted. Recording
+  // how final the numbers are lets a re-archive replace a provisional snapshot,
+  // and lets a backtest refuse to score against one.
+  batch.set(
+    db.collection('teams').doc(id).collection('gameweeks').doc(`gw_${gw}`),
+    { ...archive, dataChecked, source },
+    { merge: true }
+  );
+
+  // B. Team root document: teams/{teamId}
+  batch.set(
+    db.collection('teams').doc(id),
+    {
+      teamName: archive.teamName,
+      managerName: archive.managerName,
+      region: archive.region,
+      overallPoints: archive.overallPoints,
+      overallRank: archive.overallRank,
+      lastUpdatedGw: gw,
+      selectedLeagueIds: archive.selectedPrivateLeagues.map((l) => l.id),
+      lastSynced: archive.lastSynced,
+    },
+    { merge: true }
+  );
+
+  // C. Standings per selected league: leagues/{leagueId}/gameweeks/gw_{gw}
+  for (const league of archive.selectedPrivateLeagues) {
+    if (league.standings.length === 0) continue;
+    batch.set(
+      db.collection('leagues').doc(String(league.id)).collection('gameweeks').doc(`gw_${gw}`),
+      {
+        leagueId: league.id,
+        leagueName: league.name,
+        gameweek: gw,
+        totalMembers: league.membersCount,
+        standings: league.standings,
+        updatedAt: archive.lastSynced,
+      },
+      { merge: true }
+    );
+  }
+
+  await batch.commit();
 }
