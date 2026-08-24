@@ -9,6 +9,7 @@ import { buildFeatures } from '@/lib/feature-builder';
 import { forecast } from '@/lib/forecast-engine';
 import { buildAnalysisContext, buildUserPrompt, findUngroundedNumbers, SYSTEM_PROMPT } from '@/lib/analysis';
 import { complete, getLLMConfig } from '@/lib/openai';
+import { AI_BUDGET_EXCEEDED, budgetStatusForDisplay } from '@/lib/ai-budget';
 import { SeasonFixtures } from '@/lib/fixtures-store';
 
 export const dynamic = 'force-dynamic';
@@ -113,9 +114,47 @@ export async function POST(req: NextRequest) {
       fixtureByClub: fixtureByClub(inputs.fixtures, gameweek),
     });
 
-    const completion = await complete(cfg, SYSTEM_PROMPT, buildUserPrompt(ctx, question));
+    const completion = await complete(cfg, SYSTEM_PROMPT, buildUserPrompt(ctx, question), {
+      operation: 'analyst.explain',
+    });
+
+    // Budget refusal is not a failure of the request, it is the end of the
+    // AI-dependent part of it. Everything computed above — the forecast, the
+    // squad lookup, the elite context — is returned rather than discarded, so
+    // reaching the ceiling costs the prose and nothing else.
+    if (!completion.ok && completion.code === AI_BUDGET_EXCEEDED) {
+      return NextResponse.json(
+        {
+          season,
+          gameweek,
+          status: AI_BUDGET_EXCEEDED,
+          error: completion.error,
+          configured: true,
+          budget: completion.budget ? budgetStatusForDisplay(completion.budget) : undefined,
+          // Proof that the deterministic half ran and is unaffected.
+          forecastReady: true,
+          qualityFlags: result.qualityFlags,
+          squadUsed: Boolean(squadElementIds),
+          eliteUsed: Boolean(elite),
+          topProjections: ctx.top.slice(0, 5).map((p) => ({
+            name: p.name,
+            team: p.team,
+            xPts: p.xPts,
+          })),
+        },
+        { status: 402 }
+      );
+    }
+
     if (!completion.ok) {
-      return NextResponse.json({ error: completion.error, configured: true }, { status: 502 });
+      return NextResponse.json(
+        {
+          error: completion.error,
+          configured: true,
+          budget: completion.budget ? budgetStatusForDisplay(completion.budget) : undefined,
+        },
+        { status: 502 }
+      );
     }
 
     const ungrounded = findUngroundedNumbers(completion.text!, ctx);
@@ -129,6 +168,7 @@ export async function POST(req: NextRequest) {
       eliteUsed: Boolean(elite),
       qualityFlags: result.qualityFlags,
       analysis: completion.text,
+      budget: completion.budget ? budgetStatusForDisplay(completion.budget) : undefined,
       // Empty in the normal case. Non-empty means the model stated a decimal
       // that was not in its inputs, which the reader should know before acting.
       ungroundedNumbers: ungrounded,

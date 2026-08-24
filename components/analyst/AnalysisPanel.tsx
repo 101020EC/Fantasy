@@ -12,6 +12,9 @@ interface AnalysisResponse {
   eliteUsed?: boolean;
   error?: string;
   configured?: boolean;
+  status?: string;
+  forecastReady?: boolean;
+  budget?: { limitUsd: number; spentUsd: number; remainingUsd: number; month: string };
 }
 
 /**
@@ -81,10 +84,26 @@ export default function AnalysisPanel({
         </button>
       </div>
 
-      {state === 'error' && data?.error && (
-        <p className="mt-3 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl p-3 leading-snug">
-          {data.error}
-        </p>
+      {/* The ceiling is a stop, not a fault: say what still works rather than
+          presenting it as a broken request. */}
+      {state === 'error' && data?.status === 'AI_BUDGET_EXCEEDED' ? (
+        <div className="mt-3 text-[12px] text-sky-900 bg-sky-50 border border-sky-200 rounded-2xl p-3 leading-snug">
+          <p className="font-black mb-1">Monthly AI budget reached</p>
+          <p>{data.error}</p>
+          {data.forecastReady && (
+            <p className="mt-1.5 text-sky-800">
+              The projections above are unaffected — they are computed without a model — and nothing
+              already saved has been changed. Raise the budget above, or wait for the 1st.
+            </p>
+          )}
+        </div>
+      ) : (
+        state === 'error' &&
+        data?.error && (
+          <p className="mt-3 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl p-3 leading-snug">
+            {data.error}
+          </p>
+        )
       )}
 
       {state === 'done' && data?.analysis && (

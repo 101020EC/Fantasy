@@ -1,4 +1,12 @@
 import { getAdminDb, isAdminConfigured } from './firebase-admin';
+import {
+  AI_BUDGET_EXCEEDED,
+  BudgetStatus,
+  estimateCostMicros,
+  estimateTokens,
+  reserveBudget,
+  settleBudget,
+} from './ai-budget';
 
 const SETTINGS_DOC = { collection: 'settings', doc: 'openai' } as const;
 
@@ -100,6 +108,14 @@ export interface CompletionResult {
   text?: string;
   error?: string;
   model?: string;
+  /** Set when the monthly ceiling refused the call. No request was sent. */
+  code?: typeof AI_BUDGET_EXCEEDED;
+  /** Budget after this call, so a caller can report it without a second read. */
+  budget?: BudgetStatus;
+  inputTokens?: number;
+  outputTokens?: number;
+  /** Integer micro-dollars, like everything else in lib/ai-budget.ts. */
+  costMicros?: number;
 }
 
 /**
@@ -113,13 +129,54 @@ export async function complete(
   cfg: LLMSettings,
   system: string,
   user: string,
-  opts: { maxTokens?: number; timeoutMs?: number } = {}
+  opts: { maxTokens?: number; timeoutMs?: number; operation?: string } = {}
 ): Promise<CompletionResult> {
   if (!cfg.configured) return { ok: false, error: 'No API key configured' };
 
   const maxTokens = opts.maxTokens ?? 700;
+  const operation = opts.operation ?? 'completion';
+
+  // Reserve before the request, not after.
+  //
+  // The estimate assumes the model returns the full maxTokens, which it usually
+  // does not — deliberately pessimistic, because a reservation that is too small
+  // is a ceiling that can be crossed. The settle below replaces it with the
+  // provider's own token counts.
+  const promptTokens = estimateTokens(system) + estimateTokens(user);
+  const estimatedMicros = estimateCostMicros(cfg.model, promptTokens, maxTokens);
+
+  let reserved;
+  try {
+    reserved = await reserveBudget(operation, estimatedMicros);
+  } catch (err: any) {
+    // A budget system that cannot be reached must not become an open gate.
+    return { ok: false, error: `Could not check the AI budget: ${err?.message ?? 'unknown error'}` };
+  }
+  if (!reserved.ok) {
+    return {
+      ok: false,
+      code: AI_BUDGET_EXCEEDED,
+      error: reserved.message,
+      budget: reserved.status,
+      model: cfg.model,
+    };
+  }
+  const reservation = reserved.reservation;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 30_000);
+
+  // Every path below settles exactly once, so a reservation is never stranded
+  // by a return. The TTL sweep in lib/ai-budget.ts covers a hard crash.
+  let settled = false;
+  const settle = async (record: Parameters<typeof settleBudget>[1]) => {
+    if (settled) return undefined;
+    settled = true;
+    return settleBudget(reservation, record).catch((err) => {
+      console.warn('Could not record AI usage:', err);
+      return undefined;
+    });
+  };
 
   try {
     const req: { url: string; headers: Record<string, string>; body: unknown } =
@@ -163,10 +220,28 @@ export async function complete(
     });
 
     const data = await res.json().catch(() => ({} as any));
+
+    // The provider reports what it will bill for; the estimate above was only
+    // ever a placeholder to hold the money with.
+    const usage = data?.usage ?? {};
+    const inputTokens =
+      Number(cfg.provider === 'anthropic' ? usage.input_tokens : usage.prompt_tokens) || 0;
+    const outputTokens =
+      Number(cfg.provider === 'anthropic' ? usage.output_tokens : usage.completion_tokens) || 0;
+    const reportedTokens = inputTokens > 0 || outputTokens > 0;
+    const costMicros = reportedTokens
+      ? estimateCostMicros(cfg.model, inputTokens, outputTokens)
+      : estimateCostMicros(cfg.model, promptTokens, maxTokens);
+
     if (!res.ok) {
       // The provider's message is far more useful than the status code —
       // an expired key and an unknown model both return 4xx.
-      return { ok: false, error: data?.error?.message || `Provider returned ${res.status}` };
+      const error = data?.error?.message || `Provider returned ${res.status}`;
+      const budget = await settle({
+        model: cfg.model, provider: cfg.provider, inputTokens: 0, outputTokens: 0,
+        costMicros: 0, costBasis: 'estimated', operation, status: 'failed', error,
+      });
+      return { ok: false, error, budget, model: cfg.model };
     }
 
     const text =
@@ -174,11 +249,25 @@ export async function complete(
         ? (data.content ?? []).map((b: any) => b.text ?? '').join('').trim()
         : String(data.choices?.[0]?.message?.content ?? '').trim();
 
-    if (!text) return { ok: false, error: 'The model returned an empty response' };
-    return { ok: true, text, model: cfg.model };
+    const budget = await settle({
+      model: cfg.model, provider: cfg.provider, inputTokens, outputTokens, costMicros,
+      costBasis: reportedTokens ? 'reported' : 'estimated', operation,
+      status: text ? 'ok' : 'failed',
+      ...(text ? {} : { error: 'empty response' }),
+    });
+
+    if (!text) return { ok: false, error: 'The model returned an empty response', budget, model: cfg.model };
+    return { ok: true, text, model: cfg.model, budget, inputTokens, outputTokens, costMicros };
   } catch (err: any) {
-    if (err?.name === 'AbortError') return { ok: false, error: 'The model took too long to respond' };
-    return { ok: false, error: err?.message || 'Could not reach the model provider' };
+    const error =
+      err?.name === 'AbortError'
+        ? 'The model took too long to respond'
+        : err?.message || 'Could not reach the model provider';
+    const budget = await settle({
+      model: cfg.model, provider: cfg.provider, inputTokens: 0, outputTokens: 0,
+      costMicros: 0, costBasis: 'estimated', operation, status: 'failed', error,
+    });
+    return { ok: false, error, budget, model: cfg.model };
   } finally {
     clearTimeout(timer);
   }

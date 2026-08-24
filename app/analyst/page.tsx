@@ -13,6 +13,7 @@ import AnalysisPanel from '@/components/analyst/AnalysisPanel';
 import AccuracyPanel from '@/components/analyst/AccuracyPanel';
 import TransferSuggestions from '@/components/analyst/TransferSuggestions';
 import AnalystSetup from '@/components/analyst/AnalystSetup';
+import AiBudgetPanel from '@/components/analyst/AiBudgetPanel';
 import { ELITE_COHORT_IDS } from '@/lib/elite-cohort-seed';
 import { evaluatePromotion } from '@/lib/backtest';
 import { getLLMConfig } from '@/lib/openai';
@@ -171,6 +172,10 @@ export default async function AnalystPage() {
             needsCohort={!cohort?.managerIds?.length}
             seedSize={ELITE_COHORT_IDS.length}
           />
+
+          {/* Beside the panel that spends it, and only when there is a key to
+              spend with — a ceiling on nothing is noise. */}
+          {llm?.configured && <AiBudgetPanel />}
 
           {llm?.configured ? (
             <AnalysisPanel gameweek={target} teamId={trackedTeamId} />
