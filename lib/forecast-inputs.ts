@@ -4,7 +4,7 @@ import { gwDocId } from './analyst';
 import { PlayerPriors, PlayerStatsGameweek } from './player-stats';
 import { SeasonFixtures } from './fixtures-store';
 import { FeatureInputs } from './feature-builder';
-import { EliteDerivedGameweek, FPLBootstrap } from './types';
+import { Calibration, EliteDerivedGameweek, FPLBootstrap } from './types';
 
 /**
  * Loads everything a forecast needs out of Firestore.
@@ -56,10 +56,15 @@ export async function loadFeatureInputs(
   const deadline =
     bootstrap.events.find((e) => e.id === targetGameweek)?.deadline_time ?? null;
 
+  const calibrationRef = db
+    .doc(analystPaths.forecastCalibration(season))
+    .collection('gameweeks')
+    .doc(gwDocId(targetGameweek));
+
   const statsParent = db.doc(analystPaths.playerStats(season)).collection('gameweeks');
   const eliteParent = db.doc(analystPaths.eliteCohort(season)).collection('derived');
 
-  const [statDocs, eliteDocs, fixturesSnap, market, priorsSnap] = await Promise.all([
+  const [statDocs, eliteDocs, fixturesSnap, market, priorsSnap, calibrationSnap] = await Promise.all([
     Promise.all(wanted.map((gw) => statsParent.doc(gwDocId(gw)).get())),
     opts.includeElite
       ? Promise.all(wanted.map((gw) => eliteParent.doc(gwDocId(gw)).get()))
@@ -67,6 +72,10 @@ export async function loadFeatureInputs(
     db.doc(analystPaths.fixtures(season)).get(),
     loadMarketBefore(deadline),
     db.doc(analystPaths.playerPriors(season)).get(),
+    // The document stored FOR this gameweek, which was fitted only on earlier
+    // ones. Reading a single latest-wins document instead would hand a replay of
+    // GW5 the factors fitted on GW5 onward.
+    calibrationRef.get(),
   ]);
 
   const playerStats = new Map<number, PlayerStatsGameweek>();
@@ -95,5 +104,6 @@ export async function loadFeatureInputs(
     market,
     eliteDerived,
     priors: priorsSnap.exists ? (priorsSnap.data() as PlayerPriors) : null,
+    calibration: calibrationSnap.exists ? (calibrationSnap.data() as Calibration) : null,
   };
 }

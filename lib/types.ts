@@ -351,6 +351,12 @@ export interface FeatureSources {
   elite: number[];
   market: string[];
   fixtures: string;
+  /**
+   * Gameweeks the calibration factors were fitted on. Asserted < target like
+   * every other source: a factor fitted on GW8 and applied to GW8 scores
+   * beautifully and means nothing.
+   */
+  calibration: number[];
 }
 
 export interface PlayerFeatures {
@@ -376,11 +382,22 @@ export interface FeatureSet {
 }
 
 export interface PlayerForecast {
+  /** After calibration — the number the UI shows and the number that is scored. */
   xPts: number;
   floor: number;
   ceiling: number;
   minutesProb: number;
   confidence: number;
+  /**
+   * Before calibration, kept so the UI can show what the model said on its own
+   * and so a wild factor is visible rather than baked in invisibly.
+   */
+  rawXPts: number;
+  /**
+   * positionFactor x playerFactor actually applied. Exactly 1 means nothing was
+   * applied, which before roughly GW5 is the honest state rather than a result.
+   */
+  calibrationFactor: number;
 }
 
 export interface GameweekForecast {
@@ -388,6 +405,7 @@ export interface GameweekForecast {
   gameweek: number;
   generatedAt: string;
   model: 'base' | 'elite' | 'ep_next';
+  /** Empty until enough gameweeks are scored — see lib/calibration.ts. */
   computeVersion: number;
   includeElite: boolean;
   featureSources: FeatureSources;
@@ -402,6 +420,26 @@ export interface ModelScore {
   spearman: number;
   top10Hit: number;
   top20Hit: number;
+  /**
+   * Share of the population whose actual points landed within 2 of predicted.
+   *
+   * A bare percentage means nothing for a continuous prediction, so the
+   * tolerance is part of the name and must appear wherever the number is shown.
+   */
+  within2: number;
+  /**
+   * The same tolerance, restricted to players projected at 3 points or more —
+   * the set a manager actually picks from. `within2` over the whole population
+   * is flattered by the hundreds of players correctly projected near zero.
+   */
+  within2Considered: number;
+  /** How many players that restricted set contained. */
+  nConsidered: number;
+  /**
+   * mean(predicted - actual), signed. Positive means the model projects high.
+   * MAE hides the direction; this is what a calibration factor is fitted on.
+   */
+  bias: number;
   n: number;
   computeVersion: number;
 }
@@ -413,7 +451,21 @@ export interface GameweekAccuracy {
   /** Declared, and identical across every model variant. */
   population: string;
   n: number;
-  models: Partial<Record<'base' | 'elite' | 'ep_next', ModelScore>>;
+  /**
+   * `base` and `elite` are replays: rebuilt now with today's engine from
+   * sources that predate the gameweek. `as_published` is the forecast document
+   * that was actually stored before the deadline — what the app really said.
+   * They diverge whenever the engine changes, and both are worth keeping: the
+   * replay is what lets a model fix be re-scored over history, `as_published`
+   * is the honest record of what was shown.
+   */
+  models: Partial<Record<'base' | 'elite' | 'ep_next' | 'as_published', ModelScore>>;
+  /**
+   * Share of the scored population the stored forecast actually covered. Below
+   * 1 means the published document was incomplete, and its score is not
+   * comparable to the replays.
+   */
+  publishedCoverage?: number;
   /**
    * Manager-level, unlike the player-level scores above — never plot them on
    * one axis. Mean and median both, because one Triple Captain haul drags the
@@ -426,6 +478,31 @@ export interface GameweekAccuracy {
     max: number;
     availableManagerCount: number;
   } | null;
+}
+
+/**
+ * Multiplicative correction fitted from realised results.
+ *
+ * Kept apart from the forecast engine on purpose. The engine's inputs already
+ * update weekly - rolling xG, xA, minutes and start rate over six gameweeks,
+ * shrunk toward last season - so a player whose underlying numbers fall away is
+ * already projected lower. What that cannot see is systematic bias: a model
+ * that runs high for forwards as a class, or a player who persistently converts
+ * fewer points than his expected goals imply. Those are what this corrects, and
+ * conflating them with the weekly input refresh would double-count.
+ */
+export interface Calibration {
+  season: string;
+  /** Fitted from these gameweeks. Every one must be < the target gameweek. */
+  sourceGameweeks: number[];
+  generatedAt: string;
+  computeVersion: number;
+  /** element_type -> multiplier. 1 means no correction. */
+  positionFactor: Record<string, number>;
+  /** elementId -> multiplier. Only players past the evidence threshold appear. */
+  playerFactor: Record<string, number>;
+  /** Why a factor is still 1, in words the UI can show rather than hide. */
+  notes: string[];
 }
 
 export class LookaheadError extends Error {

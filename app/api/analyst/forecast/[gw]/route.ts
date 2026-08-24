@@ -54,6 +54,7 @@ async function run(req: NextRequest, gwParam: string, persist: boolean) {
       fixtures: inputs.fixtures,
       teams: bootstrap.teams,
       scoring: bootstrap.scoring,
+      calibration: inputs.calibration,
     });
 
     if (persist) {

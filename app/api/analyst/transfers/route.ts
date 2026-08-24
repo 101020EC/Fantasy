@@ -84,6 +84,7 @@ export async function GET(req: NextRequest) {
           fixtures: inputs.fixtures,
           teams: bootstrap.teams,
           scoring: bootstrap.scoring,
+          calibration: inputs.calibration,
         })
       );
     }

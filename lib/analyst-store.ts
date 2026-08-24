@@ -6,6 +6,7 @@ import {
   EliteCohort,
   EliteDerivedGameweek,
   EliteGameweekSnapshot,
+  Calibration,
   GameweekAccuracy,
   GameweekForecast,
 } from './types';
@@ -29,6 +30,7 @@ export const analystPaths = {
   eliteCohort: (season: string) => `eliteCohort/${season}`,
   forecasts: (season: string) => `forecasts/${season}`,
   forecastAccuracy: (season: string) => `forecastAccuracy/${season}`,
+  forecastCalibration: (season: string) => `forecastCalibration/${season}`,
 };
 
 export async function writeSeasonFixtures(doc: SeasonFixtures): Promise<void> {
@@ -139,6 +141,44 @@ export async function readForecast(
     .doc(gwDocId(gameweek))
     .get();
   return snap.exists ? (snap.data() as GameweekForecast) : null;
+}
+
+/**
+ * Calibration is stored per gameweek, not as one current document.
+ *
+ * A single latest-wins document would be refitted every week, and a backtest
+ * replaying GW5 would then apply factors fitted on GW5 through GW11. That leak
+ * is invisible in the output and flatters every number. Storing the factors that
+ * were usable when forecasting each gameweek makes the replay honest and leaves
+ * an audit trail of how the correction moved.
+ */
+export async function readCalibration(
+  season: string,
+  gameweek: number
+): Promise<Calibration | null> {
+  const snap = await getAdminDb()
+    .doc(analystPaths.forecastCalibration(season))
+    .collection('gameweeks')
+    .doc(gwDocId(gameweek))
+    .get();
+  return snap.exists ? (snap.data() as Calibration) : null;
+}
+
+/** `gameweek` is the gameweek these factors may be USED for, not fitted from. */
+export async function writeCalibration(
+  doc: Calibration,
+  gameweek: number
+): Promise<void> {
+  const db = getAdminDb();
+  const parent = db.doc(analystPaths.forecastCalibration(doc.season));
+  const batch = db.batch();
+  batch.set(
+    parent,
+    { season: doc.season, updatedAt: doc.generatedAt, lastGameweek: gameweek },
+    { merge: true }
+  );
+  batch.set(parent.collection('gameweeks').doc(gwDocId(gameweek)), { ...doc, gameweek });
+  await batch.commit();
 }
 
 export async function writeForecast(doc: GameweekForecast): Promise<void> {

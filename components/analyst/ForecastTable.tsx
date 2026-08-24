@@ -15,6 +15,9 @@ export interface ForecastRow {
   ceiling: number;
   minutesProb: number;
   confidence: number;
+  /** Before calibration. Equal to xPts while nothing has been fitted yet. */
+  rawXPts: number;
+  calibrationFactor: number;
 }
 
 const POSITIONS = ['', 'GKP', 'DEF', 'MID', 'FWD'];
@@ -33,6 +36,8 @@ const FLAG_TEXT: Record<string, string> = {
   no_fixtures: 'No stored fixture list, so opponent difficulty is not applied.',
   no_market_snapshot: 'No market snapshot before the deadline — availability is assumed.',
   no_prior_season: 'No prior-season data, so players fall back to position averages.',
+  uncalibrated:
+    'No gameweek has been scored yet, so no correction from real results is applied — these are the model on its own.',
   no_elite_data: 'No Elite Cohort data for any earlier gameweek.',
   stale_elite_data: 'The most recent Elite Cohort capture is too old to trust; it was dropped.',
   low_cohort_availability: 'Part of the Elite Cohort could not be reached for the source gameweek.',
@@ -44,20 +49,34 @@ export default function ForecastTable({
   rows,
   qualityFlags,
   gameweek,
+  calibration,
 }: {
   rows: ForecastRow[];
   qualityFlags: string[];
   gameweek: number;
+  /** How the correction was fitted, so the table can say so rather than imply it. */
+  calibration: { sourceGameweeks: number[]; notes: string[] } | null;
 }) {
   const [position, setPosition] = useState(0);
   const [maxCost, setMaxCost] = useState(0);
+  // Off by default: the corrected number is the answer, and the raw one is for
+  // checking the correction rather than for choosing a transfer.
+  const [showRaw, setShowRaw] = useState(false);
 
+  // Exactly 1 for everyone means nothing was fitted, which is a different thing
+  // from a correction that happened to come out neutral.
+  const calibrated = Boolean(calibration?.sourceGameweeks.length);
+
+  // Sorting follows whichever number is on screen: a table headed by raw points
+  // but ordered by corrected ones would be quietly misleading.
   const filtered = useMemo(
     () =>
-      rows.filter(
-        (r) => (position === 0 || r.position === position) && (maxCost === 0 || r.cost <= maxCost)
-      ),
-    [rows, position, maxCost]
+      rows
+        .filter(
+          (r) => (position === 0 || r.position === position) && (maxCost === 0 || r.cost <= maxCost)
+        )
+        .sort((a, b) => (showRaw ? b.rawXPts - a.rawXPts : b.xPts - a.xPts)),
+    [rows, position, maxCost, showRaw]
   );
 
   return (
@@ -106,6 +125,22 @@ export default function ForecastTable({
             {c === 0 ? 'Any price' : `≤ £${c}.0m`}
           </button>
         ))}
+        {calibrated && (
+          <>
+            <span className="mx-1 h-5 w-px bg-black/10" />
+            <button
+              type="button"
+              onClick={() => setShowRaw((v) => !v)}
+              className={`px-3 py-1.5 rounded-full text-xs font-black transition ${
+                showRaw
+                  ? 'bg-black/80 text-white'
+                  : 'bg-white text-black/60 border border-black/5 hover:bg-black/5'
+              }`}
+            >
+              {showRaw ? 'Showing raw' : 'Show raw'}
+            </button>
+          </>
+        )}
       </div>
 
       <div className="rounded-2xl bg-white border border-black/5 shadow-sm overflow-x-auto">
@@ -141,7 +176,15 @@ export default function ForecastTable({
                 </td>
                 <td className="py-2 px-3 text-right font-bold tabular-nums">£{r.cost.toFixed(1)}</td>
                 <td className="py-2 px-3 text-right font-black tabular-nums text-[#38003c]">
-                  {r.xPts.toFixed(1)}
+                  {(showRaw ? r.rawXPts : r.xPts).toFixed(1)}
+                  {/* Per row rather than only in a footnote: a factor large
+                      enough to change a decision should be visible beside the
+                      number it changed. */}
+                  {!showRaw && r.calibrationFactor !== 1 && (
+                    <span className="ml-1.5 text-[10px] font-bold text-black/35">
+                      ×{r.calibrationFactor.toFixed(2)}
+                    </span>
+                  )}
                 </td>
                 <td className="py-2 px-3 text-right text-[11px] font-bold tabular-nums text-black/40">
                   {r.floor.toFixed(1)}–{r.ceiling.toFixed(1)}
@@ -172,8 +215,21 @@ export default function ForecastTable({
           <strong className="text-black/60">xPts</strong> is a deterministic projection for GW{gameweek}
           from minutes, xG, xA, expected goals conceded, FPL&apos;s own fixture difficulty for the opponent and
           venue, and FPL&apos;s own scoring rules — no language model is involved in producing it. <strong className="text-black/60">Range</strong>{' '}
-          widens when the model knows less. <strong className="text-black/60">FPL ep</strong> is FPL&apos;s
-          published estimate, shown as the benchmark to beat rather than as a target to match.
+          widens when the model knows less. <strong className="text-black/60">Mins</strong> is expected
+          minutes as a share of 90, so 60% means about 54 minutes rather than a 60% chance of
+          playing. <strong className="text-black/60">FPL ep</strong> is FPL&apos;s published estimate,
+          shown as the benchmark to beat rather than as a target to match.
+          {calibrated ? (
+            <>
+              {' '}
+              xPts includes a correction fitted on the results of GW
+              {calibration!.sourceGameweeks.join(', GW')} — ×1.00 means that player&apos;s projection
+              needed no adjustment. <strong className="text-black/60">Show raw</strong> reveals the
+              uncorrected model.
+            </>
+          ) : (
+            <> No result-based correction is applied yet; it begins once a gameweek is scored.</>
+          )}
         </p>
       </div>
     </div>

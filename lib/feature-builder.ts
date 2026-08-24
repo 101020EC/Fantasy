@@ -7,6 +7,7 @@ import {
 import { SeasonFixtures } from './fixtures-store';
 import { assertNoLookahead } from './lookahead';
 import {
+  Calibration,
   EliteDerivedGameweek,
   EliteSignals,
   FeatureSet,
@@ -65,6 +66,11 @@ export interface FeatureInputs {
   eliteDerived: Map<number, EliteDerivedGameweek>;
   /** Last completed season per player, the preferred shrinkage target. */
   priors: PlayerPriors | null;
+  /**
+   * Corrections fitted from realised results, for THIS target gameweek. Null
+   * before anything has been scored, which is most of the early season.
+   */
+  calibration: Calibration | null;
 }
 
 export interface BuildOptions {
@@ -420,6 +426,7 @@ export function buildFeatures(inputs: FeatureInputs, opts: BuildOptions = {}): F
   const baselines = computeBaselines(inputs.bootstrap, orderedStats);
 
   if (!inputs.priors) qualityFlags.push('no_prior_season');
+  if (!inputs.calibration?.sourceGameweeks.length) qualityFlags.push('uncalibrated');
 
   const players: PlayerFeatures[] = inputs.bootstrap.elements.map((el) => {
     const positionPrior = baselines[el.element_type];
@@ -512,6 +519,7 @@ export function buildFeatures(inputs: FeatureInputs, opts: BuildOptions = {}): F
       elite: includeElite ? usedElite.map((d) => d.gameweek) : [],
       market: inputs.market ? [inputs.market.date] : [],
       fixtures: inputs.season,
+      calibration: inputs.calibration?.sourceGameweeks ?? [],
     },
     qualityFlags,
     players,

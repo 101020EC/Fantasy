@@ -8,7 +8,7 @@ import { GameweekAccuracy, GameweekForecast, ModelScore } from './types';
  * database and recomputed later if a definition changes.
  */
 
-export const COMPUTE_VERSION = 1;
+export const COMPUTE_VERSION = 2;
 
 /**
  * Ranks with ties averaged.
@@ -72,6 +72,21 @@ function topNHit(predicted: number[], actual: number[], ids: number[], n: number
   return shared / Math.min(n, ids.length || 1);
 }
 
+/**
+ * How close counts as right, in points.
+ *
+ * A percentage has no meaning for a continuous prediction until a tolerance is
+ * named, so the tolerance is named here and travels with the field name into the
+ * UI. Two points is roughly the gap between a clean sheet and not.
+ */
+export const TOLERANCE = 2;
+/**
+ * The projection above which a player is one you would actually consider. The
+ * unrestricted hit rate is dominated by the hundreds of players correctly
+ * projected near zero, which is true but not an achievement.
+ */
+export const CONSIDERED_THRESHOLD = 3;
+
 export function scoreModel(
   ids: number[],
   predicted: number[],
@@ -79,14 +94,29 @@ export function scoreModel(
 ): ModelScore {
   const n = ids.length;
   if (n === 0) {
-    return { mae: 0, rmse: 0, spearman: 0, top10Hit: 0, top20Hit: 0, n: 0, computeVersion: COMPUTE_VERSION };
+    return {
+      mae: 0, rmse: 0, spearman: 0, top10Hit: 0, top20Hit: 0,
+      within2: 0, within2Considered: 0, nConsidered: 0, bias: 0,
+      n: 0, computeVersion: COMPUTE_VERSION,
+    };
   }
   let absolute = 0;
   let squared = 0;
+  let signed = 0;
+  let within = 0;
+  let consideredWithin = 0;
+  let considered = 0;
   for (let i = 0; i < n; i++) {
     const d = predicted[i] - actual[i];
     absolute += Math.abs(d);
     squared += d * d;
+    signed += d;
+    const close = Math.abs(d) <= TOLERANCE;
+    if (close) within += 1;
+    if (predicted[i] >= CONSIDERED_THRESHOLD) {
+      considered += 1;
+      if (close) consideredWithin += 1;
+    }
   }
   return {
     mae: Number((absolute / n).toFixed(4)),
@@ -94,6 +124,12 @@ export function scoreModel(
     spearman: Number(spearman(predicted, actual).toFixed(4)),
     top10Hit: Number(topNHit(predicted, actual, ids, 10).toFixed(4)),
     top20Hit: Number(topNHit(predicted, actual, ids, 20).toFixed(4)),
+    within2: Number((within / n).toFixed(4)),
+    // Zero considered players is not 100% accuracy on an empty set; it is no
+    // measurement, and the companion nConsidered is what says so.
+    within2Considered: considered ? Number((consideredWithin / considered).toFixed(4)) : 0,
+    nConsidered: considered,
+    bias: Number((signed / n).toFixed(4)),
     n,
     computeVersion: COMPUTE_VERSION,
   };
@@ -157,9 +193,18 @@ export function scoreGameweek(inputs: ScoreInputs, now: Date = new Date()): Game
   const actual = ids.map((id) => actualPoints(inputs.stats, id));
 
   const models: GameweekAccuracy['models'] = {};
+  let publishedCoverage: number | undefined;
   for (const [name, fc] of Object.entries(inputs.forecasts)) {
     const predicted = ids.map((id) => fc.predictions[String(id)]?.xPts ?? 0);
-    models[name as 'base' | 'elite'] = scoreModel(ids, predicted, actual);
+    models[name as keyof GameweekAccuracy['models']] = scoreModel(ids, predicted, actual);
+    // A player the stored forecast never mentioned is scored as 0, because the
+    // population is fixed ex ante and cannot shrink to suit one model. That is
+    // only fair if the document was in fact complete, so how complete it was
+    // gets recorded rather than assumed.
+    if (name === 'as_published') {
+      const covered = ids.filter((id) => fc.predictions[String(id)] !== undefined).length;
+      publishedCoverage = ids.length ? Number((covered / ids.length).toFixed(4)) : 0;
+    }
   }
   if (inputs.epNext) {
     const predicted = ids.map((id) => inputs.epNext![String(id)] ?? 0);
@@ -194,6 +239,7 @@ export function scoreGameweek(inputs: ScoreInputs, now: Date = new Date()): Game
     population: POPULATION,
     n: ids.length,
     models,
+    publishedCoverage,
     eliteActual,
   };
 }

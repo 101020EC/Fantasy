@@ -1,6 +1,15 @@
 import { assertNoLookahead } from './lookahead';
 import { SeasonFixtures } from './fixtures-store';
-import { FeatureSet, FPLScoring, FPLTeam, GameweekForecast, PlayerForecast } from './types';
+import { factorFor } from './calibration';
+import {
+  Calibration,
+  FeatureSet,
+  FPLScoring,
+  FPLTeam,
+  GameweekForecast,
+  LookaheadError,
+  PlayerForecast,
+} from './types';
 
 /**
  * Deterministic expected-points model.
@@ -12,7 +21,7 @@ import { FeatureSet, FPLScoring, FPLTeam, GameweekForecast, PlayerForecast } fro
  * the language model's job is to explain these numbers, never to generate them.
  */
 
-export const COMPUTE_VERSION = 2;
+export const COMPUTE_VERSION = 3;
 
 /** element_type -> the key FPL uses in its own scoring table. */
 const POSITION_KEY: Record<number, 'GKP' | 'DEF' | 'MID' | 'FWD'> = {
@@ -112,6 +121,12 @@ export interface ForecastContext {
   teams?: FPLTeam[];
   /** FPL's live scoring table. Falls back to the 2026/27 rules when absent. */
   scoring?: FPLScoring;
+  /**
+   * Corrections fitted from realised results. Absent, or fitted on nothing,
+   * leaves every projection exactly as the model produced it — which before
+   * roughly GW5 is the honest state rather than a result.
+   */
+  calibration?: Calibration | null;
 }
 
 /** Poisson P(X = 0) — the probability a team concedes nothing. */
@@ -180,6 +195,18 @@ export function forecast(
   // Gate two of two. A caller who hand-assembles a feature set still cannot
   // get a prediction out of contaminated inputs.
   assertNoLookahead(fs);
+
+  // Checked against the calibration actually passed in, not against what the
+  // feature set claims about it. A caller could otherwise declare an empty
+  // calibration source list and hand over factors fitted on the target week.
+  const calibration = context.calibration ?? null;
+  const contaminated = (calibration?.sourceGameweeks ?? []).filter((gw) => gw >= fs.targetGameweek);
+  if (contaminated.length) {
+    throw new LookaheadError(
+      `Calibration for GW${fs.targetGameweek} was fitted on GW${contaminated.join(', GW')}, ` +
+        `which had not happened when a forecast for GW${fs.targetGameweek} would be useful.`
+    );
+  }
 
   const scoring = context.scoring ?? FALLBACK_SCORING;
   const byClub = fixturesForGameweek(context.fixtures, fs.targetGameweek);
@@ -297,12 +324,24 @@ export function forecast(
     // double gameweek where there is simply more variance to have.
     const spread = xPts * (0.45 + 0.4 * (1 - confidence)) + 0.8 * clubFixtures.length;
 
+    // Calibration is applied last, to the points only.
+    //
+    // Deliberately NOT to minutesProb: minutes that were over-predicted are
+    // already corrected through start_rate and appearance_rate, which are
+    // rebuilt from playerStats every week. Scaling them again here would
+    // double-count the same evidence and then feed the doubled error back into
+    // the next fit.
+    const factor = factorFor(calibration, player.elementId, position);
+    const adjusted = xPts * factor;
+
     predictions[String(player.elementId)] = {
-      xPts: Number(xPts.toFixed(2)),
-      floor: Number(Math.max(0, xPts - spread).toFixed(2)),
-      ceiling: Number((xPts + spread).toFixed(2)),
+      xPts: Number(adjusted.toFixed(2)),
+      floor: Number(Math.max(0, adjusted - spread * factor).toFixed(2)),
+      ceiling: Number((adjusted + spread * factor).toFixed(2)),
       minutesProb: Number(Math.min(1, totalMinutes / 90).toFixed(3)),
       confidence: Number(confidence.toFixed(3)),
+      rawXPts: Number(xPts.toFixed(2)),
+      calibrationFactor: Number(factor.toFixed(4)),
     };
   }
 

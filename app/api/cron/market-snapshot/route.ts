@@ -11,16 +11,20 @@ import { getTelegramConfig } from '@/lib/telegram';
 import { loadFeatureInputs } from '@/lib/forecast-inputs';
 import { buildFeatures } from '@/lib/feature-builder';
 import { forecast } from '@/lib/forecast-engine';
-import { scoreGameweek } from '@/lib/backtest';
+import { scoreGameweek, actualPoints } from '@/lib/backtest';
+import { CalibrationObservation, fitCalibration } from '@/lib/calibration';
 import { PlayerStatsGameweek } from '@/lib/player-stats';
 import { GameweekForecast } from '@/lib/types';
 import {
   analystPaths,
   readAccuracyHistory,
+  readCalibration,
+  readForecast,
   readPlayerPriors,
   readEliteCohort,
   readEliteSnapshot,
   writeAccuracy,
+  writeCalibration,
   writeForecast,
   storedEliteGameweeks,
   storedPlayerStatGameweeks,
@@ -105,7 +109,13 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Fixtures, player stats and the elite cohort.
+ * Fixtures, player stats, the elite cohort, scoring, calibration and the
+ * forecast, in that order.
+ *
+ * The order matters in one place: scoring must precede calibration, and
+ * calibration must precede the forecast, so the projection written tonight uses
+ * the correction fitted from the gameweek scored tonight rather than lagging a
+ * day behind it.
  *
  * A no-op on roughly six days out of seven: the gameweek captures are gated on
  * `data_checked` and skip anything already stored, so the usual cost is one
@@ -242,27 +252,6 @@ async function runAnalystSteps(bootstrap: any) {
     results.teamArchive = { error: err.message };
   }
 
-  // A forecast for the next gameweek, stored so it can be scored later. A
-  // prediction nobody wrote down cannot be measured against anything.
-  try {
-    const next = bootstrap.events.find((e: any) => e.is_next)?.id;
-    if (!next) {
-      results.forecast = { skipped: 'no next gameweek' };
-    } else {
-      const inputs = await loadFeatureInputs(bootstrap, season, next, { includeElite: false });
-      const features = buildFeatures(inputs, { includeElite: false });
-      const result = forecast(features, {
-        fixtures: inputs.fixtures,
-        teams: bootstrap.teams,
-        scoring: bootstrap.scoring,
-      });
-      await writeForecast(result);
-      results.forecast = { gameweek: next, players: Object.keys(result.predictions).length, flags: result.qualityFlags };
-    }
-  } catch (err: any) {
-    results.forecast = { error: err.message };
-  }
-
   // Score any finalised gameweek not yet scored. Both model variants, on one
   // population, every week — the elite variant is a hypothesis under test and
   // only sustained evidence promotes it.
@@ -281,11 +270,19 @@ async function runAnalystSteps(bootstrap: any) {
       } else {
         const forecasts: Record<string, GameweekForecast> = {};
         let epNext: Record<string, number> | null = null;
+
+        // What the app actually published before the deadline, scored alongside
+        // the replays. Without it the accuracy figures describe a forecast
+        // nobody ever saw: the replays are rebuilt with today's engine, so every
+        // model fix silently rewrites the whole history in its own favour.
+        const published = await readForecast(season, gameweek).catch(() => null);
+        if (published) forecasts.as_published = published;
         for (const includeElite of [false, true]) {
           const inputs = await loadFeatureInputs(bootstrap, season, gameweek, { includeElite });
           const features = buildFeatures(inputs, { includeElite });
           forecasts[includeElite ? 'elite' : 'base'] = forecast(features, {
-            fixtures: inputs.fixtures, teams: bootstrap.teams, scoring: bootstrap.scoring,
+            fixtures: inputs.fixtures, teams: bootstrap.teams,
+            scoring: bootstrap.scoring, calibration: inputs.calibration,
           });
           if (!includeElite && inputs.market) {
             const i = inputs.market.fields.indexOf('ep_next');
@@ -320,6 +317,89 @@ async function runAnalystSteps(bootstrap: any) {
     }
   } catch (err: any) {
     results.backtest = { error: err.message };
+  }
+
+  // Fit the correction that the NEXT gameweek's forecast will use, from every
+  // gameweek already scored. Stored against the gameweek it may be used for, so
+  // a later replay of that gameweek picks up the same factors and cannot reach
+  // forward into results that had not happened yet.
+  try {
+    const next = bootstrap.events.find((e: any) => e.is_next)?.id;
+    if (!next) {
+      results.calibration = { skipped: 'no next gameweek' };
+    } else {
+      const db = getAdminDb();
+      const elementType = new Map(bootstrap.elements.map((e: any) => [e.id, e.element_type]));
+      const scored = await readAccuracyHistory(season).catch(() => []);
+      const observations: CalibrationObservation[] = [];
+
+      // Only gameweeks with BOTH a published forecast and finalised stats. A
+      // replay would do here too, but fitting on the replay and then correcting
+      // the replay is a loop that converges on its own opinion.
+      for (const row of scored) {
+        const [fc, statsSnap] = await Promise.all([
+          readForecast(season, row.gameweek).catch(() => null),
+          db
+            .doc(analystPaths.playerStats(season))
+            .collection('gameweeks')
+            .doc(`gw_${row.gameweek}`)
+            .get(),
+        ]);
+        if (!fc || !statsSnap.exists) continue;
+        const stats = statsSnap.data() as PlayerStatsGameweek;
+        for (const [id, p] of Object.entries(fc.predictions)) {
+          // Fit on the UNCALIBRATED projection. Fitting on an already-corrected
+          // number compounds last week's factor into this week's.
+          const predicted = p.rawXPts ?? p.xPts;
+          if (predicted <= 0) continue;
+          observations.push({
+            gameweek: row.gameweek,
+            elementId: Number(id),
+            elementType: Number(elementType.get(Number(id))) || 0,
+            predicted,
+            actual: actualPoints(stats, Number(id)),
+          });
+        }
+      }
+
+      const fitted = fitCalibration(season, observations);
+      await writeCalibration(fitted, next);
+      results.calibration = {
+        forGameweek: next,
+        fittedOn: fitted.sourceGameweeks,
+        observations: observations.length,
+        positions: fitted.positionFactor,
+        players: Object.keys(fitted.playerFactor).length,
+        notes: fitted.notes,
+      };
+    }
+  } catch (err: any) {
+    results.calibration = { error: err.message };
+  }
+
+  // A forecast for the next gameweek, stored so it can be scored later. A
+  // prediction nobody wrote down cannot be measured against anything — and it
+  // is scored as `as_published` above, against exactly this document.
+  //
+  // Last, deliberately: it reads the calibration the step above just wrote.
+  try {
+    const next = bootstrap.events.find((e: any) => e.is_next)?.id;
+    if (!next) {
+      results.forecast = { skipped: 'no next gameweek' };
+    } else {
+      const inputs = await loadFeatureInputs(bootstrap, season, next, { includeElite: false });
+      const features = buildFeatures(inputs, { includeElite: false });
+      const result = forecast(features, {
+        fixtures: inputs.fixtures,
+        teams: bootstrap.teams,
+        scoring: bootstrap.scoring,
+        calibration: inputs.calibration,
+      });
+      await writeForecast(result);
+      results.forecast = { gameweek: next, players: Object.keys(result.predictions).length, flags: result.qualityFlags };
+    }
+  } catch (err: any) {
+    results.forecast = { error: err.message };
   }
 
   return results;

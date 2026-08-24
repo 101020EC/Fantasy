@@ -86,6 +86,7 @@ export async function POST(req: NextRequest) {
       fixtures: inputs.fixtures,
       teams: bootstrap.teams,
       scoring: bootstrap.scoring,
+      calibration: inputs.calibration,
     });
 
     // The squad is the manager's most recent confirmed picks. Picks for an

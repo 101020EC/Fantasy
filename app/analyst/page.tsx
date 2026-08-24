@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Brain, Users, Database, AlertCircle } from 'lucide-react';
+import { Brain, Users, Database, AlertCircle, Target } from 'lucide-react';
 import { fetchFPLBootstrap } from '@/lib/fpl-api';
 import { isAdminConfigured } from '@/lib/firebase-admin';
 import { ANALYST_ENABLED, currentEvent, finalisedEvents, seasonKey } from '@/lib/analyst';
@@ -76,7 +76,29 @@ export default async function AnalystPage() {
         fixtures: inputs.fixtures,
         teams: bootstrap.teams,
         scoring: bootstrap.scoring,
+        calibration: inputs.calibration,
       });
+
+      // Weighted across every scored gameweek, and drawn from `as_published`
+      // where it exists — the forecast the app really showed, rather than the
+      // replay, which is rebuilt with today's engine and so flatters itself
+      // every time the engine improves.
+      const headline = (() => {
+        let hits = 0;
+        let considered = 0;
+        let gameweeks = 0;
+        let series: 'published' | 'replay' | null = null;
+        for (const row of accuracy) {
+          const score = row.models.as_published ?? row.models.base;
+          if (!score || !score.nConsidered) continue;
+          if (row.models.as_published) series = 'published';
+          else if (series === null) series = 'replay';
+          hits += score.within2Considered * score.nConsidered;
+          considered += score.nConsidered;
+          gameweeks += 1;
+        }
+        return considered ? { pct: hits / considered, gameweeks, series } : null;
+      })();
 
       const elements = new Map(bootstrap.elements.map((e) => [e.id, e]));
       const teams = new Map(bootstrap.teams.map((t) => [t.id, t.short_name]));
@@ -99,7 +121,7 @@ export default async function AnalystPage() {
 
       body = (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             <Stat
               icon={<Database className="w-4 h-4" />}
               tone="indigo"
@@ -129,6 +151,19 @@ export default async function AnalystPage() {
               value={result.model === 'elite' ? 'Base + Elite' : 'Base'}
               hint="Elite Cohort Signals stay out of the numbers until they beat this over at least 8 gameweeks."
             />
+            {/* A bare percentage would be meaningless for a points projection,
+                so the tolerance and the population travel with it. */}
+            <Stat
+              icon={<Target className="w-4 h-4" />}
+              tone="amber"
+              label="Accuracy"
+              value={headline ? `${Math.round(headline.pct * 100)}%` : 'Not measured yet'}
+              hint={
+                headline
+                  ? `Within 2 points, over players projected at 3+, across ${headline.gameweeks} scored gameweek${headline.gameweeks === 1 ? '' : 's'}${headline.series === 'replay' ? ' (replayed, not as published)' : ''}.`
+                  : 'Scoring starts once FPL finalises a gameweek. Nothing is measured before then.'
+              }
+            />
           </div>
 
           <AnalystSetup
@@ -154,7 +189,19 @@ export default async function AnalystPage() {
 
           <AccuracyPanel history={accuracy} promotion={evaluatePromotion(accuracy)} />
 
-          <ForecastTable rows={rows} qualityFlags={result.qualityFlags} gameweek={target} />
+          <ForecastTable
+            rows={rows}
+            qualityFlags={result.qualityFlags}
+            gameweek={target}
+            calibration={
+              inputs.calibration
+                ? {
+                    sourceGameweeks: inputs.calibration.sourceGameweeks,
+                    notes: inputs.calibration.notes,
+                  }
+                : null
+            }
+          />
         </>
       );
     }
@@ -205,6 +252,7 @@ const TONES: Record<string, string> = {
   indigo: 'bg-indigo-100 text-indigo-600',
   emerald: 'bg-emerald-100 text-emerald-600',
   purple: 'bg-purple-100 text-[#38003c]',
+  amber: 'bg-amber-100 text-amber-600',
 };
 
 function Stat({
