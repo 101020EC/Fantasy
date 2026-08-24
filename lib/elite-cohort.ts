@@ -212,7 +212,7 @@ export function computeEliteDerived(
     const xi = new Set<number>();
     for (const p of picks) {
       const el = Number(p.element);
-      const pos = Number(p.position);
+      const mult = Number(p.multiplier);
       const cells = idx(el);
       cells[F('owned')]++;
       cells[F('ownerCount')]++;
@@ -222,10 +222,19 @@ export function computeEliteDerived(
       }
       if (p.is_vice_captain) cells[F('viceCaptained')]++;
 
-      // The EFFECTIVE XI, after FPL's automatic substitutions — which is what
-      // actually scored. Without automatic_subs (captured nowhere else in the
-      // app) the started/benched split is simply wrong.
-      const started = (pos <= 11 && !subbedOff.has(el)) || subbedOn.has(el);
+      // Did this player actually score for the manager this week.
+      //
+      // `multiplier` is the authoritative signal, not `position`: it is 0 for a
+      // benched player, 1 for a starter, 2 for the captain, 3 under Triple
+      // Captain — and 1 for ALL FIFTEEN under Bench Boost, which is how that
+      // chip reads back. Position alone would count a bench-boosted substitute
+      // as benched in a week he scored, and 16 of the 20 cohort managers played
+      // Bench Boost in GW1, so this is not an edge case.
+      //
+      // automatic_subs are then applied on top. Whether FPL rewrites multiplier
+      // after an auto-sub is not observable from a week with no auto-subs, so
+      // both conditions are combined: correct either way.
+      const started = (mult >= 1 || subbedOn.has(el)) && !subbedOff.has(el);
       if (started) cells[F('startedXI')]++;
       else cells[F('benched')]++;
       if (started) xi.add(el);
