@@ -17,6 +17,7 @@ import { GameweekForecast } from '@/lib/types';
 import {
   analystPaths,
   readAccuracyHistory,
+  readPlayerPriors,
   readEliteCohort,
   readEliteSnapshot,
   writeAccuracy,
@@ -130,6 +131,26 @@ async function runAnalystSteps(bootstrap: any) {
   }
 
   const finalised = finalisedEvents(bootstrap).map((e) => e.id);
+
+  // Prior seasons, if this database has none.
+  //
+  // These used to be written only as a by-product of capturing a finalised
+  // gameweek, which meant a fresh deployment had none until the first week was
+  // data-checked — and without them the model has no evidence about anybody, so
+  // every projection came out as zero. They do not depend on a gameweek at all:
+  // element-summary ships each player's past seasons and always has.
+  try {
+    if (await readPlayerPriors(season)) {
+      results.playerPriors = { present: true };
+    } else {
+      const { priors } = await sweepPlayerStats(bootstrap, { gameweeks: [] });
+      const doc = buildPlayerPriors(season, priors);
+      await writePlayerPriors(doc);
+      results.playerPriors = { written: doc.playerCount, sourceSeason: doc.sourceSeason };
+    }
+  } catch (err: any) {
+    results.playerPriors = { error: err.message };
+  }
 
   // Player stats — the training signal. ~600 sequential requests, so this only
   // runs for a gameweek that has just been finalised and is not already stored.

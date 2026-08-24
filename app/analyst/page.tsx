@@ -4,7 +4,7 @@ import { Brain, Users, Database, AlertCircle } from 'lucide-react';
 import { fetchFPLBootstrap } from '@/lib/fpl-api';
 import { isAdminConfigured } from '@/lib/firebase-admin';
 import { ANALYST_ENABLED, currentEvent, finalisedEvents, seasonKey } from '@/lib/analyst';
-import { readAccuracyHistory, readEliteCohort, storedEliteGameweeks, storedPlayerStatGameweeks } from '@/lib/analyst-store';
+import { readAccuracyHistory, readEliteCohort, readPlayerPriors, storedEliteGameweeks, storedPlayerStatGameweeks } from '@/lib/analyst-store';
 import { loadFeatureInputs } from '@/lib/forecast-inputs';
 import { buildFeatures } from '@/lib/feature-builder';
 import { forecast } from '@/lib/forecast-engine';
@@ -12,7 +12,7 @@ import ForecastTable, { ForecastRow } from '@/components/analyst/ForecastTable';
 import AnalysisPanel from '@/components/analyst/AnalysisPanel';
 import AccuracyPanel from '@/components/analyst/AccuracyPanel';
 import TransferSuggestions from '@/components/analyst/TransferSuggestions';
-import CohortSetup from '@/components/analyst/CohortSetup';
+import AnalystSetup from '@/components/analyst/AnalystSetup';
 import { ELITE_COHORT_IDS } from '@/lib/elite-cohort-seed';
 import { evaluatePromotion } from '@/lib/backtest';
 import { getLLMConfig } from '@/lib/openai';
@@ -60,6 +60,7 @@ export default async function AnalystPage() {
         readEliteCohort(season).catch(() => null),
         getLLMConfig().catch(() => null),
       ]);
+      const priors = await readPlayerPriors(season).catch(() => null);
       const accuracy = await readAccuracyHistory(season).catch(() => []);
 
       // The team the app already tracks, rather than a second place to
@@ -130,7 +131,11 @@ export default async function AnalystPage() {
             />
           </div>
 
-          {!cohort?.managerIds?.length && <CohortSetup seedSize={ELITE_COHORT_IDS.length} />}
+          <AnalystSetup
+            needsPriors={!priors?.playerCount}
+            needsCohort={!cohort?.managerIds?.length}
+            seedSize={ELITE_COHORT_IDS.length}
+          />
 
           {llm?.configured ? (
             <AnalysisPanel gameweek={target} teamId={trackedTeamId} />
