@@ -245,12 +245,19 @@ export function forecast(
       }
     }
 
-    // Confidence is about how much is known, not about how high the score is:
-    // history length, availability certainty, and whether a fixture exists.
+    // Confidence is about how much is known, not about how high the score is.
+    //
+    // Two independent kinds of evidence, and the better one counts: gameweeks
+    // played this season, and a full prior season. Counting only this season
+    // reported zero confidence for every player before a gameweek was
+    // finalised — including a striker with 2953 minutes and 239 points behind
+    // him, who is not an unknown quantity.
     const historyDepth = Math.min(1, (fs.sources.playerStats.length || 0) / 6);
+    const priorDepth = b.has_season_prior ? 0.45 : 0;
+    const evidence = Math.max(historyDepth, priorDepth);
     const availabilityCertainty = availability >= 0.99 || availability <= 0.01 ? 1 : 0.6;
     const confidence = clamp(
-      clubFixtures.length === 0 ? 1 : historyDepth * availabilityCertainty * (hasHistory ? 1 : 0.15),
+      clubFixtures.length === 0 ? 1 : evidence * availabilityCertainty * (hasHistory ? 1 : 0.15),
       0, 1
     );
 

@@ -442,10 +442,15 @@ export function buildFeatures(inputs: FeatureInputs, opts: BuildOptions = {}): F
       // "no data" and "does nothing" must not look the same to the model.
       minutes_per_gw_long: long.gameweeks ? long.minutes / long.gameweeks : null,
       minutes_per_gw_short: short.gameweeks ? short.minutes / short.gameweeks : null,
-      start_rate: prior && long.gameweeks
+      // Gated on hasHistory, not on gameweeks played: with no finalised
+      // gameweek yet, shrinkage over zero observations correctly returns the
+      // prior, and gating on the counter threw that away and projected every
+      // player at zero minutes. A player with neither match history nor a
+      // prior season stays null — unknown, not average.
+      start_rate: hasHistory && prior
         ? shrunkRate(long.starts, long.appearances, prior.startRate)
         : null,
-      appearance_rate: prior && long.gameweeks
+      appearance_rate: hasHistory && prior
         ? shrunkRate(long.appearances, long.gameweeks, prior.appearanceRate)
         : null,
 

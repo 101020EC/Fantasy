@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X, Bell } from 'lucide-react';
+import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X, Bell, Brain } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import TelegramSettingsModal from './telegram/TelegramSettingsModal';
 import PremierLeagueLogo from './PremierLeagueLogo';
@@ -142,6 +142,18 @@ export default function Navbar() {
                     <TrendingUp className="w-4 h-4" />
                   </div>
                   <span>Market</span>
+                </Link>
+
+                {/* Analyst */}
+                <Link
+                  href="/analyst"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-purple-800 hover:bg-purple-50 transition"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 text-[#38003c] flex items-center justify-center">
+                    <Brain className="w-4 h-4" />
+                  </div>
+                  <span>Analyst</span>
                 </Link>
 
                 {/* Alert */}
