@@ -3,10 +3,12 @@ import { fetchFPLBootstrap, fetchFPLFixtures } from '@/lib/fpl-api';
 import { isAdminConfigured, ADMIN_NOT_CONFIGURED } from '@/lib/firebase-admin';
 import { requireSession } from '@/lib/auth-server';
 import { ANALYST_ENABLED, ANALYST_DISABLED_MESSAGE, finalisedEvents, seasonKey } from '@/lib/analyst';
-import { buildPlayerStatsDoc, sweepPlayerStats } from '@/lib/player-stats';
+import { buildPlayerPriors, buildPlayerStatsDoc, sweepPlayerStats } from '@/lib/player-stats';
 import { buildSeasonFixtures } from '@/lib/fixtures-store';
 import {
+  readPlayerPriors,
   storedPlayerStatGameweeks,
+  writePlayerPriors,
   writePlayerStats,
   writeSeasonFixtures,
 } from '@/lib/analyst-store';
@@ -50,28 +52,42 @@ export async function POST(req: NextRequest) {
     const fixtures = await fetchFPLFixtures();
     if (fixtures.length) await writeSeasonFixtures(buildSeasonFixtures(season, fixtures));
 
-    if (!finalised.length) {
+    const stored = finalised.length ? await storedPlayerStatGameweeks(season) : [];
+    const pending = finalised.filter((gw) => !stored.includes(gw));
+    const batch = pending.slice(0, maxGameweeks);
+
+    // Prior seasons come from the same endpoint and do not depend on any
+    // gameweek being finalised — they are what makes a GW1 forecast better
+    // than a position average, so they are worth a sweep on their own.
+    const havePriors = Boolean(await readPlayerPriors(season));
+    const needPriors = !havePriors || body?.refreshPriors === true;
+
+    if (!batch.length && !needPriors) {
       return NextResponse.json({
         season,
         written: [],
         remaining: [],
-        message:
-          'No gameweek has been finalised yet, so there is nothing to capture. FPL keeps scores provisional until a gameweek is data-checked.',
+        upToDate: true,
+        stored,
+        message: finalised.length
+          ? undefined
+          : 'No gameweek has been finalised yet. FPL keeps scores provisional until a gameweek is data-checked.',
       });
     }
 
-    const stored = await storedPlayerStatGameweeks(season);
-    const pending = finalised.filter((gw) => !stored.includes(gw));
-    const batch = pending.slice(0, maxGameweeks);
+    // One sweep covers every requested gameweek and the priors at once —
+    // element-summary returns a player's whole season plus his past ones, so
+    // fetching separately would repeat the same ~600 requests.
+    const { byGameweek, progress, priors } = await sweepPlayerStats(bootstrap, {
+      gameweeks: batch,
+    });
 
-    if (!batch.length) {
-      return NextResponse.json({ season, written: [], remaining: [], upToDate: true, stored });
+    let priorsWritten = null;
+    if (needPriors) {
+      const doc = buildPlayerPriors(season, priors);
+      await writePlayerPriors(doc);
+      priorsWritten = { playerCount: doc.playerCount, sourceSeason: doc.sourceSeason };
     }
-
-    // One sweep covers every requested gameweek at once — element-summary
-    // returns a player's whole season, so fetching per gameweek would repeat
-    // the same ~600 requests for each.
-    const { byGameweek, progress } = await sweepPlayerStats(bootstrap, { gameweeks: batch });
 
     const written = [];
     for (const gw of batch) {
@@ -88,6 +104,7 @@ export async function POST(req: NextRequest) {
       season,
       written,
       remaining: pending.slice(maxGameweeks),
+      priors: priorsWritten,
       playersFetched: progress.fetched,
       playersFailed: progress.failed.length,
       fixtures: fixtures.length,

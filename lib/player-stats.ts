@@ -82,6 +82,36 @@ export function gameweekTotal(
   return decodeFixtures(values, fields).reduce((sum, f) => sum + (Number(f[field]) || 0), 0);
 }
 
+/**
+ * Last completed season per player, from element-summary's `history_past`.
+ *
+ * This is what a sensible prior looks like. Shrinking a player toward his
+ * position's average says Haaland is an ordinary forward until several
+ * gameweeks have passed — which is false, and known to be false, because last
+ * season he returned 239 points from 25.5 xG. Shrinking him toward his OWN
+ * last season says something much closer to the truth from GW1.
+ *
+ * Available at any time and unchanging, so it is fetched by the same sweep
+ * that collects match stats and costs nothing extra.
+ */
+export const PLAYER_PRIOR_FIELDS = [
+  'season_name', 'minutes', 'starts', 'total_points',
+  'goals_scored', 'assists', 'clean_sheets', 'goals_conceded',
+  'expected_goals', 'expected_assists', 'expected_goals_conceded',
+  'bps', 'bonus', 'saves', 'defensive_contribution',
+] as const;
+
+export interface PlayerPriors {
+  season: string;
+  updatedAt: string;
+  /** The season these numbers are FROM, e.g. "2025/26". */
+  sourceSeason: string | null;
+  playerCount: number;
+  fields: string[];
+  /** element id -> values in `fields` order. Absent = no prior season. */
+  players: Record<string, Cell[]>;
+}
+
 export interface SweepProgress {
   fetched: number;
   failed: number[];
@@ -107,7 +137,12 @@ export async function sweepPlayerStats(
     concurrency?: number;
     onProgress?: (done: number, total: number) => void;
   }
-): Promise<{ byGameweek: Map<number, Record<string, Cell[]>>; progress: SweepProgress }> {
+): Promise<{
+  byGameweek: Map<number, Record<string, Cell[]>>;
+  progress: SweepProgress;
+  /** element id -> last completed season, per PLAYER_PRIOR_FIELDS. */
+  priors: Record<string, Cell[]>;
+}> {
   const wanted = new Set(opts.gameweeks);
   const ids = opts.elementIds ?? bootstrap.elements.map((e) => e.id);
   const concurrency = Math.max(1, opts.concurrency ?? 8);
@@ -116,6 +151,7 @@ export async function sweepPlayerStats(
   for (const gw of opts.gameweeks) byGameweek.set(gw, {});
 
   const progress: SweepProgress = { fetched: 0, failed: [] };
+  const priors: Record<string, Cell[]> = {};
   let cursor = 0;
   let done = 0;
 
@@ -127,6 +163,10 @@ export async function sweepPlayerStats(
         progress.failed.push(id);
       } else {
         progress.fetched++;
+        // The most recent completed season only. Older ones describe a
+        // different player at a different club under different rules.
+        const past = summary.history_past ?? [];
+        if (past.length) priors[String(id)] = row(past[past.length - 1], PLAYER_PRIOR_FIELDS);
         for (const h of summary.history as any[]) {
           const gw = Number(h.round);
           if (!wanted.has(gw)) continue;
@@ -141,7 +181,24 @@ export async function sweepPlayerStats(
   }
 
   await Promise.all(Array.from({ length: concurrency }, worker));
-  return { byGameweek, progress };
+  return { byGameweek, progress, priors };
+}
+
+export function buildPlayerPriors(
+  season: string,
+  priors: Record<string, Cell[]>,
+  now: Date = new Date()
+): PlayerPriors {
+  const iSeason = PLAYER_PRIOR_FIELDS.indexOf('season_name');
+  const first = Object.values(priors)[0];
+  return {
+    season,
+    updatedAt: now.toISOString(),
+    sourceSeason: first ? String(first[iSeason] ?? '') || null : null,
+    playerCount: Object.keys(priors).length,
+    fields: [...PLAYER_PRIOR_FIELDS],
+    players: priors,
+  };
 }
 
 export function buildPlayerStatsDoc(

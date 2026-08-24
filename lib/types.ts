@@ -75,11 +75,37 @@ export interface FPLElementType {
   singular_name_short: string;
 }
 
+/**
+ * FPL's own scoring rules, shipped in bootstrap-static under game_config.
+ *
+ * Read rather than hardcoded: goalkeeper goals are worth 10 and defensive
+ * contribution 2, both of which are recent changes, and a model with last
+ * season's constants baked in would be quietly wrong every time the rules move.
+ */
+export interface FPLScoring {
+  long_play: number;
+  short_play: number;
+  goals_scored: Record<'GKP' | 'DEF' | 'MID' | 'FWD', number>;
+  clean_sheets: Record<'GKP' | 'DEF' | 'MID' | 'FWD', number>;
+  goals_conceded: Record<'GKP' | 'DEF' | 'MID' | 'FWD', number>;
+  defensive_contribution: Record<'GKP' | 'DEF' | 'MID' | 'FWD', number>;
+  assists: number;
+  saves: number;
+  bonus: number;
+  yellow_cards: number;
+  red_cards: number;
+  own_goals: number;
+  penalties_saved: number;
+  penalties_missed: number;
+}
+
 export interface FPLBootstrap {
   events: FPLEvent[];
   teams: FPLTeam[];
   elements: FPLElement[];
   element_types: FPLElementType[];
+  /** Absent only if FPL stops shipping it; the engine falls back to defaults. */
+  scoring?: FPLScoring;
 }
 
 export interface FPLEntry {
@@ -337,6 +363,11 @@ export interface PlayerFeatures {
 export interface FeatureSet {
   season: string;
   targetGameweek: number;
+  /**
+   * Deadline of the target gameweek, ISO. Market snapshots are dated rather
+   * than numbered, so this is what makes "before the deadline" checkable.
+   */
+  targetDeadline: string | null;
   includeElite: boolean;
   sources: FeatureSources;
   /** e.g. 'stale_elite_data', 'low_cohort_availability', 'high_chip_volatility' */

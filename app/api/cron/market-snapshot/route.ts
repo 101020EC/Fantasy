@@ -4,13 +4,14 @@ import { buildMarketSnapshot } from '@/lib/market-snapshot';
 import { getAdminDb, isAdminConfigured, ADMIN_NOT_CONFIGURED } from '@/lib/firebase-admin';
 import { ANALYST_ENABLED, finalisedEvents, seasonKey } from '@/lib/analyst';
 import { buildSeasonFixtures } from '@/lib/fixtures-store';
-import { buildPlayerStatsDoc, sweepPlayerStats } from '@/lib/player-stats';
+import { buildPlayerPriors, buildPlayerStatsDoc, sweepPlayerStats } from '@/lib/player-stats';
 import { captureEliteGameweek, computeEliteDerived } from '@/lib/elite-cohort';
 import {
   readEliteCohort,
   storedEliteGameweeks,
   storedPlayerStatGameweeks,
   writeEliteGameweek,
+  writePlayerPriors,
   writePlayerStats,
   writeSeasonFixtures,
 } from '@/lib/analyst-store';
@@ -128,10 +129,14 @@ async function runAnalystSteps(bootstrap: any) {
       // One gameweek per run. Two finalising at once is rare, and the next
       // night picks up the remainder.
       const gw = pending[0];
-      const { byGameweek, progress } = await sweepPlayerStats(bootstrap, { gameweeks: [gw] });
+      const { byGameweek, progress, priors } = await sweepPlayerStats(bootstrap, {
+        gameweeks: [gw],
+      });
       const players = byGameweek.get(gw) ?? {};
       const doc = buildPlayerStatsDoc(season, gw, players);
       await writePlayerStats(doc);
+      // Free: the same responses carry each player's past seasons.
+      await writePlayerPriors(buildPlayerPriors(season, priors));
       results.playerStats = {
         gameweek: gw,
         playerCount: doc.playerCount,

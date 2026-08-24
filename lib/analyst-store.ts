@@ -1,7 +1,7 @@
 import { getAdminDb } from './firebase-admin';
 import { gwDocId } from './analyst';
 import { SeasonFixtures } from './fixtures-store';
-import { PlayerStatsGameweek } from './player-stats';
+import { PlayerPriors, PlayerStatsGameweek } from './player-stats';
 import { EliteCohort, EliteDerivedGameweek, EliteGameweekSnapshot } from './types';
 
 /**
@@ -18,6 +18,7 @@ import { EliteCohort, EliteDerivedGameweek, EliteGameweekSnapshot } from './type
 
 export const analystPaths = {
   playerStats: (season: string) => `playerStats/${season}`,
+  playerPriors: (season: string) => `playerPriors/${season}`,
   fixtures: (season: string) => `fixtures/${season}`,
   eliteCohort: (season: string) => `eliteCohort/${season}`,
   forecasts: (season: string) => `forecasts/${season}`,
@@ -60,6 +61,15 @@ export async function storedPlayerStatGameweeks(season: string): Promise<number[
     .filter((d) => d.data().dataChecked)
     .map((d) => Number(d.data().gameweek))
     .sort((a, b) => a - b);
+}
+
+export async function writePlayerPriors(doc: PlayerPriors): Promise<void> {
+  await getAdminDb().doc(analystPaths.playerPriors(doc.season)).set(doc);
+}
+
+export async function readPlayerPriors(season: string): Promise<PlayerPriors | null> {
+  const snap = await getAdminDb().doc(analystPaths.playerPriors(season)).get();
+  return snap.exists ? (snap.data() as PlayerPriors) : null;
 }
 
 export async function writeEliteCohort(cohort: EliteCohort): Promise<void> {

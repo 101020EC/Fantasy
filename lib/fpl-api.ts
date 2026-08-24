@@ -68,6 +68,8 @@ function trimBootstrap(raw: any): FPLBootstrap {
     teams: project<FPLTeam>(raw?.teams, TEAM_FIELDS),
     elements: project<FPLElement>(raw?.elements, ELEMENT_FIELDS),
     element_types: project<FPLElementType>(raw?.element_types, ELEMENT_TYPE_FIELDS),
+    // ~1KB, and it is FPL stating its own rules — worth far more than it costs.
+    scoring: raw?.game_config?.scoring ?? undefined,
   };
 }
 
