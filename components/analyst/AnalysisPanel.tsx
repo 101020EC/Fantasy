@@ -15,7 +15,37 @@ interface AnalysisResponse {
   status?: string;
   forecastReady?: boolean;
   budget?: { limitUsd: number; spentUsd: number; remainingUsd: number; month: string };
+  job?: JobView;
+  blockedStep?: string;
+  fromSavedSteps?: boolean;
 }
+
+interface JobView {
+  jobId: string;
+  state: string;
+  resumable: boolean;
+  steps: {
+    id: string;
+    kind: 'ai' | 'compute';
+    state: 'pending' | 'running' | 'completed' | 'failed' | 'skipped';
+    blockedReason: string | null;
+    error: string | null;
+  }[];
+}
+
+/** Plain names for the steps, so the panel is readable without the code. */
+const STEP_LABEL: Record<string, string> = {
+  context: 'Projections and squad',
+  explain: 'Written explanation',
+};
+
+const STEP_TONE: Record<string, string> = {
+  completed: 'bg-emerald-100 text-emerald-700',
+  running: 'bg-sky-100 text-sky-700',
+  failed: 'bg-rose-100 text-rose-700',
+  pending: 'bg-black/5 text-black/45',
+  skipped: 'bg-black/5 text-black/45',
+};
 
 /**
  * Written commentary on the forecast.
@@ -35,16 +65,29 @@ export default function AnalysisPanel({
   const [data, setData] = useState<AnalysisResponse | null>(null);
   const [question, setQuestion] = useState('');
 
-  async function run() {
+  // Held across renders so Resume continues THIS analysis rather than starting
+  // a new one. The job itself lives in Firestore, so a reload loses only the
+  // handle: posting the same gameweek and question rejoins the same job.
+  const [jobId, setJobId] = useState<string | null>(null);
+
+  async function run(resume = false) {
     setState('loading');
     try {
       const res = await fetch('/api/analyst/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameweek, teamId, question: question.trim() || undefined }),
+        body: JSON.stringify(
+          resume && jobId
+            ? { jobId }
+            : { gameweek, teamId, question: question.trim() || undefined }
+        ),
       });
       const json: AnalysisResponse = await res.json();
       setData(json);
+      // A stale job cannot be resumed, so drop the handle rather than leave a
+      // Resume button that would only fail again.
+      if (json.status === 'JOB_STALE' || json.status === 'JOB_MISSING') setJobId(null);
+      else if (json.job?.jobId) setJobId(json.job.jobId);
       setState(res.ok ? 'done' : 'error');
     } catch (err: any) {
       setData({ error: err?.message ?? 'Could not reach the server' });
@@ -75,7 +118,7 @@ export default function AnalysisPanel({
         />
         <button
           type="button"
-          onClick={run}
+          onClick={() => run(false)}
           disabled={state === 'loading'}
           className="px-4 py-2.5 rounded-2xl bg-[#38003c] text-white text-sm font-black disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
         >
@@ -93,9 +136,29 @@ export default function AnalysisPanel({
           {data.forecastReady && (
             <p className="mt-1.5 text-sky-800">
               The projections above are unaffected — they are computed without a model — and nothing
-              already saved has been changed. Raise the budget above, or wait for the 1st.
+              already saved has been changed. That work is saved, so resuming will not recompute it
+              or pay for it again. Raise the budget above, or wait for the 1st.
             </p>
           )}
+          {data.job && <StepList job={data.job} />}
+          {data.job?.resumable && (
+            <button
+              type="button"
+              onClick={() => run(true)}
+              className="mt-2.5 px-3.5 py-2 rounded-2xl bg-sky-900 text-white text-[12px] font-black"
+            >
+              Resume from the unfinished step
+            </button>
+          )}
+        </div>
+      ) : state === 'error' && data?.status === 'JOB_STALE' ? (
+        <div className="mt-3 text-[12px] text-amber-900 bg-amber-50 border border-amber-200 rounded-2xl p-3 leading-snug">
+          <p className="font-black mb-1">The projections moved on</p>
+          <p>{data.error}</p>
+          <p className="mt-1.5 text-amber-800">
+            Press Explain for a fresh one. The unfinished analysis is kept as history — nothing
+            saved has been changed.
+          </p>
         </div>
       ) : (
         state === 'error' &&
@@ -130,9 +193,29 @@ export default function AnalysisPanel({
             {data.provider} · {data.model}
             {data.squadUsed ? ' · your squad included' : ''}
             {data.eliteUsed ? ' · Elite Cohort context included' : ''}
+            {data.fromSavedSteps ? ' · restored from saved steps, no new model call' : ''}
           </p>
         </div>
       )}
     </div>
+  );
+}
+
+/** What completed and what remains. Shown only when a job did not finish. */
+function StepList({ job }: { job: JobView }) {
+  return (
+    <ul className="mt-2.5 space-y-1">
+      {job.steps.map((s) => (
+        <li key={s.id} className="flex items-center gap-2 text-[11px]">
+          <span
+            className={`px-1.5 py-0.5 rounded-md font-black ${STEP_TONE[s.state] ?? STEP_TONE.pending}`}
+          >
+            {s.state}
+          </span>
+          <span className="font-bold text-black/70">{STEP_LABEL[s.id] ?? s.id}</span>
+          {s.kind === 'ai' && <span className="text-black/35">costs a model call</span>}
+        </li>
+      ))}
+    </ul>
   );
 }
