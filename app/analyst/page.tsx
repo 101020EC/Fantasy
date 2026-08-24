@@ -9,6 +9,9 @@ import { loadFeatureInputs } from '@/lib/forecast-inputs';
 import { buildFeatures } from '@/lib/feature-builder';
 import { forecast } from '@/lib/forecast-engine';
 import ForecastTable, { ForecastRow } from '@/components/analyst/ForecastTable';
+import AnalysisPanel from '@/components/analyst/AnalysisPanel';
+import { getLLMConfig } from '@/lib/openai';
+import { getTelegramConfig } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,11 +49,19 @@ export default async function AnalystPage() {
     if (!isAdminConfigured) {
       body = <Notice title="Firestore is not configured" body="Set FIREBASE_SERVICE_ACCOUNT to store and read analyst data." />;
     } else {
-      const [storedStats, storedElite, cohort] = await Promise.all([
+      const [storedStats, storedElite, cohort, llm] = await Promise.all([
         storedPlayerStatGameweeks(season).catch((): number[] => []),
         storedEliteGameweeks(season).catch((): number[] => []),
         readEliteCohort(season).catch(() => null),
+        getLLMConfig().catch(() => null),
       ]);
+
+      // The team the app already tracks, rather than a second place to
+      // configure one. Absent simply means the prose covers the forecast
+      // without a squad section.
+      const trackedTeamId = await getTelegramConfig()
+        .then((c) => c.teamId || undefined)
+        .catch(() => undefined);
 
       const inputs = await loadFeatureInputs(bootstrap, season, target, { includeElite: false });
       const features = buildFeatures(inputs, { includeElite: false });
@@ -112,6 +123,19 @@ export default async function AnalystPage() {
               hint="Elite Cohort Signals stay out of the numbers until they beat this over at least 8 gameweeks."
             />
           </div>
+
+          {llm?.configured ? (
+            <AnalysisPanel gameweek={target} teamId={trackedTeamId} />
+          ) : (
+            <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-4 mb-5">
+              <p className="font-black text-[#111318] text-sm">Written analysis is off</p>
+              <p className="text-[12px] text-black/50 mt-1 leading-snug">
+                Add a key with <code className="text-[11px]">PUT /api/analyst/llm-settings</code> or set
+                OPENAI_API_KEY to have the projections explained in prose. The forecast below does not
+                need it — no language model is involved in producing these numbers.
+              </p>
+            </div>
+          )}
 
           <ForecastTable rows={rows} qualityFlags={result.qualityFlags} gameweek={target} />
         </>
