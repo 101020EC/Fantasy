@@ -12,6 +12,8 @@ import ForecastTable, { ForecastRow } from '@/components/analyst/ForecastTable';
 import AnalysisPanel from '@/components/analyst/AnalysisPanel';
 import AccuracyPanel from '@/components/analyst/AccuracyPanel';
 import TransferSuggestions from '@/components/analyst/TransferSuggestions';
+import CohortSetup from '@/components/analyst/CohortSetup';
+import { ELITE_COHORT_IDS } from '@/lib/elite-cohort-seed';
 import { evaluatePromotion } from '@/lib/backtest';
 import { getLLMConfig } from '@/lib/openai';
 import { getTelegramConfig } from '@/lib/telegram';
@@ -127,6 +129,8 @@ export default async function AnalystPage() {
               hint="Elite Cohort Signals stay out of the numbers until they beat this over at least 8 gameweeks."
             />
           </div>
+
+          {!cohort?.managerIds?.length && <CohortSetup seedSize={ELITE_COHORT_IDS.length} />}
 
           {llm?.configured ? (
             <AnalysisPanel gameweek={target} teamId={trackedTeamId} />
