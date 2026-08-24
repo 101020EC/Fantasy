@@ -173,9 +173,11 @@ export default async function AnalystPage() {
             seedSize={ELITE_COHORT_IDS.length}
           />
 
-          {/* Beside the panel that spends it, and only when there is a key to
-              spend with — a ceiling on nothing is noise. */}
-          {llm?.configured && <AiBudgetPanel />}
+          {/* Above the panel that spends it, and shown whether or not a key is
+              configured: setting the ceiling before adding the key is the safer
+              order, and the panel reads only money — it never touches the LLM
+              settings. */}
+          <AiBudgetPanel />
 
           {llm?.configured ? (
             <AnalysisPanel gameweek={target} teamId={trackedTeamId} />
