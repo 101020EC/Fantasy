@@ -3,8 +3,8 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FPLEntry, TeamSquadPlayer } from '@/lib/types';
-import { CheckCircle2, History, TrendingUp } from 'lucide-react';
+import { FPLEntry, PriceStatus, TeamSquadPlayer } from '@/lib/types';
+import { CheckCircle2, History, Star, TrendingUp } from 'lucide-react';
 import { STATUS_META } from '../prices/status-meta';
 
 interface TeamPitchTopBarProps {
@@ -13,6 +13,10 @@ interface TeamPitchTopBarProps {
   /** Gameweek the fixture strip is showing; may run ahead of the squad's. */
   fixtureGw?: number;
   players: TeamSquadPlayer[];
+  /** The gameweek being played, which runs ahead of the squad's once one ends. */
+  liveGw?: number;
+  /** Watchlist players that are moving — name, club and direction. */
+  watchMovers?: { name: string; club: string; status: PriceStatus }[];
   activeChip?: string | null;
 }
 
@@ -21,9 +25,14 @@ export default function TeamPitchTopBar({
   gameweek,
   fixtureGw,
   players,
+  liveGw,
+  watchMovers = [],
   activeChip,
 }: TeamPitchTopBarProps) {
   const shownGw = fixtureGw ?? gameweek;
+  // Offer the week being played and the one after it. Basing the chips on the
+  // squad's own gameweek left them pointing at a week that had already ended.
+  const baseGw = liveGw ?? gameweek;
 
   // Price risk calculation
   const criticalFallers = players.filter((p) => p.priceAnalysis.status === 'falling_soon');
@@ -59,6 +68,32 @@ export default function TeamPitchTopBar({
         ]
   ).filter((b) => b.count > 0);
 
+  /**
+   * Who is actually moving.
+   *
+   * The badges give a number and nothing else, which tells you something is
+   * happening without telling you to whom — and on the page where you would act
+   * on it. Squad and watchlist together, marked apart by the star already used
+   * for the watchlist elsewhere.
+   */
+  const movers = [
+    ...players
+      .filter((p) => p.priceAnalysis.status !== 'stable')
+      .map((p) => ({
+        name: p.element.web_name,
+        club: p.team.short_name,
+        status: p.priceAnalysis.status,
+        watched: false,
+      })),
+    ...watchMovers.map((w) => ({ ...w, watched: true })),
+  ]
+    // Tonight before trending, rises before falls, so the urgent names lead.
+    .sort((a, b) => {
+      const rank = (s: PriceStatus) =>
+        s === 'rising_soon' ? 0 : s === 'falling_soon' ? 1 : s === 'likely_riser' ? 2 : 3;
+      return rank(a.status) - rank(b.status);
+    });
+
   const badgeTone = (tone: 'rise' | 'fall', critical: boolean) =>
     tone === 'rise'
       ? critical
@@ -81,15 +116,16 @@ export default function TeamPitchTopBar({
             {/* Two plain chips: the squad's gameweek, and the next one to
                 preview fixtures for. No arrows — they implied paging through
                 gameweeks, which is not what this does. */}
-            {[gameweek, gameweek + 1].filter((gw) => gw <= 38).map((gw) => {
+            {[baseGw, baseGw + 1].filter((gw) => gw <= 38).map((gw) => {
               const isShown = gw === shownGw;
               const href = gw === gameweek ? `/team/${entry.id}` : `/team/${entry.id}?gw=${gw}`;
+              const isSquadWeek = gw === gameweek;
               return (
                 <Link
                   key={gw}
                   href={href}
                   title={
-                    gw === gameweek
+                    isSquadWeek
                       ? `This squad, gameweek ${gw}`
                       : `Fixtures this squad faces in gameweek ${gw}`
                   }
@@ -190,6 +226,31 @@ export default function TeamPitchTopBar({
             )}
           </div>
         </div>
+
+        {movers.length > 0 && (
+          <div className="mt-3 pt-2.5 border-t border-black/10 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            {movers.map((m) => {
+              const meta = STATUS_META[m.status];
+              const up = m.status === 'rising_soon' || m.status === 'likely_riser';
+              return (
+                <span
+                  key={`${m.name}-${m.club}`}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#111318]"
+                  title={`${m.name} — ${meta.label}${m.watched ? ' (watchlist)' : ''}`}
+                >
+                  <meta.Icon
+                    className={`w-3 h-3 shrink-0 ${up ? 'text-emerald-700' : 'text-rose-700'} ${
+                      m.status === 'falling_soon' ? 'rotate-[135deg]' : ''
+                    }`}
+                  />
+                  <span className={up ? 'text-emerald-800' : 'text-rose-800'}>{m.name}</span>
+                  <span className="text-[#111318]/45 font-semibold">{m.club}</span>
+                  {m.watched && <Star className="w-2.5 h-2.5 text-pink-600 fill-current" />}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </>

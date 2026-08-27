@@ -3,12 +3,15 @@
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, CalendarClock, TrendingDown, TrendingUp } from 'lucide-react';
 import { PriceChangeDay } from '@/lib/price-changes';
-import { PriceAnalysis } from '@/lib/types';
+import { FPLElementType, FPLTeam } from '@/lib/types';
+import type { MarketRow } from '@/lib/market-row';
 
 interface PriceChangesProps {
   days: PriceChangeDay[];
   /** Used only to put a name and a club against an element id. */
-  analyses: PriceAnalysis[];
+  analyses: MarketRow[];
+  teams: FPLTeam[];
+  types: FPLElementType[];
 }
 
 /** A change that has been resolved to a player. */
@@ -48,14 +51,16 @@ function prettyDate(iso: string): string {
  * History starts at the second stored snapshot — one snapshot cannot be
  * diffed — so an empty state here is a real answer, not a failure.
  */
-export default function PriceChanges({ days, analyses }: PriceChangesProps) {
+export default function PriceChanges({ days, analyses, teams, types }: PriceChangesProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const lookup = useMemo(() => {
-    const map = new Map<number, PriceAnalysis>();
+    const map = new Map<number, MarketRow>();
     for (const a of analyses) map.set(a.elementId, a);
     return map;
   }, [analyses]);
+  const teamById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
+  const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
 
   const resolved = useMemo(
     () =>
@@ -65,8 +70,8 @@ export default function PriceChanges({ days, analyses }: PriceChangesProps) {
           return {
             id: c.id,
             name: player?.webName ?? `#${c.id}`,
-            club: player?.team.short_name ?? '',
-            position: player?.elementType.singular_name_short ?? '',
+            club: player ? teamById.get(player.teamId)?.short_name ?? '' : '',
+            position: player ? typeById.get(player.typeId)?.singular_name_short ?? '' : '',
             from: c.from,
             to: c.to,
             delta: c.delta,
@@ -76,7 +81,7 @@ export default function PriceChanges({ days, analyses }: PriceChangesProps) {
         rows.sort((a, b) => b.delta - a.delta || Math.abs(b.delta) - Math.abs(a.delta));
         return { day, rows };
       }),
-    [days, lookup]
+    [days, lookup, teamById, typeById]
   );
 
   if (!days.length) {

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { PriceAnalysis } from '@/lib/types';
+import { FPLElementType, FPLTeam } from '@/lib/types';
+import type { MarketRow } from '@/lib/market-row';
 import { ArrowDown, ArrowUp, Leaf, Rocket, Search, Star, AlertCircle } from 'lucide-react';
 import { PriceChangeDay } from '@/lib/price-changes';
 import PriceChanges from './PriceChanges';
@@ -37,19 +38,39 @@ const SORT_CHIPS = [
   { field: 'netTransfers', label: 'Net' },
 ] as const;
 
+/**
+ * A market row with the club and position replaced by ids.
+ *
+ * `PriceAnalysis` embeds the whole FPLTeam and FPLElementType object, and this
+ * is a client component, so all 616 copies crossed the server/client boundary:
+ * 218KB of twenty clubs and 176KB of four positions, 61% of the page. The
+ * lookups travel once instead.
+ */
 interface PriceMarketTableProps {
-  analyses: PriceAnalysis[];
+  analyses: MarketRow[];
+  /** Twenty clubs, sent once. */
+  teams: FPLTeam[];
+  /** Four positions, sent once. */
+  types: FPLElementType[];
   /** Newest first. Empty until a second snapshot exists to diff against. */
   changeDays?: PriceChangeDay[];
   /** Whether each direction's threshold rests on observed changes yet. */
   confidence?: { riseFitted: boolean; fallFitted: boolean };
+  /** Rendered on the right of the tab row — the page's update-window card. */
+  aside?: React.ReactNode;
 }
 
 export default function PriceMarketTable({
   analyses,
+  teams,
+  types,
   changeDays = [],
   confidence = { riseFitted: false, fallFitted: false },
+  aside,
 }: PriceMarketTableProps) {
+  const teamById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
+  const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
+
   const [tab, setTab] = useState<'table' | 'past'>('table');
   const [search, setSearch] = useState('');
   // Status and position are separate so they combine; one shared value meant
@@ -76,8 +97,8 @@ export default function PriceMarketTable({
           const matchSearch =
             p.webName.toLowerCase().includes(q) ||
             p.fullName.toLowerCase().includes(q) ||
-            p.team.name.toLowerCase().includes(q) ||
-            p.team.short_name.toLowerCase().includes(q);
+            (teamById.get(p.teamId)?.name ?? '').toLowerCase().includes(q) ||
+            (teamById.get(p.teamId)?.short_name ?? '').toLowerCase().includes(q);
           if (!matchSearch) return false;
         }
 
@@ -88,7 +109,7 @@ export default function PriceMarketTable({
           return false;
         if (statusFilter === 'critical_fallers' && p.status !== 'falling_soon') return false;
 
-        if (positionFilter !== 'all' && p.elementType.id !== POSITION_IDS[positionFilter])
+        if (positionFilter !== 'all' && p.typeId !== POSITION_IDS[positionFilter])
           return false;
 
         if (watchOnly && !watchIds.has(p.elementId)) return false;
@@ -101,7 +122,7 @@ export default function PriceMarketTable({
         if (valA === valB) return 0;
         return sortAsc ? (valA > valB ? 1 : -1) : valA < valB ? 1 : -1;
       });
-  }, [analyses, search, statusFilter, positionFilter, sortField, sortAsc, watchOnly, watchIds]);
+  }, [analyses, search, statusFilter, positionFilter, sortField, sortAsc, watchOnly, watchIds, teamById]);
 
   const visibleRows = filteredData.slice(0, 100);
 
@@ -163,7 +184,8 @@ export default function PriceMarketTable({
           tonight; everything under "Past" is a record of what already
           happened. Mixing them would make a player who has risen look like one
           about to. */}
-      <div className="flex items-center gap-1 mb-4 p-1 rounded-full bg-gray-100 w-fit">
+      <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="flex items-center gap-1 p-1 rounded-full bg-gray-100 w-fit">
         {([
           ['table', 'Table'],
           ['past', 'Past'],
@@ -183,9 +205,11 @@ export default function PriceMarketTable({
           </button>
         ))}
       </div>
+        {aside}
+      </div>
 
       {tab === 'past' ? (
-        <PriceChanges days={changeDays} analyses={analyses} />
+        <PriceChanges days={changeDays} analyses={analyses} teams={teams} types={types} />
       ) : (
       <>
       {/* Summary cards — each is also the filter for its own status */}
@@ -386,6 +410,8 @@ export default function PriceMarketTable({
               {visibleRows.map((player) => {
                 const inSquad = squadIds.has(player.elementId);
                 const watched = watchIds.has(player.elementId);
+                const club = teamById.get(player.teamId);
+                const type = typeById.get(player.typeId);
                 const tonight =
                   player.status === 'rising_soon' || player.status === 'falling_soon'
                     ? STATUS_META[player.status]
@@ -456,8 +482,8 @@ export default function PriceMarketTable({
                     <td className="px-2 py-2.5">
                       <div className="flex items-start gap-2">
                         <PlayerJersey
-                          teamCode={player.team.code}
-                          isGkp={player.elementType.id === 1}
+                          teamCode={club?.code ?? 0}
+                          isGkp={player.typeId === 1}
                           className="w-7 h-7 shrink-0 mt-0.5"
                         />
                         <div className="min-w-0">
@@ -465,11 +491,9 @@ export default function PriceMarketTable({
                             <div className="font-bold text-[13px] text-[#111318] group-hover:text-purple-700 transition truncate">
                               {player.webName}
                             </div>
-                            {inSquad && (
-                              <span className="px-1.5 py-0.5 rounded-full bg-sky-500 text-white text-[9px] font-black shrink-0">
-                                MY TEAM
-                              </span>
-                            )}
+                            {/* No "MY TEAM" chip: the row already carries a
+                                blue tint for it, and a badge on the narrowest
+                                column was spending width to repeat that. */}
                             {watched && (
                               <Star className="w-3 h-3 text-pink-500 fill-current shrink-0" />
                             )}
@@ -496,11 +520,11 @@ export default function PriceMarketTable({
                               name — the club as its short code, since the full
                               name is what pushed this column wide. */}
                           <div className="text-[10px] text-gray-500 font-semibold truncate">
-                            {player.elementType.singular_name_short}{' '}
+                            {type?.singular_name_short ?? ''}{' '}
                             <span className="font-mono text-[#111318] font-bold">
                               £{player.currentCost.toFixed(1)}
                             </span>{' '}
-                            {player.team.short_name}
+                            {club?.short_name ?? ''}
                           </div>
                           <AvailabilityChip
                             chance={player.chanceOfPlaying}

@@ -1,4 +1,5 @@
 import React from 'react';
+import { unstable_cache } from 'next/cache';
 import Link from 'next/link';
 import { Brain, Users, Database, AlertCircle, Target } from 'lucide-react';
 import { fetchFPLBootstrap } from '@/lib/fpl-api';
@@ -20,6 +21,38 @@ import { getLLMConfig } from '@/lib/openai';
 import { getTelegramConfig } from '@/lib/telegram';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * The forecast pipeline, memoised per season and gameweek.
+ *
+ * `unstable_cache` rather than a page-level revalidate: the rest of the page
+ * (stored gameweeks, cohort, accuracy) is cheap and should stay live, and this
+ * one call was the entire cost.
+ */
+const cachedForecast = (bootstrap: any, season: string, target: number) =>
+  unstable_cache(
+    async () => {
+      const inputs = await loadFeatureInputs(bootstrap, season, target, { includeElite: false });
+      const features = buildFeatures(inputs, { includeElite: false });
+      const result = forecast(features, {
+        fixtures: inputs.fixtures,
+        teams: bootstrap.teams,
+        scoring: bootstrap.scoring,
+        calibration: inputs.calibration,
+      });
+      return {
+        result,
+        calibration: inputs.calibration
+          ? {
+              sourceGameweeks: inputs.calibration.sourceGameweeks,
+              notes: inputs.calibration.notes,
+            }
+          : null,
+      };
+    },
+    ['analyst-forecast', season, String(target)],
+    { revalidate: 900, tags: ['analyst-forecast'] }
+  )();
 
 /**
  * A separate page rather than new columns on the existing ones.
@@ -71,14 +104,12 @@ export default async function AnalystPage() {
         .then((c) => c.teamId || undefined)
         .catch(() => undefined);
 
-      const inputs = await loadFeatureInputs(bootstrap, season, target, { includeElite: false });
-      const features = buildFeatures(inputs, { includeElite: false });
-      const result = forecast(features, {
-        fixtures: inputs.fixtures,
-        teams: bootstrap.teams,
-        scoring: bootstrap.scoring,
-        calibration: inputs.calibration,
-      });
+      // Six Firestore reads, a feature build and a forecast over ~600 players,
+      // to render a page whose inputs change once a night. That was 2.7s on
+      // every navigation. Cached for fifteen minutes and keyed by season and
+      // target gameweek, so a new gameweek or a cron run is picked up on its
+      // own without the page recomputing for every visitor.
+      const { result, calibration } = await cachedForecast(bootstrap, season, target);
 
       // Weighted across every scored gameweek, and drawn from `as_published`
       // where it exists — the forecast the app really showed, rather than the
@@ -200,14 +231,7 @@ export default async function AnalystPage() {
             rows={rows}
             qualityFlags={result.qualityFlags}
             gameweek={target}
-            calibration={
-              inputs.calibration
-                ? {
-                    sourceGameweeks: inputs.calibration.sourceGameweeks,
-                    notes: inputs.calibration.notes,
-                  }
-                : null
-            }
+            calibration={calibration}
           />
         </>
       );

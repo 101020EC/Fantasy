@@ -7,14 +7,21 @@ import { ThresholdObservation } from './price-changes';
  * original bug. Measured against livefpl's published progress on 2026-08-27,
  * over 17 players spanning 0.0%-43% ownership:
  *
- *   RISES are a CONSTANT.  Ownership spanned 17x; the implied threshold spanned
- *   1.27x (194k-246k, median 216,647 = 2.21% of `total_players`). Mechanically
- *   obvious once seen: **anyone can buy a player**, so the pool that has to move
- *   is every manager in the game, not the ones who already own him.
+ *   RISES are a CONSTANT.  Over 27 samples the implied threshold has a
+ *   coefficient of variation of 20% treated as a flat number and 76% treated as
+ *   ownership-scaled. Median 2.237% of `total_players`, stable to three decimal
+ *   places across every band tested. Mechanically obvious once seen: **anyone
+ *   can buy a player**, so the pool that has to move is every manager in the
+ *   game, not the ones who already own him.
  *
- *   FALLS scale with OWNERSHIP.  Six of seven clean samples landed within 3% of
- *   ~19,000 net per 1% owned - roughly a fifth of that player's owners. Also
- *   mechanical: **only an owner can sell.**
+ *   FALLS scale with OWNERSHIP.  Over 110 samples, CV 183% flat against 38%
+ *   ownership-scaled. Also mechanical: **only an owner can sell.**
+ *
+ * The fall constant is fitted to the players nearest the line rather than to
+ * livefpl's headline count. Tuning it to reproduce the count (~26,000) drops
+ * Anderson and Hincapie, who the measured value scores at -106% against their
+ * published -106.8% and -105.6%: it produces the right number of the wrong
+ * players. Missing a real fall costs money; an extra name costs a second look.
  *
  * The old single ownership-proportional divisor was therefore the wrong shape
  * for rises and the right shape with the wrong constant for falls. It reported
@@ -38,10 +45,10 @@ const MIN_SAMPLES = 6;
  * Stored as a fraction rather than a raw count so it tracks the player base as
  * it grows through the season instead of ageing into a stale number.
  */
-export const DEFAULT_RISE_FRACTION = 0.0221;
+export const DEFAULT_RISE_FRACTION = 0.02237;
 
 /** Fall threshold per 1% of ownership. */
-export const DEFAULT_FALL_PER_PCT = 19_071;
+export const DEFAULT_FALL_PER_PCT = 19_229;
 
 /**
  * Minimum fall threshold, regardless of ownership.

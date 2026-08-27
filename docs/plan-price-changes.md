@@ -531,3 +531,192 @@ Falls remain the weak half at 28.5 points, driven by Bruno G. (-220 vs -102.5)
 and Madueke (-36 vs -93.6) - the same per-player variation that made two players
 at identical ownership imply different thresholds. The market table now says so
 in as many words rather than presenting both directions with equal confidence.
+
+---
+
+# ROUND 2 - UI, falls, and performance (2026-08-27, late)
+
+## Measured page timings on PRODUCTION (logged in, cache-busted, two passes)
+
+```
+/analyst        2,677 ms   135 KB
+/prices         1,389 ms   531 KB   <-- payload
+/status           899 ms    25 KB
+/team/2792350     718 ms   108 KB
+/                  85 ms    12 KB   (client shell, already fast)
+```
+
+Pass 1 and pass 2 are identical on every server-rendered route, so nothing is
+being cached between requests - every navigation pays the full cost.
+
+## Cause of the /prices payload: the same 24 objects, 616 times
+
+```
+analyses total                     648 KB  (616 players)
+  .team          364 bytes x616 =  218 KB   <-- 20 distinct clubs
+  .elementType   294 bytes x616 =  176 KB   <-- 4 distinct positions
+with team/elementType as ids       252 KB   (-396 KB, 61%)
+as positional arrays                38 KB
+```
+
+`PriceAnalysis` embeds the whole `FPLTeam` and `FPLElementType` object in every
+row, and `PriceMarketTable` is a client component, so all 616 copies cross the
+server/client boundary. Sixty-one percent of the page is twenty clubs and four
+positions, repeated.
+
+The market page needs every player client-side for search, filter and sort, so
+sending 616 rows is right. Sending 616 copies of "Arsenal" is not.
+
+## Cause of /analyst at 2.7s
+
+It runs the full pipeline on every request - `loadFeatureInputs` (six Firestore
+reads) then `buildFeatures` then `forecast` over ~600 players - to render a page
+whose inputs change once a day. The forecast for the target gameweek is already
+written to `forecasts/{season}/gameweeks/gw_n` by the nightly cron.
+
+## Firestore round trips (dev, measured)
+
+```
+market .select() ids only     427 ms   (1 document)
+read one full market doc      108 ms   (41 KB)
+priceThresholds doc            75 ms
+listPriceChangeDays(30)        45 ms
+```
+
+The fixed cost of a round trip dominates; `loadPriceContext` caches baselines
+for 15 minutes but `readPriceThresholds` runs uncached on every request.
+
+## Decision 12 - Team page warning names the players  (ACCEPTED)
+
+The badge gives a count and nothing else, and the team page does not load the
+watchlist at all (`grep watch` over TeamPitchTopBar.tsx and team/[id]/page.tsx
+returns nothing), so a watchlisted player about to rise is invisible on the page
+where you would act on it.
+
+- Read `watchlists/{teamId}` on the team page - one small document.
+- Under the badges, a compact line naming who is moving, squad and watchlist
+  together, with the watchlist entries marked by the star already used elsewhere.
+
+## Falls: three attempts, and the honest conclusion
+
+Our 15 `falling_soon` against livefpl's 5 tonight. The extras are NOT
+low-ownership noise - they span 0.5% to 13.7% and only one is under 1%.
+
+Attempt 1 - tune the constant. Raising `fallPerPercent` to ~32,000 does match the
+count, but Anderson (6.3%) and Hincapie (1.5%) - both confirmed falling tonight
+by livefpl - drop to -63%. It trades false positives for false negatives.
+
+Attempt 2 - measure the implied per-player constant. At essentially identical
+ownership the values differ by 2.5x: Hincapie 1.5% implies 19,216 per 1% while
+Doku 1.4% implies over 48,700. No single constant can satisfy both.
+
+Attempt 3 - use ownership at the START of the counting window rather than now,
+reconstructed as `own_now - net/total_players*100`. A heavily-sold player has
+already shrunk, so current ownership makes the divisor too small. This is a real
+improvement in consistency - the spread in the implied constant falls from 42%
+to 31% - but the count stays at 13 and the mean error rises to 36.6.
+
+**The ordering is what is broken, not the scale.** Our biggest faller is Spence
+at -300%; livefpl does not have him in their top ten at all. No threshold fixes
+a wrong ordering, and the fitter can only ever correct the scale of a shape -
+so more observations will not rescue this the way they will rescue rises.
+
+livefpl polls hourly and has years of per-player counter state. We poll daily and
+have five days. That gap is the finding.
+
+## Refit on 176 livefpl points (27 risers, 110 fallers, 2026-08-27)
+
+Collected the full risers and fallers tables from livefpl (40 rows/page, three
+pages each) and inverted the published progress against FPL's bootstrap, after
+dropping every player whose price has already moved this season - their counter
+has been reset while `transfers_in_event` kept counting, so our net is not
+comparable for them.
+
+**The shapes are now confirmed, not inferred.** Coefficient of variation of the
+implied threshold under each model:
+
+| | as a constant | scaled by ownership |
+|---|---|---|
+| RISES (27 pts) | **CV 20%** | CV 76% |
+| FALLS (110 pts) | CV 183% | **CV 38%** |
+
+Rises are flat, falls scale with ownership. Neither is close.
+
+An independent confirmation fell out of the same data: the players our old
+formula ranked at 300% - Sangare, De Cuyper, Joao Pedro, Kayode, Mendy - all sit
+at 1-11% on livefpl, because they have already risen and their counters reset.
+That is exactly what `findTransferBaselines` corrects.
+
+Rise constant, stable across every band: **2.237% of `total_players`**
+(2.212% from |pct|>=50, 2.240% from >=30). MAE 4.4 points, count exact.
+
+## The fall trade-off, stated plainly
+
+Fitting the fall constant to the players nearest the line gives ~19,200 per 1%.
+Fitting it to reproduce livefpl's *count* gives ~26,000. They cannot both hold:
+
+| fall constant | flagged | of livefpl's 5 real fallers |
+|---|---|---|
+| 19,229 (measured at the line) | 13 | **4 caught** |
+| 21,022 (measured over all 110) | 8 | 2 caught |
+| 26,000 (tuned to match the count) | **5** | **2 caught** |
+
+Raising the constant to match the count does not swap false positives for
+accuracy - it drops Anderson and Hincapie, whom the measured constant scores at
+-106% against livefpl's -106.8% and -105.6%, near-perfectly. Tuning to the count
+produces the right number of the wrong players.
+
+The residual is not ownership. Players we overestimate span 0.5%-13.7% and the
+ratio to livefpl runs 1.8x-2.8x with no ownership pattern, while Anderson (6.2%)
+and Hincapie (1.5%) are dead on. Something per-player and unobservable in the
+public API is setting each player's line.
+
+## Decision 13 - Fall constant: recall over count  (ACCEPTED)
+
+**Keep the measured constant (~19,229 per 1% owned) and accept 13 flagged.**
+
+Missing a player who really does fall costs you real money - you sell late.
+Seeing three extra names costs you nothing but a second look. The asymmetry
+decides it, and tuning to the count would drop Anderson and Hincapie, whom the
+measured constant scores at -106% against livefpl's -106.8% and -105.6%.
+
+Rise fraction updated 0.0221 -> **0.02237**, now measured on 27 points across
+four bands rather than nine.
+
+## Decision 14 - Round 2 UI and performance  (IMPLEMENTED)
+
+1. **"MY TEAM" chip removed** - the row already carries a blue tint, and the
+   badge spent width in the narrowest column to repeat it.
+2. **Team page names the movers.** A line under the badges lists squad and
+   watchlist players that are moving, green for rises, red for falls, watchlist
+   marked with the star used elsewhere. `lib/watchlist.ts` reads
+   `watchlists/{teamId}` server-side - the page did not load it at all before.
+3. **Team gameweek chips follow the week being played.** They were built from
+   the squad's gameweek, which is the week that has just ended, so after GW1 they
+   offered GW1 and GW2 instead of GW2 and GW3. New `liveGw` prop, resolved the
+   same way as Decision 6, kept separate from the squad's own `activeGw`.
+4. **Market header regrouped**: title tight to the top, tab switcher and the
+   update-window card sharing the row below it. The card is passed into
+   PriceMarketTable as `aside` because the tabs live inside that client
+   component.
+5. **Falls: measured constant kept** (Decision 13).
+6. **Performance.**
+
+```
+                          before      after
+market payload            648 KB     144 KB   (-78%)
+  rows                    648 KB     136 KB
+  clubs + positions        394 KB       8 KB   sent once, not 616 times
+/analyst render          2,677 ms     ~cached  unstable_cache, 15 min
+```
+
+`lib/market-row.ts` now owns the row contract: exactly ten fields plus two ids.
+`PriceAnalysis` also carries baselines, raw transfer counts and threshold
+provenance that the table never reads, ~14KB each across 616 rows.
+
+**A bug this caught that types did not.** `MARKET_ROW_FIELDS` was first exported
+from the `'use client'` table module. `tsc` and `next build` both passed, and the
+page threw `MARKET_ROW_FIELDS is not iterable` at runtime: a *value* imported
+from a client module into a server component arrives as a client reference, not
+the array. Types cross that boundary, constants do not - which is why the
+contract now lives in `lib/`.

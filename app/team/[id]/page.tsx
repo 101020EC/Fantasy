@@ -17,6 +17,8 @@ import GlobalLeaguesCard from '@/components/team/GlobalLeaguesCard';
 import TeamSaveTracker from './TeamSaveTracker';
 import { AlertCircle, Search } from 'lucide-react';
 import { seasonKey } from '@/lib/analyst';
+import { readWatchlist } from '@/lib/watchlist';
+import { analyzePlayerPrice } from '@/lib/price-calculator';
 import { loadPriceContext } from '@/lib/price-changes-store';
 
 export const dynamic = 'force-dynamic';
@@ -44,6 +46,15 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       bootstrap.events[0];
 
     const currentGwNum = currentEvent?.id || 1;
+
+    // The gameweek being PLAYED, as opposed to the one the squad is stored
+    // under. FPL keeps `is_current` on a finished gameweek until the next
+    // deadline, so reading it alone left the chips offering a week that had
+    // already ended.
+    const liveGw =
+      bootstrap.events.find((e) => e.is_current && !e.finished)?.id ||
+      bootstrap.events.find((e) => e.is_next)?.id ||
+      currentGwNum;
     const parsedGw = queryGw ? parseInt(queryGw, 10) : NaN;
     const initialGw =
       Number.isFinite(parsedGw) && parsedGw >= 1 && parsedGw <= 38
@@ -87,6 +98,10 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
     // Same price context the market page uses, so a player cannot read
     // "Rising Tonight" on one page and "Trending Up" on the other.
     const priceContext = await loadPriceContext(seasonKey(bootstrap)).catch(() => ({}));
+
+    // Watchlisted players move too, and this is the page you would act on it
+    // from. One small document.
+    const watchIds = await readWatchlist(id).catch((): number[] => []);
     const squadPlayers = buildSquadPlayers(
       picksData.picks || [],
       bootstrap,
@@ -94,6 +109,22 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       fixtureGw,
       priceContext
     );
+
+    // Watchlisted players that are moving, resolved to names. A count alone
+    // told you something was happening without telling you to whom, and the
+    // watchlist was not consulted here at all.
+    const squadIds = new Set(squadPlayers.map((p) => p.element.id));
+    const teamMap = new Map(bootstrap.teams.map((t) => [t.id, t]));
+    const watchMovers = watchIds
+      .filter((wid) => !squadIds.has(wid))
+      .map((wid) => bootstrap.elements.find((el) => el.id === wid))
+      .filter((el): el is NonNullable<typeof el> => Boolean(el))
+      .map((el) => ({
+        name: el.web_name,
+        club: teamMap.get(el.team)?.short_name ?? '',
+        status: analyzePlayerPrice(el, bootstrap, priceContext).status,
+      }))
+      .filter((p) => p.status !== 'stable');
 
     return (
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
@@ -110,6 +141,8 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
           gameweek={activeGw}
           fixtureGw={fixtureGw}
           players={squadPlayers}
+          liveGw={liveGw}
+          watchMovers={watchMovers}
           activeChip={picksData?.active_chip}
         />
 

@@ -4,14 +4,35 @@ import { getAllMarketPriceAnalyses } from '@/lib/price-calculator';
 import { seasonKey } from '@/lib/analyst';
 import { listPriceChangeDays, loadPriceContext } from '@/lib/price-changes-store';
 import { PriceChangeDay } from '@/lib/price-changes';
-import { PriceAnalysis } from '@/lib/types';
+import { FPLElementType, FPLTeam } from '@/lib/types';
 import PriceMarketTable from '@/components/prices/PriceMarketTable';
+import { MarketRow, toMarketRow } from '@/lib/market-row';
 import { Clock, AlertCircle } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
+/** The nightly change window, in the timezone this is read in. */
+function UpdateWindow() {
+  return (
+    <div className="px-3 py-1.5 rounded-2xl bg-white border border-black/5 flex items-center gap-2 text-xs shadow-sm shrink-0">
+      <div className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold shrink-0">
+        <Clock className="w-3.5 h-3.5" />
+      </div>
+      <div className="leading-tight">
+        <span className="font-black text-[#111318] block text-[10px] sm:text-xs">Update Window</span>
+        <span className="block text-[10px] sm:text-xs font-bold text-[#38003c]">
+          08:30 - 09:30 Bangkok
+        </span>
+        <span className="block text-gray-400 text-[9px] sm:text-[10px]">01:30 - 02:30 UTC</span>
+      </div>
+    </div>
+  );
+}
+
 export default async function PricesPage() {
-  let analyses: PriceAnalysis[] = [];
+  let analyses: MarketRow[] = [];
+  let teams: FPLTeam[] = [];
+  let types: FPLElementType[] = [];
   let currentEventName = '';
   let errorMsg: string | null = null;
   let changeDays: PriceChangeDay[] = [];
@@ -24,7 +45,12 @@ export default async function PricesPage() {
     // degrade to the old behaviour if Firestore is unreachable, so a database
     // problem costs accuracy rather than the page.
     const context = await loadPriceContext(seasonKey(bootstrap)).catch(() => ({}));
-    analyses = getAllMarketPriceAnalyses(bootstrap, context);
+    // Club and position travel once each, not once per player. Embedding them
+    // in every row cost 394KB of the page — twenty clubs and four positions,
+    // repeated 616 times.
+    teams = bootstrap.teams;
+    types = bootstrap.element_types;
+    analyses = getAllMarketPriceAnalyses(bootstrap, context).map(toMarketRow);
     const t = 'thresholds' in context ? context.thresholds : null;
     confidence = { riseFitted: Boolean(t?.riseFitted), fallFitted: Boolean(t?.fallFitted) };
 
@@ -48,9 +74,11 @@ export default async function PricesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
-      {/* Top Header: Price Change on Left + Change Time on Right */}
-      <div className="flex items-center justify-between gap-3 mb-4 pb-1">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 pt-2 pb-4 sm:pt-3 sm:pb-6">
+      {/* Title row sits tight to the top; the tab switcher renders on the row
+          below it, inside PriceMarketTable, with the update window holding the
+          right-hand side of both. */}
+      <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex items-center gap-2 sm:gap-3">
           <h1 className="text-2xl sm:text-4xl font-black text-[#111318] tracking-tight">
             Price Change
@@ -61,22 +89,6 @@ export default async function PricesPage() {
             </span>
           )}
         </div>
-
-        {/* Change Time Box on the Right */}
-        <div className="px-3.5 py-2 rounded-2xl bg-white border border-black/5 flex items-center gap-2 text-xs shadow-sm shrink-0">
-          <div className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold">
-            <Clock className="w-3.5 h-3.5" />
-          </div>
-          <div className="leading-tight">
-            <span className="font-black text-[#111318] block text-[11px] sm:text-xs">Update Window</span>
-            <span className="block text-[11px] sm:text-xs font-bold text-[#38003c]">
-              08:30 - 09:30 Bangkok
-            </span>
-            <span className="block text-gray-400 text-[9px] sm:text-[10px]">
-              01:30 - 02:30 UTC
-            </span>
-          </div>
-        </div>
       </div>
 
       {errorMsg ? (
@@ -85,7 +97,14 @@ export default async function PricesPage() {
           <p className="font-bold text-base">{errorMsg}</p>
         </div>
       ) : (
-        <PriceMarketTable analyses={analyses} changeDays={changeDays} confidence={confidence} />
+        <PriceMarketTable
+          analyses={analyses}
+          teams={teams}
+          types={types}
+          changeDays={changeDays}
+          confidence={confidence}
+          aside={<UpdateWindow />}
+        />
       )}
     </div>
   );
