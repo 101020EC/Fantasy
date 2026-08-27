@@ -56,10 +56,12 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       bootstrap.events.find((e) => e.is_next)?.id ||
       currentGwNum;
     const parsedGw = queryGw ? parseInt(queryGw, 10) : NaN;
+    // Open on the gameweek being played, not the last one with points. The
+    // chips offer `liveGw` and the one after it, so defaulting to the scored
+    // week left the page sitting on a gameweek the chips no longer showed —
+    // and therefore with no chip highlighted at all.
     const initialGw =
-      Number.isFinite(parsedGw) && parsedGw >= 1 && parsedGw <= 38
-        ? parsedGw
-        : entry.current_event || currentGwNum;
+      Number.isFinite(parsedGw) && parsedGw >= 1 && parsedGw <= 38 ? parsedGw : liveGw;
 
     // Which gameweek's fixtures to show. A future gameweek has no squad yet —
     // its deadline has not passed — so the squad falls back while the fixture
@@ -67,10 +69,13 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
     // squad plays next, not for a squad that does not exist.
     const fixtureGw = initialGw;
 
-    let activeGw = initialGw;
+    // Start from the last gameweek that actually has picks. Asking for the
+    // upcoming one first would spend a guaranteed 404 on every page load, since
+    // its deadline has not passed; the walk-back below stays for the cases the
+    // entry itself is behind.
+    let activeGw = Math.min(initialGw, entry.current_event || initialGw);
     let picksData: FPLPicksResponse | null = null;
 
-    // Try fetching the requested GW, fallback to previous GWs if deadline not passed yet
     try {
       picksData = await fetchFPLPicks(id, activeGw);
     } catch {

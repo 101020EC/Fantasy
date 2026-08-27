@@ -720,3 +720,59 @@ page threw `MARKET_ROW_FIELDS is not iterable` at runtime: a *value* imported
 from a client module into a server component arrives as a client reference, not
 the array. Types cross that boundary, constants do not - which is why the
 contract now lives in `lib/`.
+
+---
+
+# ROUND 3 (2026-08-27, night)
+
+## Decision 15 - Team page opens on the upcoming gameweek  (ACCEPTED)
+
+`initialGw` defaulted to `entry.current_event`, the last gameweek with points -
+GW1. The chips offer GW2 and GW3 (Decision 14), and `isShown` compares against
+that default, so **no chip was highlighted at all**: the page opened on a
+gameweek that was no longer offered. Default to the gameweek being played.
+
+Picks are still fetched for the last gameweek that HAS them, rather than letting
+the existing walk-back discover it: starting the fetch at GW2 would spend a
+guaranteed 404 on every single team page load, which fights Decision 17.
+
+## Decision 16 - Trending badges must not look like Tonight  (ACCEPTED)
+
+Not a data bug. Verified on production, both pages agree exactly: Tzolis is at
++67% and reads "Trending Up" on the market table and "1 Trending Up" on the team
+page. He is correctly absent from Rising Tonight, which starts at 100%.
+
+The confusion is the design's fault. The Trending badge is the same solid green
+in the same shape as the Tonight badge, differing by one word - and the mobile
+label collapses to "1 Up", which reads as the same thing. Two tiers that mean
+very different things should not look nearly identical.
+
+Tonight keeps the solid fill and the pulse. Trending becomes translucent with a
+border and no pulse - visibly the quieter statement.
+
+## Decision 17 - loading.tsx on every dynamic route  (ACCEPTED)
+
+Only `/team/[id]` had one. `/prices`, `/analyst` and `/status` are all
+`force-dynamic` with no loading boundary, so the App Router paints nothing until
+the server component resolves - the click appears to do nothing for 0.9 to 2.7
+seconds. That is exactly the reported symptom.
+
+A loading boundary also gives Next something to prefetch for a dynamic route, so
+the shell is already in the client cache by the time the link is clicked.
+
+## Round 3 verification
+
+- Team page now opens with **GW 2 highlighted**. Before, `initialGw` was GW1
+  while the chips offered GW2 and GW3, so `isShown` matched nothing and neither
+  chip was selected — a bug that was on screen and invisible.
+- Confirmed on production that the "1 Trending Up" report was NOT a data
+  mismatch: Tzolis is +67% and reads "Trending Up" on both pages, correctly
+  outside Rising Tonight, which starts at 100%.
+- All four dynamic routes now return a prefetchable **14KB skeleton** to an
+  `RSC`/`Next-Router-Prefetch` request. Previously only /team/[id] did; the
+  others had no loading boundary, so a click blocked on the full render.
+
+**Consequence worth naming:** opening on the upcoming gameweek makes the pitch
+default to fixtures rather than stats, because `FootballPitch` picks its mode
+from `isPreview` and a gameweek that has not kicked off has no points to show.
+Existing behaviour, newly reached by default. GW1's points are one chip away.

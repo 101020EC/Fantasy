@@ -94,14 +94,25 @@ export default function TeamPitchTopBar({
       return rank(a.status) - rank(b.status);
     });
 
-  const badgeTone = (tone: 'rise' | 'fall', critical: boolean) =>
-    tone === 'rise'
-      ? critical
-        ? 'bg-emerald-600 hover:bg-emerald-700 animate-pulse-fall'
-        : 'bg-emerald-500/90 hover:bg-emerald-600'
-      : critical
-      ? 'bg-rose-600 hover:bg-rose-700 animate-pulse-fall'
-      : 'bg-rose-500/90 hover:bg-rose-600';
+  /**
+   * Tonight and Trending must not look alike.
+   *
+   * They were the same solid green in the same shape, one word apart — and the
+   * mobile label collapses to "Up", which reads as "rising tonight" however
+   * hard you squint. A player at 67% of the threshold is a different statement
+   * from one at 101%, so it gets a quieter one: translucent, outlined, no
+   * pulse. Only the tonight tier is allowed to shout.
+   */
+  const badgeTone = (tone: 'rise' | 'fall', critical: boolean) => {
+    if (!critical) {
+      return tone === 'rise'
+        ? 'bg-emerald-600/15 text-emerald-900 border-emerald-700/25 hover:bg-emerald-600/25'
+        : 'bg-rose-600/15 text-rose-900 border-rose-700/25 hover:bg-rose-600/25';
+    }
+    return tone === 'rise'
+      ? 'bg-emerald-600 text-white border-white/20 hover:bg-emerald-700 animate-pulse-fall'
+      : 'bg-rose-600 text-white border-white/20 hover:bg-rose-700 animate-pulse-fall';
+  };
 
   return (
     <>
@@ -204,10 +215,9 @@ export default function TeamPitchTopBar({
                   <Link
                     key={badge.status}
                     href="/prices"
-                    className={`relative overflow-hidden px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-white font-black text-xs sm:text-sm shadow-md transition active:scale-95 flex items-center gap-1.5 border border-white/20 ${badgeTone(
-                      badge.tone,
-                      totalCritical > 0
-                    )}`}
+                    className={`relative overflow-hidden px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition active:scale-95 flex items-center gap-1.5 border ${
+                      totalCritical > 0 ? 'shadow-md' : ''
+                    } ${badgeTone(badge.tone, totalCritical > 0)}`}
                     title={`${badge.count} ${meta.label}`}
                   >
                     <meta.Icon
