@@ -84,15 +84,29 @@ export default async function StatusPage() {
       });
 
       // ── Price changes ────────────────────────────────────────────────────
+      //
+      // "No diffs yet" is not evidence of a failure. The diff is written by the
+      // 01:00 UTC capture, so between shipping it and that job's next run there
+      // are legitimately snapshots and no changes. Only a diff that has fallen
+      // BEHIND the snapshots is a real signal, and saying otherwise sends the
+      // reader looking for a bug that is not there.
+      const lastChange = changeDates[changeDates.length - 1] ?? null;
+      const changeLag =
+        lastChange && last
+          ? Math.round((Date.parse(last) - Date.parse(lastChange)) / 86_400_000)
+          : null;
       checks.push({
         label: 'Price changes',
-        tone: changeDates.length ? 'ok' : snapshotDates.length < 2 ? 'idle' : 'warn',
+        tone: changeLag !== null && changeLag > 1 ? 'warn' : changeDates.length ? 'ok' : 'idle',
         value: changeDates.length ? `${changeDates.length} days computed` : 'none yet',
-        detail: changeDates.length
-          ? `History runs from ${changeDates[0]}. Shown on the Past tab of the market page.`
-          : snapshotDates.length < 2
-          ? 'Needs two snapshots to compare. Nothing is wrong — there is simply nothing to diff yet.'
-          : 'Snapshots exist but no diff has been written. The cron step may be failing.',
+        detail:
+          changeLag !== null && changeLag > 1
+            ? `Newest diff is ${lastChange} but the newest snapshot is ${last} — the diff step is falling behind.`
+            : changeDates.length
+            ? `History runs from ${changeDates[0]}. Shown on the Past tab of the market page.`
+            : snapshotDates.length < 2
+            ? 'Needs two snapshots to compare. Nothing is wrong — there is simply nothing to diff yet.'
+            : `${snapshotDates.length} snapshots are stored, so the first diffs appear with the next 01:00 UTC capture. If this is still empty after that, the step is failing.`,
       });
 
       // ── Target threshold ─────────────────────────────────────────────────
