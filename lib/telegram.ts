@@ -39,14 +39,20 @@ export async function sendTelegramMessage(
 
 /** Which kinds of alert the nightly job should send. */
 export interface AlertToggles {
-  /** Score at or beyond ±75 — a change expected in tonight's window. */
+  /** At or beyond ±100% of the threshold — a change expected tonight. */
   priceMoves: boolean;
-  /** ±35 and up: earlier warning, less certain. */
+  /** ±50% and up: earlier warning, less certain. */
   trends: boolean;
   /** A squad player picking up an injury flag. */
   injuries: boolean;
   /** Include watchlist players, not just the squad. */
   watchlist: boolean;
+  /**
+   * Report prices that have ALREADY changed, as well as ones predicted to.
+   * A completed change cannot be acted on, but it moves your team value and it
+   * makes a player you were saving for more or less affordable.
+   */
+  priceChanged: boolean;
   /** Hours before a squad deadline to start mentioning it. */
   deadlineHours: number;
 }
@@ -56,6 +62,7 @@ export const DEFAULT_ALERTS: AlertToggles = {
   trends: false,
   injuries: true,
   watchlist: true,
+  priceChanged: true,
   deadlineHours: 36,
 };
 

@@ -15,6 +15,7 @@ interface Alerts {
   trends: boolean;
   injuries: boolean;
   watchlist: boolean;
+  priceChanged: boolean;
   deadlineHours: number;
 }
 
@@ -33,6 +34,11 @@ const ALERT_ROWS: { key: keyof Alerts; label: string; hint: string }[] = [
   { key: 'trends', label: 'Early trends', hint: 'Sooner warning, less certain' },
   { key: 'injuries', label: 'Fitness news', hint: 'A squad player picking up a flag' },
   { key: 'watchlist', label: 'Include watchlist', hint: 'Not just your squad' },
+  {
+    key: 'priceChanged',
+    label: 'Prices that already changed',
+    hint: 'What FPL actually did overnight, not a prediction',
+  },
 ];
 
 export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSettingsModalProps) {
@@ -50,6 +56,7 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
     trends: false,
     injuries: true,
     watchlist: true,
+    priceChanged: true,
     deadlineHours: 36,
   });
 

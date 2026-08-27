@@ -1,6 +1,9 @@
 import React from 'react';
 import { fetchFPLBootstrap } from '@/lib/fpl-api';
 import { getAllMarketPriceAnalyses } from '@/lib/price-calculator';
+import { seasonKey } from '@/lib/analyst';
+import { listPriceChangeDays, loadPriceContext } from '@/lib/price-changes-store';
+import { PriceChangeDay } from '@/lib/price-changes';
 import { PriceAnalysis } from '@/lib/types';
 import PriceMarketTable from '@/components/prices/PriceMarketTable';
 import { Clock, AlertCircle } from 'lucide-react';
@@ -11,13 +14,33 @@ export default async function PricesPage() {
   let analyses: PriceAnalysis[] = [];
   let currentEventName = '';
   let errorMsg: string | null = null;
+  let changeDays: PriceChangeDay[] = [];
+  let estimated = true;
 
   try {
     const bootstrap = await fetchFPLBootstrap();
-    analyses = getAllMarketPriceAnalyses(bootstrap);
-    const currentEvent = bootstrap.events.find((e) => e.is_current) || bootstrap.events.find((e) => e.is_next);
-    if (currentEvent) {
-      currentEventName = currentEvent.name;
+
+    // Baselines and thresholds make the target percentage mean something. Both
+    // degrade to the old behaviour if Firestore is unreachable, so a database
+    // problem costs accuracy rather than the page.
+    const context = await loadPriceContext(seasonKey(bootstrap)).catch(() => ({}));
+    analyses = getAllMarketPriceAnalyses(bootstrap, context);
+    estimated = !('thresholds' in context && context.thresholds?.fitted);
+
+    // The Past tab. Only days with a computed diff exist, so an empty list is a
+    // real answer — there is no history before the second snapshot.
+    changeDays = await listPriceChangeDays(30).catch(() => []);
+
+    // The gameweek being played or about to be — not the last one with points.
+    // FPL keeps `is_current` on a finished gameweek until the next deadline, so
+    // reading it alone left this badge saying "Gameweek 1" for days after GW1
+    // had ended.
+    const activeEvent =
+      bootstrap.events.find((e) => e.is_current && !e.finished) ||
+      bootstrap.events.find((e) => e.is_next) ||
+      bootstrap.events.find((e) => e.is_current);
+    if (activeEvent) {
+      currentEventName = activeEvent.name;
     }
   } catch (err: any) {
     errorMsg = err.message || 'Unable to load price data from FPL API';
@@ -61,7 +84,7 @@ export default async function PricesPage() {
           <p className="font-bold text-base">{errorMsg}</p>
         </div>
       ) : (
-        <PriceMarketTable analyses={analyses} />
+        <PriceMarketTable analyses={analyses} changeDays={changeDays} estimated={estimated} />
       )}
     </div>
   );

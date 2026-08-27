@@ -4,7 +4,8 @@ import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FPLEntry, TeamSquadPlayer } from '@/lib/types';
-import { CheckCircle2, TrendingDown, TrendingUp, History } from 'lucide-react';
+import { CheckCircle2, History, TrendingUp } from 'lucide-react';
+import { STATUS_META } from '../prices/status-meta';
 
 interface TeamPitchTopBarProps {
   entry: FPLEntry;
@@ -33,6 +34,39 @@ export default function TeamPitchTopBar({
 
   const totalCritical = criticalFallers.length + criticalRisers.length;
   const totalLikely = likelyFallers.length + likelyRisers.length;
+
+  /**
+   * Badges, split by direction.
+   *
+   * This used to be a single rose-red "N Players at Risk!" with a downward
+   * arrow, shown even when every one of those players was about to RISE — which
+   * puts your team value up and is good news. Direction now decides the colour,
+   * the icon and the verb.
+   *
+   * The "tonight" tier leads; the trending tier is the fallback. A player only
+   * reaches 100% of the threshold on the night itself, by which point it is
+   * usually too late to act, so the 50-99% band has to stay visible.
+   */
+  const badges = (
+    totalCritical > 0
+      ? [
+          { count: criticalRisers.length, status: 'rising_soon' as const, tone: 'rise' as const },
+          { count: criticalFallers.length, status: 'falling_soon' as const, tone: 'fall' as const },
+        ]
+      : [
+          { count: likelyRisers.length, status: 'likely_riser' as const, tone: 'rise' as const },
+          { count: likelyFallers.length, status: 'likely_faller' as const, tone: 'fall' as const },
+        ]
+  ).filter((b) => b.count > 0);
+
+  const badgeTone = (tone: 'rise' | 'fall', critical: boolean) =>
+    tone === 'rise'
+      ? critical
+        ? 'bg-emerald-600 hover:bg-emerald-700 animate-pulse-fall'
+        : 'bg-emerald-500/90 hover:bg-emerald-600'
+      : critical
+      ? 'bg-rose-600 hover:bg-rose-700 animate-pulse-fall'
+      : 'bg-rose-500/90 hover:bg-rose-600';
 
   return (
     <>
@@ -117,8 +151,8 @@ export default function TeamPitchTopBar({
           </div>
 
           {/* Right Edge: Today Safe with Live Pulse */}
-          <div className="shrink-0">
-            {totalCritical === 0 && totalLikely === 0 ? (
+          <div className="shrink-0 flex items-center gap-2">
+            {badges.length === 0 ? (
               <div className="relative overflow-hidden px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl bg-emerald-500 text-white font-black text-xs sm:text-sm shadow-md flex items-center gap-2 border border-white/20">
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-100 opacity-85"></span>
@@ -128,22 +162,31 @@ export default function TeamPitchTopBar({
                 <span className="whitespace-nowrap">Today Safe</span>
               </div>
             ) : (
-              <Link
-                href="/prices"
-                className="relative overflow-hidden px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs sm:text-sm shadow-md transition active:scale-95 flex items-center gap-2 border border-white/20 animate-pulse-fall"
-                title="View Price Changes"
-              >
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-200 opacity-85"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
-                </span>
-                <TrendingDown className="w-4 h-4 stroke-[3]" />
-                <span className="whitespace-nowrap">
-                  {totalCritical > 0
-                    ? `${totalCritical} Players at Risk!`
-                    : `${totalLikely} Likely to Change`}
-                </span>
-              </Link>
+              badges.map((badge) => {
+                const meta = STATUS_META[badge.status];
+                return (
+                  <Link
+                    key={badge.status}
+                    href="/prices"
+                    className={`relative overflow-hidden px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl text-white font-black text-xs sm:text-sm shadow-md transition active:scale-95 flex items-center gap-1.5 border border-white/20 ${badgeTone(
+                      badge.tone,
+                      totalCritical > 0
+                    )}`}
+                    title={`${badge.count} ${meta.label}`}
+                  >
+                    <meta.Icon
+                      className={`w-4 h-4 stroke-[3] shrink-0 ${
+                        badge.status === 'falling_soon' ? 'rotate-[135deg]' : ''
+                      }`}
+                    />
+                    <span className="whitespace-nowrap">
+                      {badge.count}{' '}
+                      <span className="hidden sm:inline">{meta.label}</span>
+                      <span className="sm:hidden">{meta.short}</span>
+                    </span>
+                  </Link>
+                );
+              })
             )}
           </div>
         </div>

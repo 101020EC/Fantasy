@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X, Bell, Brain } from 'lucide-react';
+import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X, Bell, Brain, Activity } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import TelegramSettingsModal from './telegram/TelegramSettingsModal';
 import PremierLeagueLogo from './PremierLeagueLogo';
@@ -181,6 +181,18 @@ export default function Navbar() {
                     <Database className="w-4 h-4" />
                   </div>
                   <span>Back Up</span>
+                </Link>
+
+                {/* Status */}
+                <Link
+                  href="/status"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="w-full flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-slate-800 hover:bg-slate-50 transition text-left"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <span>Status</span>
                 </Link>
 
                 <div className="my-1 border-t border-black/5" />

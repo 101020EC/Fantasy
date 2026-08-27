@@ -12,7 +12,7 @@ import {
   TeamSquadPlayer,
   placeholderTeam,
 } from './types';
-import { analyzePlayerPrice } from './price-calculator';
+import { analyzePlayerPrice, PriceContext } from './price-calculator';
 
 const FPL_BASE = 'https://fantasy.premierleague.com/api';
 
@@ -183,7 +183,13 @@ export function buildSquadPlayers(
   picks: FPLPicksResponse['picks'] = [],
   bootstrap: FPLBootstrap,
   fixtures: FPLFixture[] = [],
-  currentEventId: number = 1
+  currentEventId: number = 1,
+  /**
+   * Baselines and fitted thresholds for the price score. Optional: without them
+   * every player falls back to a gameweek-start baseline and the unfitted
+   * threshold, which is what this did before they existed.
+   */
+  priceContext: PriceContext = {}
 ): TeamSquadPlayer[] {
   const elementMap = new Map(bootstrap.elements.map((el) => [el.id, el]));
   const teamMap = new Map(bootstrap.teams.map((t) => [t.id, t]));
@@ -238,7 +244,7 @@ export function buildSquadPlayers(
         element,
         team,
         elementType,
-        priceAnalysis: analyzePlayerPrice(element, bootstrap),
+        priceAnalysis: analyzePlayerPrice(element, bootstrap, priceContext),
         nextFixture,
         fixtures: playerFixtures,
       };

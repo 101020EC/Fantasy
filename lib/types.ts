@@ -190,10 +190,35 @@ export interface PriceAnalysis {
   costChangeEvent: number;
   transfersInEvent: number;
   transfersOutEvent: number;
+  /**
+   * Net transfers since this player's price last changed — the number FPL
+   * actually measures against the threshold. NOT the gameweek total: FPL resets
+   * a player's counter at every price change, while `transfers_in_event` resets
+   * only at the gameweek rollover.
+   */
   netTransfers: number;
+  /** The raw gameweek total, kept so the two can be told apart. */
+  netTransfersEvent: number;
+  /**
+   * Snapshot date the baseline came from, or null when the player has not
+   * changed price this gameweek and the gameweek start is the correct baseline.
+   */
+  baselineSince: string | null;
   selectedByPercent: number;
   status: PriceStatus;
-  changeScore: number; // -100 to +100 index estimate
+  /**
+   * Progress toward the price change, as a percentage of the threshold.
+   * 100 means a change is expected in tonight's window. Signed: negative is
+   * progress toward a fall. Can exceed 100 — a player well past the threshold
+   * is a different situation from one that just reached it.
+   */
+  changeScore: number;
+  /**
+   * True while the threshold behind `changeScore` is the unfitted formula
+   * rather than one fitted to observed changes. The UI must not present an
+   * estimate as a measurement.
+   */
+  targetEstimated: boolean;
   news: string;
   /** FPL's own 0/25/50/75 estimate; always sent alongside a flag. */
   chanceOfPlaying: number | null;

@@ -1,4 +1,6 @@
 import { FPLBootstrap, FPLElement, FPLElementType, FPLTeam, PriceAnalysis, PriceStatus, placeholderTeam } from './types';
+import { TransferBaseline } from './price-changes';
+import { PriceThresholds, thresholdFor } from './price-thresholds';
 
 const FALLBACK_TEAM: FPLTeam = placeholderTeam();
 const FALLBACK_TYPE: FPLElementType = {
@@ -22,14 +24,56 @@ function buildLookups(bootstrap: FPLBootstrap): Lookups {
 }
 
 /**
- * Calculates price change trends, prediction score, and alert status for FPL players
- * based on net transfer volume, ownership percentage, and injury flags.
+ * Context the caller can supply to make the score accurate. Both are optional
+ * and both degrade to the old behaviour when absent, so a page that has not
+ * loaded Firestore still renders a sensible table.
+ */
+export interface PriceContext {
+  /** Where each player's counter was last reset, from findTransferBaselines(). */
+  baselines?: Map<number, TransferBaseline> | null;
+  /** Thresholds fitted from observed changes, if any have been observed. */
+  thresholds?: PriceThresholds | null;
+  lookups?: Lookups;
+}
+
+/**
+ * `rising_soon` / `falling_soon` at 100% of the threshold, the trending tiers
+ * at half of it. 100 is the real line — a player at 100% is expected to move in
+ * tonight's window — so the tiers are anchored to it rather than to an
+ * arbitrary point on a clamped index.
+ */
+const TONIGHT = 100;
+const TRENDING = 50;
+
+/** Beyond this the exact figure stops meaning anything; only the sign does. */
+const SCORE_CAP = 300;
+
+/**
+ * Progress toward a price change, as a percentage of FPL's threshold.
+ *
+ * Two things make this different from a naive net-transfers score, and both
+ * were wrong before:
+ *
+ * 1. **The counter resets at every price change.** `transfers_in_event` resets
+ *    only at the gameweek rollover, so a player who rose on Monday carried the
+ *    transfers that caused the rise for the rest of the week and stayed pinned
+ *    at the top of the table. `baselines` subtracts them.
+ * 2. **The threshold is measurable.** It used to be a formula nobody had ever
+ *    checked against a real change. `thresholds` carries one fitted to the
+ *    changes we have actually observed, and falls back to that formula while
+ *    the sample is too small.
  */
 export function analyzePlayerPrice(
   element: FPLElement,
   bootstrap: FPLBootstrap,
-  lookups: Lookups = buildLookups(bootstrap)
+  context: PriceContext | Lookups = {}
 ): PriceAnalysis {
+  // Callers used to pass a bare Lookups as the third argument. Both shapes are
+  // accepted so every existing call site keeps working untouched.
+  const ctx: PriceContext =
+    'teams' in context && 'types' in context ? { lookups: context as Lookups } : (context as PriceContext);
+  const lookups = ctx.lookups ?? buildLookups(bootstrap);
+
   const team = lookups.teams.get(element.team) || { ...FALLBACK_TEAM, id: element.team };
   const elementType = lookups.types.get(element.element_type) || {
     ...FALLBACK_TYPE,
@@ -37,14 +81,23 @@ export function analyzePlayerPrice(
   };
 
   const currentCost = element.now_cost / 10;
-  const netTransfers = element.transfers_in_event - element.transfers_out_event;
   const ownership = parseFloat(element.selected_by_percent) || 1.0;
 
-  // Transfer threshold formula estimate:
-  // In FPL, price rise target is roughly proportional to ownership and active base
-  // High net transfers in / out relative to ownership drives changes.
-  const baselineThreshold = Math.max(25000, ownership * 12000);
-  let rawScore = (netTransfers / baselineThreshold) * 100;
+  const netTransfersEvent = element.transfers_in_event - element.transfers_out_event;
+
+  // Absent baselines mean "we have no snapshot history yet", which is the same
+  // answer as "this player has not changed price this gameweek": zero. That is
+  // correct for most of the table for most of a gameweek, so the fix is useful
+  // from the first day even with no stored history at all.
+  const baseline = ctx.baselines?.get(element.id) ?? null;
+  const netTransfers =
+    element.transfers_in_event -
+    (baseline?.transfersIn ?? 0) -
+    (element.transfers_out_event - (baseline?.transfersOut ?? 0));
+
+  const direction: 'rise' | 'fall' = netTransfers >= 0 ? 'rise' : 'fall';
+  const threshold = thresholdFor(ownership, direction, ctx.thresholds);
+  let rawScore = (netTransfers / threshold) * 100;
 
   // Injured or suspended players are sold off faster than transfers alone show.
   // Applied before rounding, so the score stays a whole number in the UI.
@@ -52,14 +105,13 @@ export function analyzePlayerPrice(
     rawScore *= 1.25;
   }
 
-  const changeScore = Math.min(100, Math.max(-100, Math.round(rawScore)));
+  const changeScore = Math.round(Math.min(SCORE_CAP, Math.max(-SCORE_CAP, rawScore)));
 
-  // Thresholds on the capped -100..100 score.
   let status: PriceStatus = 'stable';
-  if (changeScore >= 75) status = 'rising_soon';
-  else if (changeScore >= 35) status = 'likely_riser';
-  else if (changeScore <= -75) status = 'falling_soon';
-  else if (changeScore <= -35) status = 'likely_faller';
+  if (changeScore >= TONIGHT) status = 'rising_soon';
+  else if (changeScore >= TRENDING) status = 'likely_riser';
+  else if (changeScore <= -TONIGHT) status = 'falling_soon';
+  else if (changeScore <= -TRENDING) status = 'likely_faller';
 
   let availability: PriceAnalysis['availability'] = 'available';
   if (element.status === 'd') availability = 'doubtful';
@@ -78,17 +130,25 @@ export function analyzePlayerPrice(
     transfersInEvent: element.transfers_in_event,
     transfersOutEvent: element.transfers_out_event,
     netTransfers,
+    netTransfersEvent,
+    baselineSince: baseline?.since ?? null,
     selectedByPercent: ownership,
     status,
     changeScore,
+    targetEstimated: !ctx.thresholds?.fitted,
     news: element.news,
     chanceOfPlaying: element.chance_of_playing_next_round,
     availability,
   };
 }
 
-export function getAllMarketPriceAnalyses(bootstrap: FPLBootstrap): PriceAnalysis[] {
+export function getAllMarketPriceAnalyses(
+  bootstrap: FPLBootstrap,
+  context: Omit<PriceContext, 'lookups'> = {}
+): PriceAnalysis[] {
   // Build the lookups once rather than scanning teams and positions per player.
   const lookups = buildLookups(bootstrap);
-  return bootstrap.elements.map((el) => analyzePlayerPrice(el, bootstrap, lookups));
+  return bootstrap.elements.map((el) =>
+    analyzePlayerPrice(el, bootstrap, { ...context, lookups })
+  );
 }

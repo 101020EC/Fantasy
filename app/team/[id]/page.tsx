@@ -16,6 +16,8 @@ import PrivateLeaguesCard from '@/components/team/PrivateLeaguesCard';
 import GlobalLeaguesCard from '@/components/team/GlobalLeaguesCard';
 import TeamSaveTracker from './TeamSaveTracker';
 import { AlertCircle, Search } from 'lucide-react';
+import { seasonKey } from '@/lib/analyst';
+import { loadPriceContext } from '@/lib/price-changes-store';
 
 export const dynamic = 'force-dynamic';
 
@@ -82,7 +84,16 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
     // The requested gameweek runs ahead of the squad's when its deadline has
     // not passed — there is no squad or points for it yet, only fixtures.
     const isPreview = fixtureGw > activeGw;
-    const squadPlayers = buildSquadPlayers(picksData.picks || [], bootstrap, fixtures, fixtureGw);
+    // Same price context the market page uses, so a player cannot read
+    // "Rising Tonight" on one page and "Trending Up" on the other.
+    const priceContext = await loadPriceContext(seasonKey(bootstrap)).catch(() => ({}));
+    const squadPlayers = buildSquadPlayers(
+      picksData.picks || [],
+      bootstrap,
+      fixtures,
+      fixtureGw,
+      priceContext
+    );
 
     return (
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">

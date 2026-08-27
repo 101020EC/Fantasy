@@ -75,6 +75,7 @@ export async function PUT(req: NextRequest) {
     trends: Boolean(a.trends ?? DEFAULT_ALERTS.trends),
     injuries: Boolean(a.injuries ?? DEFAULT_ALERTS.injuries),
     watchlist: Boolean(a.watchlist ?? DEFAULT_ALERTS.watchlist),
+    priceChanged: Boolean(a.priceChanged ?? DEFAULT_ALERTS.priceChanged),
     deadlineHours: Math.min(72, Math.max(0, Number(a.deadlineHours) || 0)),
   };
 

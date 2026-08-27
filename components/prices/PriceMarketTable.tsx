@@ -2,7 +2,9 @@
 
 import React, { useMemo, useState } from 'react';
 import { PriceAnalysis } from '@/lib/types';
-import { ArrowUpDown, Leaf, Rocket, Search, Star, AlertCircle } from 'lucide-react';
+import { ArrowDown, ArrowUp, Leaf, Rocket, Search, Star, AlertCircle } from 'lucide-react';
+import { PriceChangeDay } from '@/lib/price-changes';
+import PriceChanges from './PriceChanges';
 import PlayerJersey from '../pitch/PlayerJersey';
 import { STATUS_META, StatusPill } from './status-meta';
 import AvailabilityChip from './AvailabilityChip';
@@ -28,11 +30,27 @@ const POSITION_FILTERS = [
   { key: 'all', label: 'All' },
 ];
 
+const SORT_CHIPS = [
+  { field: 'changeScore', label: 'Target' },
+  { field: 'currentCost', label: 'Price' },
+  { field: 'selectedByPercent', label: 'Owned' },
+  { field: 'netTransfers', label: 'Net' },
+] as const;
+
 interface PriceMarketTableProps {
   analyses: PriceAnalysis[];
+  /** Newest first. Empty until a second snapshot exists to diff against. */
+  changeDays?: PriceChangeDay[];
+  /** True while the target percentage rests on the unfitted threshold formula. */
+  estimated?: boolean;
 }
 
-export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
+export default function PriceMarketTable({
+  analyses,
+  changeDays = [],
+  estimated = true,
+}: PriceMarketTableProps) {
+  const [tab, setTab] = useState<'table' | 'past'>('table');
   const [search, setSearch] = useState('');
   // Status and position are separate so they combine; one shared value meant
   // picking a position silently cleared the status filter.
@@ -104,20 +122,72 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
     }
   };
 
-  const sortableHeader = (field: typeof sortField, label: string) => (
-    <th
-      onClick={() => handleSort(field)}
-      className="px-3 py-3.5 text-center cursor-pointer hover:text-[#111318] transition"
-    >
-      <div className="flex items-center justify-center gap-1">
-        <span>{label}</span>
-        <ArrowUpDown className="w-3 h-3 text-gray-400" />
-      </div>
-    </th>
+  /**
+   * Sorting lives in its own chip row rather than in the table headers.
+   *
+   * The four-column layout folds price into the player cell and ownership
+   * together with net transfers, so three of the four sortable headers no
+   * longer have a column of their own. Chips keep every sort reachable without
+   * spending table width, and match the filter chips already on this page.
+   */
+  const sortChips = (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">
+        Sort
+      </span>
+      {SORT_CHIPS.map((chip) => {
+        const isOn = sortField === chip.field;
+        return (
+          <button
+            key={chip.field}
+            type="button"
+            onClick={() => handleSort(chip.field)}
+            className={`px-3 py-1.5 rounded-full text-xs font-black transition flex items-center gap-1 ${
+              isOn
+                ? 'bg-[#38003c] text-white shadow-sm'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <span>{chip.label}</span>
+            {isOn &&
+              (sortAsc ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />)}
+          </button>
+        );
+      })}
+    </div>
   );
 
   return (
     <div className="w-full">
+      {/* Two tenses, kept apart. Everything under "Table" is a prediction about
+          tonight; everything under "Past" is a record of what already
+          happened. Mixing them would make a player who has risen look like one
+          about to. */}
+      <div className="flex items-center gap-1 mb-4 p-1 rounded-full bg-gray-100 w-fit">
+        {([
+          ['table', 'Table'],
+          ['past', 'Past'],
+        ] as const).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setTab(key)}
+            className={`px-5 py-1.5 rounded-full text-xs font-black transition ${
+              tab === key ? 'bg-white text-[#38003c] shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {label}
+            {key === 'past' && changeDays.length > 0 && (
+              <span className="ml-1.5 text-[10px] text-gray-400">{changeDays.length}</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'past' ? (
+        <PriceChanges days={changeDays} analyses={analyses} />
+      ) : (
+      <>
       {/* Summary cards — each is also the filter for its own status */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-3">
         <button
@@ -257,7 +327,9 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-black/5">
+        <div className="pt-2 border-t border-black/5">{sortChips}</div>
+
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-black/5">
           <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">
             Position
           </span>
@@ -292,19 +364,22 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
       </div>
 
       <div className="pastel-card overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-gray-700">
-            <thead className="text-[11px] uppercase text-gray-400 border-b border-black/5 font-black tracking-wide">
+        <div>
+          <table className="w-full text-left text-sm text-gray-700 table-fixed">
+            <thead className="text-[10px] uppercase text-gray-400 border-b border-black/5 font-black tracking-wide">
               <tr>
-                {/* Target % leads: this is a price radar, so the prediction is
-                    the column you scan first. */}
-                {sortableHeader('changeScore', 'Target %')}
-                <th className="px-4 py-3.5 text-left">Player</th>
-                <th className="px-3 py-3.5 text-center">Pos</th>
-                {sortableHeader('currentCost', 'Price')}
-                {sortableHeader('selectedByPercent', 'Owned %')}
-                {sortableHeader('netTransfers', 'Net Transfers')}
-                <th className="px-4 py-3.5 text-center">Status</th>
+                {/* Target leads: this is a price radar, so the prediction is
+                    the column you scan first. Four columns, not seven — position,
+                    price and club now sit under the player's name, which is what
+                    lets the whole table fit a phone without scrolling sideways. */}
+                <th className="px-2 py-3 text-center w-16">Target</th>
+                <th className="px-2 py-3 text-left">Player</th>
+                <th className="px-2 py-3 text-center w-24">Owned</th>
+                {/* Wider than Owned: the full "Falling Tonight" pill is ~120px
+                    and the card clips anything past the column, so a 96px
+                    column silently cut the label in half. The mobile label is
+                    one word, so the narrow width is only used where it fits. */}
+                <th className="px-2 py-3 text-center w-24 sm:w-36">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5">
@@ -330,8 +405,10 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                     key={player.elementId}
                     className={`transition group ${rowTint}`}
                   >
-                    {/* Target % — half the previous width */}
-                    <td className="px-3 py-3">
+                    {/* Target — percent of FPL's threshold. 100 means a change
+                        is expected tonight, so the bar fills at 100 and the
+                        number is allowed to run past it. */}
+                    <td className="px-2 py-2.5">
                       <div className="w-14 mx-auto">
                         <div className="flex items-center justify-center gap-1 mb-1 text-[10px] font-bold">
                           {/* Only the two "tonight" states are marked — a pulse
@@ -357,11 +434,11 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                           <div
                             className={`h-full ${
-                              player.changeScore >= 75
+                              player.changeScore >= 100
                                 ? 'bg-emerald-500'
                                 : player.changeScore > 0
                                 ? 'bg-emerald-400'
-                                : player.changeScore <= -75
+                                : player.changeScore <= -100
                                 ? 'bg-rose-500'
                                 : player.changeScore < 0
                                 ? 'bg-rose-400'
@@ -376,16 +453,16 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                       </div>
                     </td>
 
-                    <td className="px-4 py-3">
-                      <div className="flex items-start gap-3">
+                    <td className="px-2 py-2.5">
+                      <div className="flex items-start gap-2">
                         <PlayerJersey
                           teamCode={player.team.code}
                           isGkp={player.elementType.id === 1}
-                          className="w-8 h-8 shrink-0 mt-0.5"
+                          className="w-7 h-7 shrink-0 mt-0.5"
                         />
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <div className="font-bold text-[#111318] group-hover:text-purple-700 transition">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1">
+                            <div className="font-bold text-[13px] text-[#111318] group-hover:text-purple-700 transition truncate">
                               {player.webName}
                             </div>
                             {inSquad && (
@@ -415,8 +492,15 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                               </button>
                             )}
                           </div>
-                          <div className="text-[11px] text-gray-500 font-semibold">
-                            {player.team.name}
+                          {/* Position, price and club on one line under the
+                              name — the club as its short code, since the full
+                              name is what pushed this column wide. */}
+                          <div className="text-[10px] text-gray-500 font-semibold truncate">
+                            {player.elementType.singular_name_short}{' '}
+                            <span className="font-mono text-[#111318] font-bold">
+                              £{player.currentCost.toFixed(1)}
+                            </span>{' '}
+                            {player.team.short_name}
                           </div>
                           <AvailabilityChip
                             chance={player.chanceOfPlaying}
@@ -426,33 +510,29 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
                       </div>
                     </td>
 
-                    <td className="px-3 py-3 text-center text-xs font-bold text-gray-600">
-                      {player.elementType.singular_name_short}
+                    {/* Ownership above, net transfers below. Net is measured
+                        since this player's last price change, not since the
+                        gameweek started — that is the number FPL counts. */}
+                    <td className="px-2 py-2.5 text-center font-mono">
+                      <div className="text-[12px] font-bold text-gray-700">
+                        {player.selectedByPercent}%
+                      </div>
+                      <div className="text-[11px] font-bold">
+                        {player.netTransfers > 0 ? (
+                          <span className="text-emerald-600">
+                            +{player.netTransfers.toLocaleString()}
+                          </span>
+                        ) : player.netTransfers < 0 ? (
+                          <span className="text-rose-600">
+                            {player.netTransfers.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">0</span>
+                        )}
+                      </div>
                     </td>
 
-                    <td className="px-3 py-3 text-center font-black text-[#111318] font-mono">
-                      £{player.currentCost.toFixed(1)}m
-                    </td>
-
-                    <td className="px-3 py-3 text-center text-xs text-gray-600 font-mono font-bold">
-                      {player.selectedByPercent}%
-                    </td>
-
-                    <td className="px-3 py-3 text-center font-mono font-bold text-xs">
-                      {player.netTransfers > 0 ? (
-                        <span className="text-emerald-600">
-                          +{player.netTransfers.toLocaleString()}
-                        </span>
-                      ) : player.netTransfers < 0 ? (
-                        <span className="text-rose-600">
-                          {player.netTransfers.toLocaleString()}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">0</span>
-                      )}
-                    </td>
-
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-2 py-2.5 text-center">
                       <StatusPill status={player.status} />
                     </td>
                   </tr>
@@ -471,7 +551,16 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
           </div>
         )}
 
-        <div className="p-3 text-center text-xs text-gray-400 border-t border-black/5 bg-gray-50/50">
+        {/* The threshold behind Target is FPL's, and FPL never publishes it.
+            Until enough real changes have been observed to fit one, this is an
+            estimate and says so rather than implying it was measured. */}
+        <div className="px-3 pt-2.5 text-center text-[10px] text-gray-400 leading-snug">
+          {estimated
+            ? 'Target is progress toward a price change, against an estimated threshold. 100% means a change is expected tonight.'
+            : 'Target is progress toward a price change, against a threshold fitted to observed changes. 100% means a change is expected tonight.'}
+        </div>
+
+        <div className="p-3 text-center text-xs text-gray-400 border-t border-black/5 bg-gray-50/50 mt-2">
           {filteredData.length === 0
             ? 'No matching players'
             : filteredData.length > visibleRows.length
@@ -481,6 +570,8 @@ export default function PriceMarketTable({ analyses }: PriceMarketTableProps) {
               }`}
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

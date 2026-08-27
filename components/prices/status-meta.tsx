@@ -14,6 +14,8 @@ import { PriceStatus } from '@/lib/types';
  */
 export interface StatusMeta {
   label: string;
+  /** One word, for the narrow mobile table where the full label will not fit. */
+  short: string;
   Icon: React.ComponentType<{ className?: string }>;
   /** Extra classes for the icon — colour, rotation, pulse. */
   iconClass: string;
@@ -24,30 +26,35 @@ export interface StatusMeta {
 export const STATUS_META: Record<PriceStatus, StatusMeta> = {
   rising_soon: {
     label: 'Rising Tonight',
+    short: 'Tonight',
     Icon: Rocket,
     iconClass: 'text-emerald-600 animate-blink',
     pillClass: 'bg-emerald-600 text-white shadow-sm',
   },
   likely_riser: {
     label: 'Trending Up',
+    short: 'Up',
     Icon: TrendingUp,
     iconClass: 'text-emerald-600',
     pillClass: 'bg-emerald-100 text-emerald-800',
   },
   stable: {
     label: 'Neutral',
+    short: '—',
     Icon: TrendingUp,
     iconClass: 'text-gray-300',
     pillClass: 'bg-gray-100 text-gray-500',
   },
   likely_faller: {
     label: 'Trending Down',
+    short: 'Down',
     Icon: TrendingDown,
     iconClass: 'text-rose-600',
     pillClass: 'bg-rose-100 text-rose-800',
   },
   falling_soon: {
     label: 'Falling Tonight',
+    short: 'Tonight',
     // A leaf tipped off its stem — the falling-leaf reading, without a custom asset.
     Icon: Leaf,
     iconClass: 'text-rose-600 rotate-[135deg] animate-blink',
@@ -55,16 +62,24 @@ export const STATUS_META: Record<PriceStatus, StatusMeta> = {
   },
 };
 
-/** Status pill with its icon, used in the table's last column. */
+/**
+ * Status pill with its icon, used in the table's last column.
+ *
+ * The label collapses to a single word below `sm`. "Rising Tonight" at full
+ * width is what stops the four-column table fitting a phone screen, and the
+ * icon already carries the direction.
+ */
 export function StatusPill({ status }: { status: PriceStatus }) {
   const meta = STATUS_META[status];
   const showIcon = status !== 'stable';
 
   return (
     <span
-      className={`inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap ${meta.pillClass}`}
+      className={`inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold whitespace-nowrap ${meta.pillClass}`}
+      title={meta.label}
     >
-      <span>{meta.label}</span>
+      <span className="sm:hidden">{meta.short}</span>
+      <span className="hidden sm:inline">{meta.label}</span>
       {showIcon && (
         <meta.Icon
           className={`w-3.5 h-3.5 shrink-0 ${

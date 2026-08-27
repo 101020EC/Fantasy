@@ -167,7 +167,23 @@ function HistoryView() {
 
   // Find stats for currently selected GW
   const currentGwStats = historyData?.current?.find((h: any) => h.event === selectedGw);
-  const maxAvailableGw = entryData?.current_event || selectedGw || 1;
+  /**
+   * Two different questions, which used to share one variable.
+   *
+   * `latestScoredGw` is the last gameweek that HAS points — FPL's own
+   * `current_event`, which stays at 1 until the GW2 deadline passes. It is the
+   * ceiling on what can be selected: `currentGwStats` looks the selection up in
+   * `history.current[]`, and a gameweek with no entry there renders empty cards.
+   *
+   * `activeGw` is the gameweek being played or about to be, which is what
+   * "Current" means to a reader and what the official site shows. Once GW1 is
+   * finished that is GW2, even though GW1 is still the last one with points.
+   */
+  const latestScoredGw = entryData?.current_event || selectedGw || 1;
+  const activeGw =
+    bootstrapData?.events?.find((e: any) => e.is_current && !e.finished)?.id ||
+    bootstrapData?.events?.find((e: any) => e.is_next)?.id ||
+    latestScoredGw;
 
   // Memoised: rebuilding these from ~700 players on every keystroke was wasteful
   const elementMap = useMemo(
@@ -291,7 +307,7 @@ function HistoryView() {
       <div className="pastel-card p-2.5 sm:p-3 shadow-sm flex items-center overflow-x-auto gap-2 scrollbar-none">
         {Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => {
           const isSelected = gw === selectedGw;
-          const isFinished = gw <= maxAvailableGw;
+          const isFinished = gw <= latestScoredGw;
 
           return (
             <button
@@ -307,7 +323,7 @@ function HistoryView() {
               }`}
             >
               <span className="block text-[8px] uppercase opacity-75">
-                {gw === maxAvailableGw ? 'Current' : isFinished ? 'Done' : 'Upcoming'}
+                {gw === activeGw ? 'Current' : isFinished ? 'Done' : 'Upcoming'}
               </span>
               <span className="text-xs font-black">GW {gw}</span>
             </button>

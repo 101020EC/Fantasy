@@ -1,17 +1,29 @@
 import { getAdminDb, isAdminConfigured } from './firebase-admin';
 
 /**
- * A log of what was actually sent to Telegram.
+ * A log of every alert attempt, delivered or not.
  *
  * The alert job used to send and forget, so there was no way to answer "did it
- * go out, and what did it say" without opening Telegram. Each successful send
- * is recorded here instead.
+ * go out, and what did it say" without opening Telegram. Worse, only successful
+ * sends were recorded, which made three very different situations look
+ * identical from outside: nothing qualified, the bot was not configured, and
+ * Telegram rejected every message. Failures and skips are recorded too, so
+ * silence always has a reason attached to it.
  */
+export type NotificationOutcome = 'sent' | 'failed' | 'skipped';
+
 export interface SentNotification {
   id: string;
   sentAt: string;
   /** 'alert' for the nightly run, 'test' for the button in settings. */
   kind: 'alert' | 'test';
+  /**
+   * What happened. Entries written before this field existed are all
+   * successful sends, so a missing value reads as 'sent'.
+   */
+  outcome: NotificationOutcome;
+  /** Telegram's own description, or why the run had nothing to say. */
+  error: string | null;
   /** Bangkok date, so the list groups the way the reader thinks about days. */
   date: string;
   summary: {
@@ -19,6 +31,8 @@ export interface SentNotification {
     fallers: number;
     watchlist: number;
     injuries: number;
+    /** Players whose price actually moved since the last snapshot. */
+    priceChanges?: number;
     deadlineIn: number | null;
   };
   /** The message as Telegram received it, minus the escaping. */
@@ -43,6 +57,9 @@ export async function recordNotification(entry: {
   kind: SentNotification['kind'];
   summary: SentNotification['summary'];
   text: string;
+  /** Defaults to 'sent' so existing call sites keep their meaning. */
+  outcome?: NotificationOutcome;
+  error?: string | null;
 }): Promise<void> {
   if (!isAdminConfigured) return;
 
@@ -54,6 +71,8 @@ export async function recordNotification(entry: {
         sentAt: now.toISOString(),
         date: bangkokDate(now),
         kind: entry.kind,
+        outcome: entry.outcome ?? 'sent',
+        error: entry.error ?? null,
         summary: entry.summary,
         text: unescape(entry.text),
       });
@@ -73,7 +92,16 @@ export async function listNotifications(limit = 60): Promise<SentNotification[]>
     .limit(limit)
     .get();
 
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<SentNotification, 'id'>) }));
+  return snap.docs.map((d) => {
+    const data = d.data() as Partial<SentNotification>;
+    return {
+      ...(data as Omit<SentNotification, 'id'>),
+      // Entries predate these fields; they were only ever written on success.
+      outcome: data.outcome ?? 'sent',
+      error: data.error ?? null,
+      id: d.id,
+    };
+  });
 }
 
 /** Drops entries past the retention window. Called opportunistically on write. */

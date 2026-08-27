@@ -10,8 +10,46 @@ import {
 import { getAdminDb, isAdminConfigured } from '@/lib/firebase-admin';
 import { recordNotification, pruneNotifications } from '@/lib/notifications';
 import { analyzePlayerPrice } from '@/lib/price-calculator';
+import { seasonKey } from '@/lib/analyst';
+import { loadPriceContext, listSnapshotDates, readSnapshot } from '@/lib/price-changes-store';
+import { diffAgainstLive, PriceChangeDay } from '@/lib/price-changes';
 
 export const dynamic = 'force-dynamic';
+
+const EMPTY_SUMMARY = {
+  risers: 0,
+  fallers: 0,
+  watchlist: 0,
+  injuries: 0,
+  priceChanges: 0,
+  deadlineIn: null,
+};
+
+/** How many named movers the message lists before it summarises the rest. */
+const MAX_NAMED_CHANGES = 12;
+
+/**
+ * Prices that moved between the newest stored snapshot and live FPL.
+ *
+ * Returns null when there is no snapshot to compare against, which is a real
+ * state on a fresh database and must read as "unknown", never as "nothing
+ * changed".
+ */
+async function recentPriceChanges(
+  elements: { id: number; now_cost: number }[]
+): Promise<PriceChangeDay | null> {
+  if (!isAdminConfigured) return null;
+  try {
+    const dates = await listSnapshotDates();
+    if (!dates.length) return null;
+    const latest = await readSnapshot(dates[dates.length - 1]);
+    if (!latest) return null;
+    return diffAgainstLive(latest, elements);
+  } catch {
+    // The prediction half of this alert is still worth sending without it.
+    return null;
+  }
+}
 
 /**
  * Nightly price-change alert. Scheduled by vercel.json, which sends
@@ -30,6 +68,16 @@ export async function GET(req: NextRequest) {
 
     const { botToken, chatId, teamId: envTeamId, alerts, configured } = await getTelegramConfig();
     if (!configured) {
+      // Recorded, not just returned. An unconfigured bot and a quiet night used
+      // to look identical from outside — no message, no trace, no way to tell
+      // which had happened without reading Vercel logs.
+      await recordNotification({
+        kind: 'alert',
+        outcome: 'skipped',
+        error: 'Telegram is not configured — no bot token or chat id.',
+        summary: EMPTY_SUMMARY,
+        text: '',
+      });
       return NextResponse.json(
         { error: 'TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are not configured' },
         { status: 503 }
@@ -52,15 +100,24 @@ export async function GET(req: NextRequest) {
       bootstrap.events[0];
 
     const picksData = await fetchFPLPicks(teamId, entry.current_event || currentEvent.id);
-    const squadPlayers = buildSquadPlayers(picksData.picks, bootstrap, [], currentEvent.id);
+    const priceContext = await loadPriceContext(seasonKey(bootstrap)).catch(() => ({}));
+    const squadPlayers = buildSquadPlayers(
+      picksData.picks,
+      bootstrap,
+      [],
+      currentEvent.id,
+      priceContext
+    );
     const squadIds = new Set(squadPlayers.map((p) => p.element.id));
 
     // 2. Watchlist. Kept in Firestore precisely so this job can read it —
     //    there is no browser here to hold a local list.
     let watchedPlayers: { name: string; short: string; analysis: ReturnType<typeof analyzePlayerPrice> }[] = [];
+    const watchIdSet = new Set<number>();
     if (isAdminConfigured && alerts.watchlist) {
       const snap = await getAdminDb().collection('watchlists').doc(String(teamId)).get();
       const watchIds: number[] = snap.data()?.elementIds ?? [];
+      watchIds.forEach((id) => watchIdSet.add(id));
       const teamMap = new Map(bootstrap.teams.map((t) => [t.id, t]));
 
       watchedPlayers = watchIds
@@ -72,7 +129,7 @@ export async function GET(req: NextRequest) {
         .map((el) => ({
           name: el.web_name,
           short: teamMap.get(el.team)?.short_name ?? 'CLB',
-          analysis: analyzePlayerPrice(el, bootstrap),
+          analysis: analyzePlayerPrice(el, bootstrap, priceContext),
         }));
     }
 
@@ -97,6 +154,15 @@ export async function GET(req: NextRequest) {
       ? squadPlayers.filter((p) => p.element.status !== 'a' && p.element.news)
       : [];
 
+    // Prices that have ALREADY moved. Compared against the newest stored
+    // snapshot rather than a precomputed diff: this job runs at 06:00 Bangkok
+    // and the diff for the change it wants to report is not written until
+    // 08:00, so a stored document here would always be a day and a half stale.
+    const changed = alerts.priceChanged ? await recentPriceChanges(bootstrap.elements) : null;
+    const squadChanges = changed
+      ? changed.changes.filter((c) => squadIds.has(c.id) || watchIdSet.has(c.id))
+      : [];
+
     const deadline = alerts.deadlineHours
       ? nextDeadline(bootstrap.events, alerts.deadlineHours)
       : null;
@@ -112,8 +178,17 @@ export async function GET(req: NextRequest) {
       fallers.length === 0 &&
       watchMovers.length === 0 &&
       injured.length === 0 &&
+      squadChanges.length === 0 &&
+      !changed?.changes.length &&
       !deadline
     ) {
+      await recordNotification({
+        kind: 'alert',
+        outcome: 'skipped',
+        error: 'Nothing met the alert thresholds.',
+        summary: { ...EMPTY_SUMMARY },
+        text: '',
+      });
       return NextResponse.json({
         alertSent: false,
         message: 'No price change alerts tonight.',
@@ -130,6 +205,33 @@ export async function GET(req: NextRequest) {
 
     let text = `🚨 *Fanta: Price Alert Warning\\!*\n\n`;
     text += `👤 *Team:* ${escapeMarkdown(entry.name)} \\(\\#${escapeMarkdown(entry.id)}\\)\n\n`;
+
+    if (changed && changed.changes.length > 0) {
+      const elementMap = new Map(bootstrap.elements.map((el) => [el.id, el]));
+      const teamMap = new Map(bootstrap.teams.map((t) => [t.id, t]));
+      const money = (tenths: number) => (tenths / 10).toFixed(1);
+
+      text += `💰 *Prices changed:*\n`;
+      squadChanges.slice(0, MAX_NAMED_CHANGES).forEach((c) => {
+        const el = elementMap.get(c.id);
+        const club = el ? teamMap.get(el.team)?.short_name ?? 'CLB' : 'CLB';
+        const arrow = c.delta > 0 ? '🔺' : '🔻';
+        text += `${arrow} *${escapeMarkdown(el?.web_name ?? c.id)}* \\(${escapeMarkdown(
+          club
+        )}\\) £${escapeMarkdown(money(c.from))} → £${escapeMarkdown(money(c.to))}\n`;
+      });
+      if (squadChanges.length > MAX_NAMED_CHANGES) {
+        text += `_\\+${escapeMarkdown(squadChanges.length - MAX_NAMED_CHANGES)} more in your squad_\n`;
+      }
+      if (squadChanges.length === 0) {
+        text += `_None in your squad or watchlist\\._\n`;
+      }
+      // One line for the whole market, so a quiet squad never implies a quiet
+      // night. Forty players can move without one of them being yours.
+      text += `_Market: ${escapeMarkdown(changed.risesCount)} up, ${escapeMarkdown(
+        changed.fallsCount
+      )} down_\n\n`;
+    }
 
     if (risers.length > 0) {
       text += `🚀 *Expected Price Rise \\(£\\+0\\.1m\\):*\n`;
@@ -175,20 +277,26 @@ export async function GET(req: NextRequest) {
 
     // 4. Deliver, and report Telegram's verdict honestly
     const result = await sendTelegramMessage(botToken, chatId, text);
-    if (result.ok) {
-      await recordNotification({
-        kind: 'alert',
-        summary: {
-          risers: risers.length,
-          fallers: fallers.length,
-          watchlist: watchMovers.length,
-          injuries: injured.length,
-          deadlineIn: deadline ? Math.round(deadline.hoursAway) : null,
-        },
-        text,
-      });
-      await pruneNotifications();
-    }
+
+    // Recorded either way. A rejection used to return 502 and vanish, so a
+    // month of "can't parse entities" would have been completely invisible.
+    const summary = {
+      risers: risers.length,
+      fallers: fallers.length,
+      watchlist: watchMovers.length,
+      injuries: injured.length,
+      priceChanges: squadChanges.length,
+      deadlineIn: deadline ? Math.round(deadline.hoursAway) : null,
+    };
+    await recordNotification({
+      kind: 'alert',
+      outcome: result.ok ? 'sent' : 'failed',
+      error: result.ok ? null : result.description ?? 'Telegram rejected the message',
+      summary,
+      text,
+    });
+    await pruneNotifications();
+
     if (!result.ok) {
       return NextResponse.json(
         { alertSent: false, error: `Telegram rejected the message: ${result.description}` },
@@ -202,6 +310,8 @@ export async function GET(req: NextRequest) {
       fallersCount: fallers.length,
       watchlistCount: watchMovers.length,
       injuredCount: injured.length,
+      priceChangesCount: squadChanges.length,
+      marketChanges: changed ? { rises: changed.risesCount, falls: changed.fallsCount } : null,
       deadlineIn: deadline ? Math.round(deadline.hoursAway) : null,
     });
   } catch (err: any) {

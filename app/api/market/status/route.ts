@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb, isAdminConfigured, ADMIN_NOT_CONFIGURED } from '@/lib/firebase-admin';
 import { requireSession } from '@/lib/auth-server';
+import { listPriceChangeDays, storedChangeDates } from '@/lib/price-changes-store';
+import { listNotifications } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -67,8 +69,45 @@ export async function GET() {
     })
   );
 
+  // Price changes and the alert log. Both answer "is this actually working",
+  // which nothing else in the app could report before — a failed Telegram send
+  // and a quiet night used to be indistinguishable.
+  const [changeDates, recentChanges, notifications] = await Promise.all([
+    storedChangeDates().catch((): string[] => []),
+    listPriceChangeDays(7).catch(() => []),
+    listNotifications(20).catch(() => []),
+  ]);
+
+  const lastSent = notifications.find((n) => n.outcome === 'sent') ?? null;
+  const lastFailure = notifications.find((n) => n.outcome === 'failed') ?? null;
+
   return NextResponse.json({
     configured: true,
+    priceChanges: {
+      dayCount: changeDates.length,
+      firstDate: changeDates[0] ?? null,
+      lastDate: changeDates[changeDates.length - 1] ?? null,
+      recent: recentChanges.map((d) => ({
+        date: d.date,
+        changedOn: d.changedOn,
+        rises: d.risesCount,
+        falls: d.fallsCount,
+        spansGap: d.spansGap,
+        observations: d.observations?.length ?? 0,
+      })),
+    },
+    alerts: {
+      attempts: notifications.length,
+      lastSentAt: lastSent?.sentAt ?? null,
+      lastFailureAt: lastFailure?.sentAt ?? null,
+      lastFailureReason: lastFailure?.error ?? null,
+      recent: notifications.slice(0, 10).map((n) => ({
+        sentAt: n.sentAt,
+        outcome: n.outcome,
+        error: n.error,
+        summary: n.summary,
+      })),
+    },
     days,
     dayCount: days.length,
     firstDate: days[0]?.date ?? null,
