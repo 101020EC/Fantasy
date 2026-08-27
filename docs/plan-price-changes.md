@@ -361,3 +361,173 @@ Mobile layout at 375px. `resize_window` reports success but `innerWidth` stays
 is not logged in. Arithmetic says it fits (64 + 96 + 96 fixed, ~119px for the
 player cell which truncates, short pill ~79px inside 96px) but that is a
 calculation, not an observation.
+
+---
+
+# THRESHOLD RECALIBRATION - 2026-08-27 (evening)
+
+Prompted by the user: our table showed 26 players "Rising Tonight"; livefpl
+showed one. That gap is not a scale error, it is a **shape** error.
+
+## Method
+
+Read livefpl's Prices table (risers and fallers) and FPL's bootstrap at the same
+moment, then inverted their published progress percentage to recover the
+threshold each player is being measured against:
+
+    implied threshold = net_transfers / (livefpl_progress / 100)
+
+17 players, ownership 0.0%-43%. Confounders checked and cleared: only 10 players
+have `cost_change_start != 0` this season and all are rises, so for everyone else
+the gameweek-cumulative net IS the net since their last reset - the two measures
+agree and the comparison is clean.
+
+## Finding 1 - rises use a CONSTANT threshold
+
+| player | ownership | implied threshold |
+|---|---|---|
+| Hinshelwood | 2.5% | 219,341 |
+| Gakpo | 5.8% | 224,406 |
+| Havertz | 7.3% | 197,651 |
+| Cherki | 10.2% | 216,647 |
+| Odegaard | 11.2% | 201,995 |
+| Gvardiol | 13.3% | 246,182 |
+| Tzolis | 25.9% | 194,298 |
+| Rogers | 25.9% | 214,039 |
+| Szoboszlai | 43.0% | 218,733 |
+
+Ownership spans **17x**. The threshold spans **1.27x**. It is flat.
+
+Median 216,647 = **2.21% of `bootstrap.total_players`** (9,804,056). Expressing
+it as a fraction of the manager base rather than a hard number lets it track the
+player base as it grows through the season.
+
+Mechanically this is obvious in hindsight: **anyone can buy a player**, so the
+buying pool is every manager, not the ones who already own him.
+
+## Finding 2 - falls scale with OWNERSHIP
+
+| player | ownership | implied threshold | per 1% owned |
+|---|---|---|---|
+| Madueke | 0.3% | 5,721 | 19,071 |
+| Merino | 0.6% | 11,568 | 19,280 |
+| Welbeck | 1.0% | 18,954 | 18,954 |
+| Hincapie | 1.5% | 28,823 | 19,216 |
+| Eze | 1.8% | 33,789 | 18,771 |
+| Anderson | 6.3% | 118,167 | 18,757 |
+
+Six of seven land within 3% of ~19,000 per 1% ownership - roughly a fifth of a
+player's owners. Also mechanical: **only an owner can sell**, so the selling pool
+IS the ownership.
+
+So the two directions have genuinely different shapes, and the old formula -
+one ownership-proportional divisor for both - was the wrong shape for rises and
+the right shape with the wrong constant for falls.
+
+## Accuracy against livefpl
+
+| model | mean abs error | risers >=100% | fallers <=-100% |
+|---|---|---|---|
+| old `max(25000, own*12000)` | **82.8 pts** | 23 | 16 |
+| split rise/fall | **3.6 pts (rises)** | **1** | 13-28 |
+| livefpl (truth) | - | **1** | **4** |
+
+The rise side is solved: 3.6 points of error and the count matches exactly.
+
+## The fall side is NOT solved
+
+Two problems, both real:
+
+1. **`selected_by_percent` is rounded to one decimal.** Below ~0.5% ownership the
+   denominator is dominated by rounding, and 74 of the 87 false fallers are
+   players reported at "0.0%". A floor on the fall threshold hides them
+   (`max(15000, own*32000)` gives exactly 4, matching livefpl) but that is fitting
+   the count, not the mechanism.
+2. **Two players at identical ownership imply different thresholds.** Sarr and
+   Bruno G. are both 3.0% owned; implied 48,795 and 32,666 per 1%. Something
+   per-player that we cannot observe is involved, so fall error stays ~32-39
+   points however the constants are tuned.
+
+Rises are accurate. Falls are directionally right and noisy, and the UI should
+not present them with equal confidence.
+
+## Retention - checked, and there is NONE
+
+`grep prune|KEEP_DAYS|retention|delete` over the new modules returns nothing.
+`priceChanges/{date}` grows one document per day forever.
+
+Precedent exists and is two lines: `lib/notifications.ts` has `KEEP_DAYS = 90`
+and `pruneNotifications()`, called opportunistically after each write.
+
+Size is not the issue (~2KB/day, ~700KB/year). Two other things are:
+
+- **The Past tab reads `listPriceChangeDays(30)`** - already bounded, so old
+  documents are invisible and pay rent forever.
+- **`collectObservations()` reads the newest 30 days** to fit thresholds. Once
+  more than 30 days exist, the fit silently uses a moving window - which is
+  probably correct, since the real threshold drifts with the manager base, but
+  it is currently accidental rather than chosen.
+
+## Decision 10 - Split rise/fall thresholds  (ACCEPTED)
+
+**Rises: constant. Falls: ownership-proportional with a floor. Say plainly that
+falls are the less confident half.**
+
+```
+riseThreshold = total_players * RISE_FRACTION      (fitted; 0.0221 today)
+fallThreshold = max(FALL_FLOOR, ownership * FALL_PER_PCT)
+                                                   (fitted; 15,000 and ~32,000)
+```
+
+- `total_players` comes from bootstrap and is already fetched everywhere the
+  score is computed, so the rise threshold tracks the manager base as it grows
+  instead of ageing into a hard-coded number.
+- The fall floor exists because `selected_by_percent` is rounded to one decimal:
+  below ~0.5% the denominator is mostly rounding error, and without a floor 74
+  players reported as "0.0%" flood the faller list. The floor is chosen to match
+  the observed count, which is fitting the symptom - stated here so nobody later
+  mistakes it for a measured quantity.
+- `fitPriceThresholds` now fits **three** scalars against real observations
+  (rise fraction, fall per-percent, fall floor) instead of one scale factor on a
+  shape that was wrong. Every observed change remains a direct sample.
+- UI must distinguish the two: rises carry ~3.6 points of error against livefpl,
+  falls ~32-39 points however the constants are tuned, because two players at
+  identical ownership demonstrably imply different thresholds. Presenting both
+  with the same confidence would be the dishonest part.
+
+## Decision 11 - Retention  (ACCEPTED)
+
+- `priceChanges/` keeps **730 days** (two seasons), pruned opportunistically
+  after each write, mirroring `pruneNotifications()`. ~1.5MB total.
+- **`collectObservations` widens from 30 days to 90.** The 30 was never chosen -
+  it was a default that came along for the ride. It was defensible while the
+  threshold was a raw number that drifts with the manager base, but Decision 10
+  stores the rise threshold as a *fraction of `total_players`*, which removes
+  that drift. With the drift gone, more samples are strictly better.
+- The Past tab stays at 30 days per page with a "load more".
+
+## Result after implementing Decisions 10 and 11
+
+Re-measured against the same livefpl snapshot:
+
+| | before | after | livefpl |
+|---|---|---|---|
+| mean abs error, rises | 82.8 pts | **3.6 pts** | - |
+| mean abs error, falls | - | 28.5 pts | - |
+| Rising Tonight | **26** | **1** | **1** |
+| Falling Tonight | 20 | 15 | 4 |
+
+Every rise sample now lands within 8 points. The count matches exactly.
+
+**One honest caveat on the rise side:** we and livefpl both say exactly one
+player is rising tonight, but not the same one - we pick Palmer (109%), they pick
+Odegaard (103.6%, Palmer 88.9% "Tomorrow"). Palmer's implied threshold is 266k
+against a 216k median, the only real outlier in the rise set, and the two above
+him by ownership (Gvardiol 13.3% -> 246k, Palmer 14.7% -> 266k) hint at a mild
+ownership slope the flat model does not capture. Not worth adding a parameter
+on two points; the fitter will find it from real observations if it is real.
+
+Falls remain the weak half at 28.5 points, driven by Bruno G. (-220 vs -102.5)
+and Madueke (-36 vs -93.6) - the same per-player variation that made two players
+at identical ownership imply different thresholds. The market table now says so
+in as many words rather than presenting both directions with equal confidence.

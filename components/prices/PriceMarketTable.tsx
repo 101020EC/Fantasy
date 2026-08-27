@@ -41,14 +41,14 @@ interface PriceMarketTableProps {
   analyses: PriceAnalysis[];
   /** Newest first. Empty until a second snapshot exists to diff against. */
   changeDays?: PriceChangeDay[];
-  /** True while the target percentage rests on the unfitted threshold formula. */
-  estimated?: boolean;
+  /** Whether each direction's threshold rests on observed changes yet. */
+  confidence?: { riseFitted: boolean; fallFitted: boolean };
 }
 
 export default function PriceMarketTable({
   analyses,
   changeDays = [],
-  estimated = true,
+  confidence = { riseFitted: false, fallFitted: false },
 }: PriceMarketTableProps) {
   const [tab, setTab] = useState<'table' | 'past'>('table');
   const [search, setSearch] = useState('');
@@ -551,13 +551,22 @@ export default function PriceMarketTable({
           </div>
         )}
 
-        {/* The threshold behind Target is FPL's, and FPL never publishes it.
-            Until enough real changes have been observed to fit one, this is an
-            estimate and says so rather than implying it was measured. */}
-        <div className="px-3 pt-2.5 text-center text-[10px] text-gray-400 leading-snug">
-          {estimated
-            ? 'Target is progress toward a price change, against an estimated threshold. 100% means a change is expected tonight.'
-            : 'Target is progress toward a price change, against a threshold fitted to observed changes. 100% means a change is expected tonight.'}
+        {/* FPL never publishes the threshold, and the two directions do not
+            share one. Rises are measured against the whole manager base —
+            anyone can buy — and match the reference closely. Falls are measured
+            against a player's own owners, and are genuinely noisier: two players
+            at the same ownership can imply very different thresholds. Saying so
+            is the difference between a number and a number that misleads. */}
+        <div className="px-3 pt-2.5 text-center text-[10px] text-gray-400 leading-snug space-y-0.5">
+          <p>
+            Target is progress toward a price change; 100% means a change is expected tonight.
+            Rises need a share of all managers to buy in{confidence.riseFitted ? ', fitted to observed changes' : ' (estimated)'}; falls
+            need a share of that player&rsquo;s owners to sell{confidence.fallFitted ? ', fitted to observed changes' : ' (estimated)'}.
+          </p>
+          <p className="text-gray-300">
+            Falling percentages are the less reliable half — read them as a direction, not a
+            measurement.
+          </p>
         </div>
 
         <div className="p-3 text-center text-xs text-gray-400 border-t border-black/5 bg-gray-50/50 mt-2">

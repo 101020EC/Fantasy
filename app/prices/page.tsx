@@ -15,7 +15,7 @@ export default async function PricesPage() {
   let currentEventName = '';
   let errorMsg: string | null = null;
   let changeDays: PriceChangeDay[] = [];
-  let estimated = true;
+  let confidence = { riseFitted: false, fallFitted: false };
 
   try {
     const bootstrap = await fetchFPLBootstrap();
@@ -25,7 +25,8 @@ export default async function PricesPage() {
     // problem costs accuracy rather than the page.
     const context = await loadPriceContext(seasonKey(bootstrap)).catch(() => ({}));
     analyses = getAllMarketPriceAnalyses(bootstrap, context);
-    estimated = !('thresholds' in context && context.thresholds?.fitted);
+    const t = 'thresholds' in context ? context.thresholds : null;
+    confidence = { riseFitted: Boolean(t?.riseFitted), fallFitted: Boolean(t?.fallFitted) };
 
     // The Past tab. Only days with a computed diff exist, so an empty list is a
     // real answer — there is no history before the second snapshot.
@@ -84,7 +85,7 @@ export default async function PricesPage() {
           <p className="font-bold text-base">{errorMsg}</p>
         </div>
       ) : (
-        <PriceMarketTable analyses={analyses} changeDays={changeDays} estimated={estimated} />
+        <PriceMarketTable analyses={analyses} changeDays={changeDays} confidence={confidence} />
       )}
     </div>
   );

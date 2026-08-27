@@ -1,6 +1,6 @@
 import { FPLBootstrap, FPLElement, FPLElementType, FPLTeam, PriceAnalysis, PriceStatus, placeholderTeam } from './types';
 import { TransferBaseline } from './price-changes';
-import { PriceThresholds, thresholdFor } from './price-thresholds';
+import { isFitted, PriceThresholds, thresholdFor } from './price-thresholds';
 
 const FALLBACK_TEAM: FPLTeam = placeholderTeam();
 const FALLBACK_TYPE: FPLElementType = {
@@ -95,8 +95,18 @@ export function analyzePlayerPrice(
     (baseline?.transfersIn ?? 0) -
     (element.transfers_out_event - (baseline?.transfersOut ?? 0));
 
+  // Rises and falls do not share a threshold shape: anyone can buy a player, so
+  // a rise is measured against the whole manager base, while only an owner can
+  // sell, so a fall is measured against that player's ownership. Measured
+  // against livefpl, a single ownership-proportional divisor reported 26 players
+  // rising tonight where one was rising.
   const direction: 'rise' | 'fall' = netTransfers >= 0 ? 'rise' : 'fall';
-  const threshold = thresholdFor(ownership, direction, ctx.thresholds);
+  const threshold = thresholdFor(
+    ownership,
+    direction,
+    ctx.thresholds,
+    bootstrap.total_players
+  );
   let rawScore = (netTransfers / threshold) * 100;
 
   // Injured or suspended players are sold off faster than transfers alone show.
@@ -135,7 +145,8 @@ export function analyzePlayerPrice(
     selectedByPercent: ownership,
     status,
     changeScore,
-    targetEstimated: !ctx.thresholds?.fitted,
+    targetEstimated: !isFitted(direction, ctx.thresholds),
+    targetDirection: direction,
     news: element.news,
     chanceOfPlaying: element.chance_of_playing_next_round,
     availability,

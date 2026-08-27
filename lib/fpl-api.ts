@@ -70,6 +70,10 @@ function trimBootstrap(raw: any): FPLBootstrap {
     element_types: project<FPLElementType>(raw?.element_types, ELEMENT_TYPE_FIELDS),
     // ~1KB, and it is FPL stating its own rules — worth far more than it costs.
     scoring: raw?.game_config?.scoring ?? undefined,
+    // One integer, and the denominator for every price-rise threshold. Cheap to
+    // keep, and without it the rise threshold has to fall back to a hard-coded
+    // manager count that ages badly.
+    total_players: typeof raw?.total_players === 'number' ? raw.total_players : undefined,
   };
 }
 

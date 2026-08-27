@@ -8,6 +8,7 @@ import {
   listSnapshotDates,
   previousSnapshotDate,
   readSnapshot,
+  prunePriceChanges,
   writePriceChanges,
   writePriceThresholds,
 } from '@/lib/price-changes-store';
@@ -97,7 +98,8 @@ export async function GET(req: NextRequest) {
     // that cannot be re-fetched later, and a diff failure must never cost a day
     // of it.
     const priceChanges = await computePriceChanges(snapshot.date);
-    const priceThresholds = await fitThresholds(seasonKey(bootstrap));
+    const priceChangesPruned = await prunePriceChanges().catch(() => 0);
+    const priceThresholds = await fitThresholds(seasonKey(bootstrap), bootstrap.total_players);
 
     // ── Analyst steps ────────────────────────────────────────────────────
     // Everything below is additive and OFF by default. It runs only after the
@@ -116,6 +118,7 @@ export async function GET(req: NextRequest) {
       fields: snapshot.fields.length,
       rosterUpdated: rosterChanged,
       priceChanges,
+      priceChangesPruned,
       priceThresholds,
       analyst,
     });
@@ -194,17 +197,18 @@ async function computePriceChanges(date: string) {
  * formula, with `fitted: false` and a note saying so — which is what lets the
  * UI label the number as an estimate instead of implying it was measured.
  */
-async function fitThresholds(season: string) {
+async function fitThresholds(season: string, totalPlayers?: number) {
   try {
     const { observations, sourceDays } = await collectObservations();
-    const fitted = fitPriceThresholds(observations, { season, sourceDays });
+    const fitted = fitPriceThresholds(observations, { season, sourceDays, totalPlayers });
     await writePriceThresholds(fitted);
     return {
-      fitted: fitted.fitted,
+      riseFitted: fitted.riseFitted,
+      fallFitted: fitted.fallFitted,
       riseSamples: fitted.riseSamples,
       fallSamples: fitted.fallSamples,
-      riseScale: Number(fitted.riseScale.toFixed(3)),
-      fallScale: Number(fitted.fallScale.toFixed(3)),
+      riseFraction: Number(fitted.riseFraction.toFixed(5)),
+      fallPerPercent: Math.round(fitted.fallPerPercent),
     };
   } catch (err: any) {
     return { error: err.message };

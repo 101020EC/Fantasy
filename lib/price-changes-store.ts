@@ -21,6 +21,24 @@ const MARKET = 'market';
 const CHANGES = 'priceChanges';
 const THRESHOLDS = 'priceThresholds';
 
+/**
+ * Two seasons. Small (~2KB/day, ~1.5MB total), but unbounded growth with
+ * nothing reading the far end is rent for no benefit. Mirrors the KEEP_DAYS
+ * pattern in lib/notifications.ts.
+ */
+const KEEP_DAYS = 730;
+
+/**
+ * How far back the threshold fit looks.
+ *
+ * This was 30 days by accident, not by choice. A short window was defensible
+ * while the threshold was a raw transfer count that drifts as the manager base
+ * grows — but the rise threshold is now stored as a *fraction* of
+ * `total_players`, which removes that drift, and the fall threshold is per 1%
+ * of ownership. With the drift gone, more samples are strictly better.
+ */
+const FIT_WINDOW_DAYS = 90;
+
 /** Every captured snapshot date, oldest first. */
 export async function listSnapshotDates(): Promise<string[]> {
   if (!isAdminConfigured) return [];
@@ -90,6 +108,24 @@ export async function listPriceChangeDays(limit = 30): Promise<PriceChangeDay[]>
   return snap.docs.map((d) => d.data() as PriceChangeDay);
 }
 
+/** Drops change documents past the retention window. Called after each write. */
+export async function prunePriceChanges(): Promise<number> {
+  if (!isAdminConfigured) return 0;
+
+  const cutoff = new Date(Date.now() - KEEP_DAYS * 86_400_000).toISOString().slice(0, 10);
+  const old = await getAdminDb()
+    .collection(CHANGES)
+    .where('date', '<', cutoff)
+    .limit(200)
+    .get();
+
+  if (old.empty) return 0;
+  const batch = getAdminDb().batch();
+  old.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  return old.size;
+}
+
 /** Which days have a computed diff. Ids only. */
 export async function storedChangeDates(): Promise<string[]> {
   if (!isAdminConfigured) return [];
@@ -119,7 +155,7 @@ export async function writePriceThresholds(t: PriceThresholds): Promise<void> {
  * for.
  */
 export async function collectObservations(
-  limit = 30
+  limit = FIT_WINDOW_DAYS
 ): Promise<{ observations: ThresholdObservation[]; sourceDays: string[] }> {
   const days = await listPriceChangeDays(limit);
   const observations: ThresholdObservation[] = [];

@@ -106,6 +106,12 @@ export interface FPLBootstrap {
   element_types: FPLElementType[];
   /** Absent only if FPL stops shipping it; the engine falls back to defaults. */
   scoring?: FPLScoring;
+  /**
+   * Every registered manager. One number, and the denominator behind a price
+   * rise: a rise needs a fixed fraction of the whole player base to buy in, so
+   * the threshold has to track this as the base grows through the season.
+   */
+  total_players?: number;
 }
 
 export interface FPLEntry {
@@ -214,11 +220,17 @@ export interface PriceAnalysis {
    */
   changeScore: number;
   /**
-   * True while the threshold behind `changeScore` is the unfitted formula
-   * rather than one fitted to observed changes. The UI must not present an
-   * estimate as a measurement.
+   * True while the threshold behind `changeScore` is a starting estimate rather
+   * than one fitted to observed changes. Tracked per direction, because rises
+   * and falls are fitted separately and can be at different stages.
    */
   targetEstimated: boolean;
+  /**
+   * Which threshold `changeScore` was measured against. Falls are the less
+   * certain half — two players at the same ownership demonstrably imply
+   * different thresholds — so the UI hedges them and not rises.
+   */
+  targetDirection: 'rise' | 'fall';
   news: string;
   /** FPL's own 0/25/50/75 estimate; always sent alongside a flag. */
   chanceOfPlaying: number | null;

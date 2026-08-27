@@ -110,15 +110,20 @@ export default async function StatusPage() {
       });
 
       // ── Target threshold ─────────────────────────────────────────────────
+      // Reported per direction: rises and falls are fitted from separate
+      // samples and reach confidence at different times, so one combined
+      // "fitted" flag would overstate whichever half is behind.
       checks.push({
         label: 'Target threshold',
-        tone: thresholds?.fitted ? 'ok' : 'idle',
-        value: thresholds?.fitted
-          ? `fitted (rises x${thresholds.riseScale.toFixed(2)}, falls x${thresholds.fallScale.toFixed(2)})`
+        tone: thresholds?.riseFitted && thresholds?.fallFitted ? 'ok' : 'idle',
+        value: thresholds
+          ? `rises ${thresholds.riseFitted ? 'fitted' : 'estimated'} · falls ${
+              thresholds.fallFitted ? 'fitted' : 'estimated'
+            }`
           : 'estimated',
         detail: thresholds?.notes?.length
           ? thresholds.notes.join(' ')
-          : 'FPL never publishes the threshold. Until enough real changes have been observed, the target percentage rests on an unfitted formula.',
+          : 'FPL never publishes the threshold. Rises need a fixed share of all managers to buy in; falls need a share of that player\u2019s owners to sell. Both rest on starting estimates until real changes have been observed.',
       });
 
       // ── Telegram ─────────────────────────────────────────────────────────
