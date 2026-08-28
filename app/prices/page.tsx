@@ -43,6 +43,10 @@ export default async function PricesPage() {
   let bootstrapForStaleness: unknown = null;
 
   try {
+    // The Past tab's history depends on nothing else here, so it is started
+    // first and awaited last rather than queued behind two other requests.
+    const changeDaysPromise = listPriceChangeDays(30).catch((): PriceChangeDay[] => []);
+
     const bootstrap = await fetchFPLBootstrap();
     bootstrapForStaleness = bootstrap;
 
@@ -59,9 +63,9 @@ export default async function PricesPage() {
     const t = 'thresholds' in context ? context.thresholds : null;
     confidence = { riseFitted: Boolean(t?.riseFitted), fallFitted: Boolean(t?.fallFitted) };
 
-    // The Past tab. Only days with a computed diff exist, so an empty list is a
-    // real answer — there is no history before the second snapshot.
-    changeDays = await listPriceChangeDays(30).catch(() => []);
+    // Only days with a computed diff exist, so an empty list is a real answer —
+    // there is no history before the second snapshot.
+    changeDays = await changeDaysPromise;
 
     // The gameweek being played or about to be — not the last one with points.
     // FPL keeps `is_current` on a finished gameweek until the next deadline, so

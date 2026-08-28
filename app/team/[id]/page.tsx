@@ -40,8 +40,24 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
   }
 
   try {
-    const bootstrap = await fetchFPLBootstrap();
-    const entry = await fetchFPLEntry(id);
+    // One waiting stage, not five.
+    //
+    // These were awaited one after another, so the page cost six serial round
+    // trips before it could render — visible in a screen recording as three
+    // seconds of skeleton. Only two of them actually depend on anything: picks
+    // needs the entry's current event, and the price context needs the season
+    // from the bootstrap. Everything else was queued behind a request it had no
+    // relationship to.
+    const [bootstrap, entry, fixtures, transfers, watchIds] = await Promise.all([
+      fetchFPLBootstrap(),
+      fetchFPLEntry(id),
+      fetchFPLFixtures(),
+      // Transfers give the purchase price behind every squad value.
+      fetchFPLTransfers(id).catch((): any[] => []),
+      // Watchlisted players move too, and this is the page you would act on it
+      // from. One small document.
+      readWatchlist(id).catch((): number[] => []),
+    ]);
 
     const currentEvent =
       bootstrap.events.find((e) => e.is_current) ||
@@ -79,6 +95,11 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
     let activeGw = Math.min(initialGw, entry.current_event || initialGw);
     let picksData: FPLPicksResponse | null = null;
 
+    // Started, not awaited. The same price context the market page uses — so a
+    // player cannot read "Rising Tonight" on one page and "Trending Up" on the
+    // other — and it has no reason to wait behind the squad request.
+    const priceContextPromise = loadPriceContext(seasonKey(bootstrap)).catch(() => ({}));
+
     try {
       picksData = await fetchFPLPicks(id, activeGw);
     } catch {
@@ -98,24 +119,11 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       throw new Error(`Unable to find squad lineup for this team (Please check Team ID)`);
     }
 
-    // Transfers give the purchase price behind every squad value. Fetched
-    // alongside fixtures rather than after them: it is one more request on a
-    // page that already makes several, and it must not add a serial hop.
-    const [fixtures, transfers] = await Promise.all([
-      fetchFPLFixtures(),
-      fetchFPLTransfers(id).catch((): any[] => []),
-    ]);
+    const priceContext = await priceContextPromise;
     const activeEvent = bootstrap.events.find((e) => e.id === activeGw) || currentEvent;
     // The requested gameweek runs ahead of the squad's when its deadline has
     // not passed — there is no squad or points for it yet, only fixtures.
     const isPreview = fixtureGw > activeGw;
-    // Same price context the market page uses, so a player cannot read
-    // "Rising Tonight" on one page and "Trending Up" on the other.
-    const priceContext = await loadPriceContext(seasonKey(bootstrap)).catch(() => ({}));
-
-    // Watchlisted players move too, and this is the page you would act on it
-    // from. One small document.
-    const watchIds = await readWatchlist(id).catch((): number[] => []);
     const squadPlayers = buildSquadPlayers(
       picksData.picks || [],
       bootstrap,
