@@ -1002,3 +1002,53 @@ Not diagnosed, and deliberately not guessed at further from a remote console.
 The next step is a real profile in DevTools during the click, not more remote
 probes — the last three rounds each found the previous round's conclusion was
 measured in the wrong place, and this is the point to stop before doing it again.
+
+### Decision 24 — the screen recording found what four rounds of probing missed
+
+A 30-second recording settled two things the remote instrumentation had got
+wrong.
+
+**The skeletons do paint, immediately.** Visible at 6.25s, 16.25s and 26.00s.
+The earlier probe that "never caught `.animate-pulse`" was measuring badly, not
+observing an absence. The complaint was never a dead click — it was standing in
+front of a skeleton:
+
+| Menu item | Tap → real content |
+|---|---|
+| Analyst | ~1.3s |
+| Market | ~1.5s |
+| History | ~2.8s |
+| **Team** | **~3.0s** |
+
+**Two causes, both structural.**
+
+1. *The team page awaited six things in series.* Bootstrap, entry, picks,
+   fixtures + transfers, price context, watchlist — six round trips deep, when
+   only two have a real dependency (picks needs the entry's current event, the
+   price context needs the season). Now one parallel stage of five, then picks
+   and the context together. The market page's change history got the same
+   treatment.
+
+2. *The function runs on the wrong continent.* `x-vercel-id: sin1::iad1` — the
+   request enters at Singapore and executes in Washington DC, while Firestore
+   sits in `asia-southeast3`. Every database read crossed the Pacific and came
+   back, and so did every byte of a 115KB page, for a user in Bangkok.
+
+| Leg | iad1 | sin1 |
+|---|---|---|
+| User (Thailand) → function | ~250 ms | ~30 ms |
+| Function → Firestore (asia-southeast3) | ~220 ms | ~15 ms |
+| Function → FPL (UK) | ~90 ms | ~190 ms |
+
+Two legs improve sharply, one worsens — and the worsening one is now down to
+two stages rather than six. The nightly sweep was checked before committing to
+this: 600 player requests at concurrency 8 is ~8s from iad1 and ~15s from sin1,
+against a 60s `maxDuration`. No risk.
+
+`regions: ["sin1"]` in `vercel.json`. One field, instantly reversible, no
+migration.
+
+**Assumption stated:** the `asia-southeast3` reading is from `fanta-fpl-dev`,
+the only database these credentials reach. Production is assumed to match. If it
+does not, the Firestore leg gets worse rather than better and the region should
+be reconsidered — measurable straight after deploy.
