@@ -156,3 +156,111 @@ body {
 .animate-pulse-fall {
   animation: pulse-fall 2s infinite;
 }
+
+/* ============================================================
+   Splash — plays once per session when the app is opened.
+
+   The markup is plain HTML in layout.tsx rather than a React component: a
+   component mounts after hydration, so the app would paint first and then be
+   covered, which reads as a bug.
+
+   Every keyframe moves only transform / opacity / clip-path, so the work stays
+   on the compositor and off the main thread that is busy hydrating. Combined
+   with pointer-events: none for its whole life, the splash never delays use.
+   ============================================================ */
+#splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: linear-gradient(115deg, #a9e06a 0%, #74dcae 46%, #3fd0e8 100%);
+  animation: splash-out 300ms ease-in 900ms forwards;
+}
+
+/* The head script sets this from sessionStorage before the first paint. Without
+   that step a returning visitor sees the splash flash on every refresh. */
+html[data-splash='done'] #splash {
+  display: none;
+}
+
+#splash-logo {
+  position: relative;
+  width: min(58vw, 33vh);
+  aspect-ratio: 320 / 417;
+  animation: splash-logo-out 250ms cubic-bezier(0.4, 0, 0.9, 0.4) 900ms forwards;
+}
+
+#splash-mark {
+  position: absolute;
+  inset: 0;
+  animation: splash-logo-in 320ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+}
+
+#splash-mark > div {
+  position: absolute;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.splash-body {
+  inset: 0;
+  background-image: url('/splash-logo.webp');
+}
+
+/* The gold crown ships as a crop rather than a second full logo — the two images
+   differ only here, which keeps it at 5.7KB instead of 33KB. The percentages are
+   the crown's real position within the 449x585 source. */
+#splash-crown {
+  background-image: url('/splash-crown.webp');
+  left: 19.6%;
+  top: 0;
+  width: 57%;
+  height: 18.46%;
+  clip-path: inset(0 100% 0 0);
+  animation: splash-crown-wipe 340ms cubic-bezier(0.3, 0, 0.2, 1) 420ms forwards;
+}
+
+.sp {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--s);
+  height: var(--s);
+  background: rgba(255, 255, 255, 0.85);
+  clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%);
+  animation: splash-sparkle 1050ms ease-in-out var(--d) both;
+}
+
+@keyframes splash-logo-in {
+  from { opacity: 0; transform: scale(0.86); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes splash-crown-wipe {
+  to { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes splash-logo-out {
+  from { opacity: 1; transform: scale(1) translateY(0); }
+  to   { opacity: 0; transform: scale(1.06) translateY(-26px); }
+}
+
+@keyframes splash-out {
+  to { opacity: 0; visibility: hidden; }
+}
+
+@keyframes splash-sparkle {
+  0%   { opacity: 0; transform: scale(0.4); }
+  35%  { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.7) translateY(-14px); }
+}
+
+/* Drop the splash entirely rather than leaving an opaque panel behind. The reduce
+   rule above forces animation-duration to 0.01ms, which does clear the overlay,
+   but it still flashes on the way out. */
+@media (prefers-reduced-motion: reduce) {
+  #splash { display: none; }
+}
