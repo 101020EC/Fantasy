@@ -955,3 +955,50 @@ yet proven. The remaining second is the body, not the round trip: TTFB is flat
 at ~350ms across every route while totals span 20×. That points at /prices'
 351KB of HTML — 616 table rows rendered server-side — which is the next lever
 and is deliberately still open.
+
+### Decision 23 — the market page was half data, half rows
+
+The Round 5 note guessed "616 table rows rendered server-side". Wrong: the table
+has always rendered 100. Measured on production, the 351KB was:
+
+| Part | Size | Cause |
+|---|---|---|
+| RSC payload | 171 KB | all 616 players, as objects |
+| Table HTML | 160 KB | 100 rows at ~1.6 KB each |
+| Everything else | 20 KB | |
+
+Both halves fixed:
+
+- **Rows are sent as positional arrays.** Twelve field names, quoted and
+  repeated 616 times, cost more than the values they label — 59% of that payload
+  by direct measurement. They are decoded once on the client, so every field
+  reference in the table stays written by name. Same reasoning as
+  `market/{date}` in Firestore, applied to the wire.
+- **25 rows instead of 100**, with Show more. The table is sorted by proximity
+  to a price change, so the names that matter are at the top, and expanding
+  costs no request because all 616 are already in the browser. The limit resets
+  on a sort or filter change, since a different question puts different players
+  on top.
+
+Result on production: **351 KB → 132 KB (−62%)**; data 171→70, table 160→45.
+
+### What this did NOT fix, measured
+
+Clicking a menu item still shows the table about a second later. Four
+measurements, all on production:
+
+- **No RSC request is made on click** — the navigation is served entirely from
+  the prefetch cache. The network is not the bottleneck.
+- **No long tasks** during the navigation. The main thread is not blocked.
+- Halving the payload changed the timing by nothing measurable.
+- The table appears ~1.0–1.1s after the click, repeatably.
+
+So something is *waiting* rather than working, and it is not the network, the
+payload, or script execution. The instrumentation is also suspect: two
+`requestAnimationFrame` polling loops froze the CDP evaluate outright, so part
+of that second may be the harness rather than the app.
+
+Not diagnosed, and deliberately not guessed at further from a remote console.
+The next step is a real profile in DevTools during the click, not more remote
+probes — the last three rounds each found the previous round's conclusion was
+measured in the wrong place, and this is the point to stop before doing it again.
