@@ -776,3 +776,42 @@ the shell is already in the client cache by the time the link is clicked.
 default to fixtures rather than stats, because `FootballPitch` picks its mode
 from `isPreview` and a gameweek that has not kicked off has no points to show.
 Existing behaviour, newly reached by default. GW1's points are one chip away.
+
+## Decision 18 — one unescaped `~` silenced every alert
+
+The alert was never being skipped and the cron never failed. Telegram rejected
+the message, every single night:
+
+```
+Bad Request: can't parse entities:
+Can't find end of Italic entity at byte offset 256
+```
+
+The last line of the message was hardcoded, not passed through
+`escapeMarkdown()`:
+
+```
+⏰ _Prices update daily ~01:30 - 02:30 UTC_
+                        ^ opens a MarkdownV2 strikethrough
+```
+
+`~` opened a strikethrough entity that swallowed the italic's closing `_`.
+Message length is 257 bytes and the `~` sits at byte 237, which matches the
+offset Telegram reported. `escapeMarkdown` already covers `~` — the character
+simply never reached it. It was the only occurrence in the repository.
+
+Confirmed on production that the bot itself was healthy: `POST /api/telegram/test`
+delivered, because its fixed message happens to contain no `~`. So the fault was
+isolated to the alert template alone — not the token, the chat id, the schedule,
+or the thresholds.
+
+**Second change, worth more than the first.** `sendTelegramMessage` now retries
+without `parse_mode` when Telegram reports a parse failure, and reports the
+original rejection as a warning on an otherwise successful send. A single stray
+character cost days of alerts; from here a formatting slip costs the formatting
+only. The warning is recorded on the notification so /status still shows the bug
+rather than hiding it behind a delivered message.
+
+This was only findable because the /status page and the notification log from
+Decision 12 record failures. Before them, a rejection returned 502 into a Vercel
+log nobody reads, and looked exactly like a quiet night.

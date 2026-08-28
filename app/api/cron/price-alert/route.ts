@@ -273,7 +273,10 @@ export async function GET(req: NextRequest) {
       )}h — ${escapeMarkdown(formatBangkok(deadline.at))} Bangkok\n\n`;
     }
 
-    text += `⏰ _Prices update daily ~01:30 \\- 02:30 UTC_`;
+    // The tilde is escaped: MarkdownV2 reads a bare `~` as the strikethrough
+    // delimiter, which swallowed the closing `_` and left the italic unclosed.
+    // Telegram rejected every alert with "Can't find end of Italic entity".
+    text += `⏰ _Prices update daily \\~01:30 \\- 02:30 UTC_`;
 
     // 4. Deliver, and report Telegram's verdict honestly
     const result = await sendTelegramMessage(botToken, chatId, text);
@@ -291,7 +294,9 @@ export async function GET(req: NextRequest) {
     await recordNotification({
       kind: 'alert',
       outcome: result.ok ? 'sent' : 'failed',
-      error: result.ok ? null : result.description ?? 'Telegram rejected the message',
+      error: result.ok
+        ? result.description ?? null
+        : result.description ?? 'Telegram rejected the message',
       summary,
       text,
     });

@@ -31,10 +31,31 @@ export async function sendTelegramMessage(
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) {
-    return { ok: false, description: data.description || `Telegram returned ${res.status}` };
+  if (res.ok && data.ok) return { ok: true };
+
+  const description = data.description || `Telegram returned ${res.status}`;
+
+  // A formatting slip used to cost the whole message. One unescaped `~` opened
+  // a strikethrough that swallowed an italic's closing delimiter, and every
+  // nightly alert was rejected in silence for days. The content is still worth
+  // delivering without its formatting, so a parse failure retries as plain
+  // text — and still reports the original rejection so the bug stays visible.
+  if (!/can't parse entities/i.test(description)) {
+    return { ok: false, description };
   }
-  return { ok: true };
+
+  const retry = await fetch(`${TELEGRAM_API}/bot${botToken}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    // Unescaping first, so the fallback does not read as a wall of backslashes.
+    body: JSON.stringify({ chat_id: chatId, text: text.replace(/\\(.)/g, '$1') }),
+    cache: 'no-store',
+  });
+  const retryData = await retry.json().catch(() => ({}));
+  if (retry.ok && retryData.ok) {
+    return { ok: true, description: `Sent unformatted — Telegram rejected the markup: ${description}` };
+  }
+  return { ok: false, description };
 }
 
 /** Which kinds of alert the nightly job should send. */
