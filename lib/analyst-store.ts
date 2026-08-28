@@ -217,6 +217,23 @@ export async function readAccuracyHistory(season: string): Promise<GameweekAccur
     .sort((a, b) => a.gameweek - b.gameweek);
 }
 
+/**
+ * Every gameweek with a snapshot, provisional ones included.
+ *
+ * `storedEliteGameweeks` deliberately reports only finalised captures, so the
+ * cron re-captures a provisional week once FPL data-checks it. This one answers
+ * the different question "have we captured this at all yet", which is what stops
+ * the provisional pass running again every night for the same week.
+ */
+export async function storedEliteGameweeksAny(season: string): Promise<number[]> {
+  const snap = await getAdminDb()
+    .doc(analystPaths.eliteCohort(season))
+    .collection('gameweeks')
+    .select('gameweek')
+    .get();
+  return snap.docs.map((d) => Number(d.data().gameweek)).sort((a, b) => a - b);
+}
+
 export async function storedEliteGameweeks(season: string): Promise<number[]> {
   const snap = await getAdminDb()
     .doc(analystPaths.eliteCohort(season))

@@ -1117,3 +1117,60 @@ instead of waiting out the window.
 prompted by a number this document reported as fact. It was not fact. Three
 samples on a variable network is not a measurement, and presenting it as one
 sent the next round chasing a difference that did not exist.
+
+## Round 6 — the Elite Cohort page
+
+Every layer below the UI already existed: the roster in `eliteCohort/{season}`,
+immutable raw snapshots per gameweek, derived counts, and a read API. What was
+missing was a way to look at any of it. Production held one gameweek:
+
+```
+20/20 managers · 57 distinct players owned · xiOverlapMean 0.677
+B.Fernandes  18/20 owned · 15/20 captained · EO 165% · deltaEO +117
+João Pedro   20/20 owned — universal
+Bench Boost  16 of 20 · transfers 0
+```
+
+### Decision 26 — capture at the deadline, not only at finalisation
+
+Transfers are the part of this most worth seeing, and they are **zero for GW1 by
+construction** — nobody transfers into the first gameweek. Waiting for
+`data_checked` would leave the section empty until a day or two after GW2 is
+played, when the information stopped being interesting.
+
+Picks and transfers become public the moment the deadline passes; only points
+and ranks stay provisional. So the capture now runs twice: a provisional
+snapshot with `dataChecked: false` once the deadline has passed, overwritten by
+the final one when FPL data-checks the week. The schema already carried
+`dataChecked` for exactly this, and the "raw is immutable" rule holds where it
+matters — a snapshot is immutable *once dataChecked is true*.
+
+Anything shown from a provisional capture is labelled, because its entry points
+and ranks will still move.
+
+### Decision 27 — four sections, differential last
+
+The request was "most-shared players, and transfers in/out". Two more signals
+were already computed and are worth more than either:
+
+1. **Template** — most owned, the shape of the consensus squad
+2. **Captains** — where the cohort concentrates its risk
+3. **Transfers in / out** — the week's movement
+4. **Ahead of the crowd** — `deltaEO`, elite effective ownership minus general
+   ownership. This is the one that says something the FPL site cannot: Maguire
+   at +73 means the cohort is 73 points of effective ownership ahead of everyone
+   else on a player most managers do not have.
+
+Section 4 last, deliberately: it is the most useful and the least obvious, so it
+reads as a payoff rather than a hurdle.
+
+### Decision 28 — a separate read-only route per manager
+
+`/team/[id]` already renders any team, which looks like a free ride. It is not:
+`TeamSaveTracker` calls `setSavedTeamId(id)` on mount, so opening an elite
+manager's squad through it would **silently switch the user's own team to
+theirs**. It also renders the live squad from FPL, not the gameweek being
+studied, and would add 20 more reasons to call the FPL API.
+
+`/elite/[id]` renders the stored snapshot instead — the right gameweek, with
+captain, bench and chip, no side effects, and no new upstream requests.

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X, Bell, Brain, Activity } from 'lucide-react';
+import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X, Bell, Brain, Activity, Crown } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import TelegramSettingsModal from './telegram/TelegramSettingsModal';
 import PremierLeagueLogo from './PremierLeagueLogo';
@@ -32,7 +32,7 @@ export default function Navbar() {
    */
   useEffect(() => {
     const warm = () => {
-      for (const route of ['/prices', '/analyst', '/status', '/backup', '/']) {
+      for (const route of ['/prices', '/analyst', '/elite', '/status', '/backup', '/']) {
         try {
           router.prefetch(route);
         } catch {
@@ -192,6 +192,18 @@ export default function Navbar() {
                     <Brain className="w-4 h-4" />
                   </div>
                   <span>Analyst</span>
+                </Link>
+
+                {/* Elite Cohort */}
+                <Link
+                  href="/elite"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-black text-amber-800 hover:bg-amber-50 transition"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+                    <Crown className="w-4 h-4" />
+                  </div>
+                  <span>Elite</span>
                 </Link>
 
                 {/* Alert */}

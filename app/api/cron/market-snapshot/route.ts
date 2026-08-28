@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import type { FPLEvent } from '@/lib/types';
 import { fetchFPLBootstrap, fetchFPLFixtures } from '@/lib/fpl-api';
 import { buildMarketSnapshot } from '@/lib/market-snapshot';
 import { buildThresholdObservations, diffSnapshots } from '@/lib/price-changes';
@@ -38,6 +39,7 @@ import {
   writeCalibration,
   writeForecast,
   storedEliteGameweeks,
+  storedEliteGameweeksAny,
   storedPlayerStatGameweeks,
   writeEliteGameweek,
   writePlayerPriors,
@@ -307,20 +309,39 @@ async function runAnalystSteps(bootstrap: any) {
     if (!cohort?.managerIds?.length) {
       results.eliteCohort = { skipped: 'no cohort configured' };
     } else {
-      const stored = await storedEliteGameweeks(season);
+      const [stored, everStored] = await Promise.all([
+        storedEliteGameweeks(season),
+        storedEliteGameweeksAny(season),
+      ]);
       const pending = finalised.filter((gw) => !stored.includes(gw));
-      if (!pending.length) {
+
+      // A gameweek whose deadline has passed but which FPL has not data-checked.
+      // Squads and transfers are already public and frozen; only points and
+      // ranks are still moving. Captured provisionally so the page has this
+      // week's transfers now rather than two days after they stopped mattering.
+      const now = Date.now();
+      const inFlight = (bootstrap.events as FPLEvent[])
+        .filter((e) => !e.data_checked && Date.parse(e.deadline_time) <= now)
+        .map((e) => e.id)
+        .sort((a, b) => b - a)[0];
+
+      const target = pending[0] ?? (inFlight && !everStored.includes(inFlight) ? inFlight : null);
+
+      if (target == null) {
         results.eliteCohort = { upToDate: true, stored: stored.length };
       } else {
-        const gw = pending[0];
-        const snapshot = await captureEliteGameweek(season, gw, cohort.managerIds);
+        const isFinal = pending.includes(target);
+        const snapshot = await captureEliteGameweek(season, target, cohort.managerIds, {
+          dataChecked: isFinal,
+        });
         await writeEliteGameweek(snapshot, computeEliteDerived(snapshot));
         results.eliteCohort = {
-          gameweek: gw,
+          gameweek: target,
+          provisional: !isFinal,
           availableManagerCount: snapshot.availableManagerCount,
           cohortSize: snapshot.cohortSize,
           missing: snapshot.missing,
-          remaining: pending.length - 1,
+          remaining: Math.max(0, pending.length - 1),
         };
       }
     }

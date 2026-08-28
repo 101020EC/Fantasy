@@ -52,7 +52,7 @@ function flatten(items: any[], fields: readonly string[]): Cell[] {
   return items.flatMap((item) => row(item, fields));
 }
 
-function unflatten(values: Cell[], fields: readonly string[]): Record<string, Cell>[] {
+export function unflatten(values: Cell[], fields: readonly string[]): Record<string, Cell>[] {
   const width = fields.length;
   const out: Record<string, Cell>[] = [];
   for (let i = 0; i + width <= values.length; i += width) {
@@ -121,7 +121,7 @@ export async function captureEliteGameweek(
   season: string,
   gameweek: number,
   managerIds: number[],
-  opts: { delayMs?: number } = {}
+  opts: { delayMs?: number; dataChecked?: boolean } = {}
 ): Promise<EliteGameweekSnapshot> {
   const delayMs = opts.delayMs ?? 120;
   const managers: Record<string, EliteManagerGameweek> = {};
@@ -162,7 +162,11 @@ export async function captureEliteGameweek(
     season,
     gameweek,
     capturedAt: new Date().toISOString(),
-    dataChecked: true,
+    // Picks and transfers are final the moment the deadline passes; points and
+    // ranks are not. A capture taken between the deadline and FPL's data check
+    // is therefore correct about squads and provisional about scores, and says
+    // so rather than claiming to be settled.
+    dataChecked: opts.dataChecked ?? true,
     cohortSize: managerIds.length,
     availableManagerCount: Object.keys(managers).length,
     missing,
