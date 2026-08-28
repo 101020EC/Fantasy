@@ -920,3 +920,38 @@ TTFB is flat across all five while totals span 20×, so the cost is streaming th
 body, not starting the response. Prefetching the skeleton hides that entirely
 from the click; /prices' 351KB body and /analyst's 2.6s remain, and are a
 separate question deliberately left open.
+
+### Round 5 verification
+
+Stats card, live on production:
+
+```
+Gameweek 2 · not played yet     GW Points —   GW Rank —
+Season so far · through GW1     Total Points 53   Overall Rank #3,482,299
+                                Squad Value £100.0m
+                                  £100.2m on the market · £0.2m not yet realisable
+```
+
+The squad-value complaint turned out to be **correct behaviour**, not a bug.
+Calafiori and João Pedro have each risen 0.1 since purchase; FPL returns half of
+a rise rounded down, so both still sell for exactly what they cost and £100.0m
+was right all along. Summing `now_cost` would have shown £100.2m — a number FPL
+never displays. The fix was therefore to explain the figure, not to change it.
+14 assertions cover the rule, including that +0.1 returns nothing and +0.3
+returns 0.1 rather than 0.15.
+
+Prefetch, measured in the browser on a real page load:
+
+| | Before | After |
+|---|---|---|
+| RSC prefetch requests issued | **0** | **5** (`/prices` 23KB, `/analyst` 6KB, `/status` 3KB, `/backup` 2KB, `/` 2KB) |
+| Click → committed, /analyst | — | ~1.0s (against 2.6s for a cold full load) |
+
+**Not achieved, and worth stating plainly:** the click is faster but not
+instant, and a probe watching for `.animate-pulse` never caught the skeleton
+painting on `/status` or `/prices` — click-to-commit sat at ~1.0s on both. So
+the prefetch is real and measurable, but the "paints immediately" claim is not
+yet proven. The remaining second is the body, not the round trip: TTFB is flat
+at ~350ms across every route while totals span 20×. That points at /prices'
+351KB of HTML — 616 table rows rendered server-side — which is the next lever
+and is deliberately still open.
