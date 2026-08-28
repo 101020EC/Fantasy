@@ -1052,3 +1052,25 @@ migration.
 the only database these credentials reach. Production is assumed to match. If it
 does not, the Firestore leg gets worse rather than better and the region should
 be reconsidered — measurable straight after deploy.
+
+### Round 6 verification — measured from the user's own browser in Thailand
+
+`x-vercel-id` now reads `sin1::sin1`. Median of three runs per route,
+cache-busted:
+
+| Route | Before (Round 5) | After | |
+|---|---|---|---|
+| /status | 910 ms | **226 ms** | 4.0× |
+| /prices | 1,195 ms | **249 ms** | 4.8× |
+| /team | 1,264 ms | **477 ms** | 2.6× |
+| /analyst | 2,623 ms | **677 ms** | 3.9× |
+
+TTFB fell from a flat ~350–500 ms to 126–219 ms, which is the Pacific crossing
+disappearing. The rest is the waterfall collapse and the smaller payload.
+
+Worth naming: of the four rounds spent on this, the payload work saved 62% of
+bytes and changed the felt latency by nothing measurable, while two structural
+facts — six serial awaits and a function on the wrong continent — accounted for
+almost all of it. The bytes were the visible thing; they were not the expensive
+thing. And none of it surfaced until a 30-second screen recording showed the
+skeleton painting instantly and then sitting there.
