@@ -6,6 +6,7 @@ import {
   fetchFPLEntry,
   fetchFPLPicks,
   fetchFPLFixtures,
+  fetchFPLTransfers,
   buildSquadPlayers,
 } from '@/lib/fpl-api';
 import { FPLPicksResponse } from '@/lib/types';
@@ -97,7 +98,13 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       throw new Error(`Unable to find squad lineup for this team (Please check Team ID)`);
     }
 
-    const fixtures = await fetchFPLFixtures();
+    // Transfers give the purchase price behind every squad value. Fetched
+    // alongside fixtures rather than after them: it is one more request on a
+    // page that already makes several, and it must not add a serial hop.
+    const [fixtures, transfers] = await Promise.all([
+      fetchFPLFixtures(),
+      fetchFPLTransfers(id).catch((): any[] => []),
+    ]);
     const activeEvent = bootstrap.events.find((e) => e.id === activeGw) || currentEvent;
     // The requested gameweek runs ahead of the squad's when its deadline has
     // not passed — there is no squad or points for it yet, only fixtures.
@@ -167,7 +174,15 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
         </div>
 
         {/* 3. Team Overview Header & Stats */}
-        <TeamHeader entry={entry} picksData={picksData} isPreview={isPreview} />
+        <TeamHeader
+          entry={entry}
+          picksData={picksData}
+          isPreview={isPreview}
+          squadGw={activeGw}
+          shownGw={fixtureGw}
+          elements={bootstrap.elements}
+          transfers={transfers}
+        />
 
         {/* 4. Private Leagues Card */}
         <PrivateLeaguesCard

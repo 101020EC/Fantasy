@@ -14,8 +14,42 @@ export default function Navbar() {
   const [isTelegramOpen, setIsTelegramOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  /**
+   * Warm every destination the menu can reach, on idle.
+   *
+   * Round 3 added a `loading.tsx` to each dynamic route and confirmed the server
+   * returns a skeleton to an RSC prefetch — but nothing was ever asking for it.
+   * The menu is conditionally rendered, so its links are absent from the DOM
+   * until the hamburger opens, and Next prefetches on viewport intersection.
+   * Rendering it hidden would not help either: `display: none` never intersects.
+   *
+   * Prefetching by hand sidesteps the observer entirely. Each call costs one
+   * ~14KB skeleton, and it buys the whole round trip back from the click.
+   */
+  useEffect(() => {
+    const warm = () => {
+      for (const route of ['/prices', '/analyst', '/status', '/backup', '/']) {
+        try {
+          router.prefetch(route);
+        } catch {
+          // Prefetching is an optimisation; never let it break navigation.
+        }
+      }
+    };
+    const idle = (window as any).requestIdleCallback;
+    // Deliberately after the current page settles — prefetching four routes in
+    // parallel with the render they are meant to speed up helps nothing.
+    const handle = idle ? idle(warm, { timeout: 2000 }) : window.setTimeout(warm, 1200);
+    return () => {
+      const cancelIdle = (window as any).cancelIdleCallback;
+      if (idle && cancelIdle) cancelIdle(handle);
+      else window.clearTimeout(handle);
+    };
+  }, [router]);
   const pathname = usePathname();
   const { savedTeamId, logout } = useAuth();
 
@@ -93,7 +127,11 @@ export default function Navbar() {
             </button>
 
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onMouseEnter={() => router.prefetch(teamUrl)}
+              onClick={() => {
+                router.prefetch(teamUrl);
+                setIsMenuOpen(!isMenuOpen);
+              }}
               className={`w-10 h-10 rounded-full border border-black/10 flex items-center justify-center transition active:scale-90 shadow-sm ${
                 isMenuOpen
                   ? 'bg-[#38003c] text-white'

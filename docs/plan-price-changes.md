@@ -857,3 +857,66 @@ the hourly write guard holds.
 
 **Not verified:** the banner has never been seen during a real outage — FPL
 recovered before this shipped. The next 403 is its first live test.
+
+## Round 5 — the stats card and the menu
+
+### Decision 20 — Squad Value is a selling price, not a market price
+
+The card read £100.0m while the pitch above it showed prices that had moved for
+days. It was `entry_history.value`, frozen at the GW1 deadline.
+
+The naive fix is wrong: summing `now_cost` gives a number FPL never shows, and
+it overstates the team every time a player rises. FPL sells at
+`purchase + floor((now_cost − purchase) / 2)` on a rise, and at `now_cost` on a
+fall — the manager keeps half the gain and all of the loss.
+
+Purchase price is recoverable for all fifteen without a new endpoint shape:
+
+| Case | Source |
+|---|---|
+| Bought during the season | `element_in_cost`, latest transfer-in for that element |
+| Original squad, never traded | `now_cost − cost_change_start` — the season-start price, which is what they were bought at |
+
+`cost_change_start` is already in `ELEMENT_FIELDS`; only `/entry/{id}/transfers/`
+is new to this page, and `fetchFPLTransfers` already exists and already degrades
+to `[]`.
+
+### Decision 21 — the stats card mixes two clocks, so it gets two headings
+
+`Total Points 53` is a season figure. `GW Points —` is a week that has not
+kicked off. Side by side with no heading they read as one contradictory
+statement — which is exactly what was reported. Split into **"GW n · not played
+yet"** (points, rank) and **"Season so far · through GW1"** (total, overall rank,
+squad value, bank). Every number now says what period it belongs to.
+
+### Decision 22 — the prefetch added in Round 3 never ran
+
+Round 3 added `loading.tsx` to all four dynamic routes and verified the server
+returns a 14KB skeleton to an RSC prefetch request. That verified the wrong
+half. The nav menu is `{isMenuOpen && (…)}`, so its links are **not in the DOM
+until the hamburger is pressed** — and Next prefetches on viewport intersection.
+Confirmed against production HTML: `/analyst`, `/status` and `/backup` appear
+nowhere in the initial markup.
+
+So every menu click still paid a full round trip before anything could paint.
+The skeleton existed; nothing had asked for it.
+
+Fixed by prefetching imperatively with `router.prefetch()` on mount, during idle
+time, rather than by relying on the observer seeing a hidden element. Rendering
+the menu permanently and hiding it with CSS would not have worked either —
+`display: none` never intersects.
+
+Measured on production, two passes per route:
+
+| Route | TTFB | Total | HTML |
+|---|---|---|---|
+| /backup | 114 ms | 115 ms | 12 KB |
+| /status | 405 ms | 910 ms | 29 KB |
+| /team | 410 ms | 1,264 ms | 114 KB |
+| /prices | 330 ms | 1,195 ms | 351 KB |
+| /analyst | 350 ms | 2,623 ms | 138 KB |
+
+TTFB is flat across all five while totals span 20×, so the cost is streaming the
+body, not starting the response. Prefetching the skeleton hides that entirely
+from the click; /prices' 351KB body and /analyst's 2.6s remain, and are a
+separate question deliberately left open.
