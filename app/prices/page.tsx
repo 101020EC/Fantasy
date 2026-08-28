@@ -8,6 +8,8 @@ import { FPLElementType, FPLTeam } from '@/lib/types';
 import PriceMarketTable from '@/components/prices/PriceMarketTable';
 import { MarketRow, toMarketRow } from '@/lib/market-row';
 import { Clock, AlertCircle } from 'lucide-react';
+import { stalest } from '@/lib/fpl-resilience';
+import { StaleNotice } from '@/components/system/UpstreamNotice';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,8 +40,11 @@ export default async function PricesPage() {
   let changeDays: PriceChangeDay[] = [];
   let confidence = { riseFitted: false, fallFitted: false };
 
+  let bootstrapForStaleness: unknown = null;
+
   try {
     const bootstrap = await fetchFPLBootstrap();
+    bootstrapForStaleness = bootstrap;
 
     // Baselines and thresholds make the target percentage mean something. Both
     // degrade to the old behaviour if Firestore is unreachable, so a database
@@ -73,8 +78,15 @@ export default async function PricesPage() {
     errorMsg = err.message || 'Unable to load price data from FPL API';
   }
 
+  const served = stalest(bootstrapForStaleness);
+
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-6 pt-2 pb-4 sm:pt-3 sm:pb-6">
+      {served && (
+        <div className="mb-3">
+          <StaleNotice capturedAt={served.capturedAt} />
+        </div>
+      )}
       {/* Title row sits tight to the top; the tab switcher renders on the row
           below it, inside PriceMarketTable, with the update window holding the
           right-hand side of both. */}

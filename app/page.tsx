@@ -143,7 +143,16 @@ function HistoryView() {
 
     try {
       const res = await fetch(`/api/fpl/entry/${newTeamInput.trim()}`);
-      if (!res.ok) throw new Error('Team ID not found in FPL system');
+      // Only a 404 means the ID is wrong. Anything else is FPL being
+      // unavailable, and telling someone their ID is bad sends them to fix
+      // something that was never broken.
+      if (!res.ok) {
+        throw new Error(
+          res.status === 404
+            ? 'Team ID not found in FPL system'
+            : 'FPL is not responding right now — try again in a moment'
+        );
+      }
       const data = await res.json();
       setPreviewNewEntry(data);
     } catch (err: any) {

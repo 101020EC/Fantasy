@@ -20,6 +20,8 @@ import { seasonKey } from '@/lib/analyst';
 import { readWatchlist } from '@/lib/watchlist';
 import { analyzePlayerPrice } from '@/lib/price-calculator';
 import { loadPriceContext } from '@/lib/price-changes-store';
+import { FplError, stalest } from '@/lib/fpl-resilience';
+import { FplUnavailable, StaleNotice } from '@/components/system/UpstreamNotice';
 
 export const dynamic = 'force-dynamic';
 
@@ -131,8 +133,12 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       }))
       .filter((p) => p.status !== 'stable');
 
+    const served = stalest(bootstrap, entry, picksData, fixtures);
+
     return (
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
+        {served && <StaleNotice capturedAt={served.capturedAt} />}
+
         <TeamSaveTracker
           id={id}
           entry={entry}
@@ -175,6 +181,13 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       </div>
     );
   } catch (err: any) {
+    // An upstream outage is not a missing team. Telling someone to re-check a
+    // team ID that was never wrong is the worst thing this page can do, and it
+    // is exactly what a single shared error card did during FPL's 403 block.
+    if (err instanceof FplError && err.kind === 'unavailable') {
+      return <FplUnavailable status={err.status} detail={err.message} />;
+    }
+
     return (
       <div className="max-w-md mx-auto px-4 py-16 text-center">
         <div className="p-8 rounded-4xl bg-white border border-rose-200 shadow-xl">

@@ -13,6 +13,8 @@ import {
   placeholderTeam,
 } from './types';
 import { analyzePlayerPrice, PriceContext } from './price-calculator';
+import { FplError, markStale, recall, recallEntry, remember, withRetry } from './fpl-resilience';
+import { loadBootstrapFallback, saveBootstrapFallback } from './fpl-fallback-store';
 
 const FPL_BASE = 'https://fantasy.premierleague.com/api';
 
@@ -36,7 +38,47 @@ const FPL_HEADERS = {
  * made from a browser. Client components must go through /api/fpl/*.
  */
 function fplFetch(path: string, revalidate: number) {
-  return fetch(`${FPL_BASE}${path}`, { headers: FPL_HEADERS, next: { revalidate } });
+  return withRetry(() =>
+    fetch(`${FPL_BASE}${path}`, { headers: FPL_HEADERS, next: { revalidate } })
+  );
+}
+
+/**
+ * Fetch, and fall back to the last good copy for this path when FPL will not
+ * answer. A 404 is never retried or substituted — it is FPL telling the truth
+ * about something that does not exist.
+ */
+async function fplJson<T>(path: string, revalidate: number, label: string): Promise<T> {
+  let res: Response | null = null;
+  try {
+    res = await fplFetch(path, revalidate);
+  } catch {
+    res = null;
+  }
+
+  if (res?.ok) {
+    const value = (await res.json()) as T;
+    remember(path, value);
+    return value;
+  }
+
+  if (res?.status === 404) {
+    throw new FplError('not_found', 404, `${label} was not found`);
+  }
+
+  const cached = recallEntry(path);
+  if (cached) {
+    markStale(cached.value, cached.capturedAt, res?.status ?? 0);
+    return cached.value as T;
+  }
+
+  throw new FplError(
+    'unavailable',
+    res?.status ?? 0,
+    res
+      ? `The FPL API is temporarily unavailable (HTTP ${res.status})`
+      : 'The FPL API could not be reached'
+  );
 }
 
 // bootstrap-static ships 109 fields per player and weighs ~1.7MB. Next's data
@@ -93,54 +135,82 @@ function trimBootstrap(raw: any): FPLBootstrap {
  */
 const getBootstrap = unstable_cache(
   async (): Promise<FPLBootstrap> => {
-    const res = await fetch(`${FPL_BASE}/bootstrap-static/`, {
-      headers: FPL_HEADERS,
-      cache: 'no-store',
-    });
+    const res = await withRetry(() =>
+      fetch(`${FPL_BASE}/bootstrap-static/`, { headers: FPL_HEADERS, cache: 'no-store' })
+    );
     if (!res.ok) {
-      throw new Error(`Could not load FPL player data (HTTP ${res.status})`);
+      throw new FplError(
+        'unavailable',
+        res.status,
+        `Could not load FPL player data (HTTP ${res.status})`
+      );
     }
-    return trimBootstrap(await res.json());
+    const trimmed = trimBootstrap(await res.json());
+    // Never let persisting the safety net break the request it is protecting.
+    await saveBootstrapFallback(trimmed).catch(() => {});
+    return trimmed;
   },
   ['fpl-bootstrap-static'],
   { revalidate: 300, tags: ['fpl-bootstrap'] }
 );
 
-export function fetchFPLBootstrap(): Promise<FPLBootstrap> {
-  return getBootstrap();
+/**
+ * Every page starts here, so a failure here is the whole site going down. Two
+ * fallbacks, in order of freshness: this instance's last good copy, then the
+ * one in Firestore, which survives a cold start. Both are marked stale so the
+ * page can say what it is showing rather than quietly presenting old prices as
+ * current.
+ */
+export async function fetchFPLBootstrap(): Promise<FPLBootstrap> {
+  try {
+    const bootstrap = await getBootstrap();
+    remember('bootstrap', bootstrap);
+    return bootstrap;
+  } catch (err) {
+    const status = err instanceof FplError ? err.status : 0;
+
+    const warm = recallEntry('bootstrap');
+    if (warm) {
+      markStale(warm.value, warm.capturedAt, status);
+      return warm.value as FPLBootstrap;
+    }
+
+    const durable = await loadBootstrapFallback().catch(() => null);
+    if (durable) {
+      markStale(durable.bootstrap, durable.capturedAt, status);
+      return durable.bootstrap;
+    }
+
+    throw err;
+  }
 }
 
-export async function fetchFPLEntry(teamId: number | string): Promise<FPLEntry> {
-  const res = await fplFetch(`/entry/${teamId}/`, 60);
-  if (!res.ok) {
-    // Distinguish "no such team" from an upstream outage — collapsing both into
-    // "team not found" sent users to re-check an ID that was fine.
-    throw new Error(
-      res.status === 404
-        ? `Team ID ${teamId} was not found — check the number`
-        : `The FPL API is temporarily unavailable (HTTP ${res.status})`
-    );
-  }
-  return res.json();
+export function fetchFPLEntry(teamId: number | string): Promise<FPLEntry> {
+  // "No such team" and "upstream is down" are different answers and get
+  // different errors — collapsing them sent people to re-check an ID that was
+  // fine while FPL was blocking us.
+  return fplJson<FPLEntry>(`/entry/${teamId}/`, 60, `Team ID ${teamId}`);
 }
 
 export async function fetchFPLPicks(
   teamId: number | string,
   eventId: number | string
 ): Promise<FPLPicksResponse> {
-  const res = await fplFetch(`/entry/${teamId}/event/${eventId}/picks/`, 60);
-  if (!res.ok) {
-    throw new Error(`No squad found for GW ${eventId}`);
-  }
-  return res.json();
+  return fplJson<FPLPicksResponse>(
+    `/entry/${teamId}/event/${eventId}/picks/`,
+    60,
+    `A squad for GW ${eventId}`
+  );
 }
 
 export async function fetchFPLFixtures(): Promise<FPLFixture[]> {
   try {
-    const res = await fplFetch('/fixtures/', 1800);
-    return res.ok ? await res.json() : [];
+    return await fplJson<FPLFixture[]>('/fixtures/', 1800, 'The fixture list');
   } catch {
-    return [];
+    // An empty list is the established contract here; callers render a pitch
+    // without fixtures rather than failing. A stale list beats it, and fplJson
+    // has already tried for one.
+    return recall<FPLFixture[]>('/fixtures/') ?? [];
   }
 }
 

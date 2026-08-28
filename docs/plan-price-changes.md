@@ -815,3 +815,45 @@ rather than hiding it behind a delivered message.
 This was only findable because the /status page and the notification log from
 Decision 12 record failures. Before them, a rejection returned 502 into a Vercel
 log nobody reads, and looked exactly like a quiet night.
+
+## Decision 19 — an FPL outage should cost freshness, not the site
+
+On 2026-08-28 FPL began returning 403 to every request from Vercel while the
+identical request from a residential IP returned 200 — a Cloudflare block on the
+egress address. Two separate failures followed, and both were ours.
+
+**The message was wrong.** `/team/[id]` rendered "Team Not Found" with a "Search
+Another Team ID" button. The team was fine; FPL was down. The page sent people to
+correct something that was never broken. `FplError` now carries a `kind` —
+`not_found` only for a real 404, `unavailable` for everything else — and the two
+get different cards. The upstream one offers a retry, not a search box.
+
+**The site had nothing to fall back on.** Every page begins with the bootstrap,
+so one refused request took down the whole app while a perfectly good copy sat in
+memory. Three layers now, in order of freshness:
+
+1. the fetch itself, retried **once** on 403/429/5xx — FPL's block is IP-level
+   and a burst makes it worse, so this covers a wobble and gets out of the way;
+2. the last good response per path, in instance memory;
+3. for the bootstrap only, a durable copy in `settings/fplBootstrapCache`,
+   rewritten at most hourly. Instance memory dies with a cold start, which is
+   precisely the case that takes the site down.
+
+Stale data is served **labelled**. An error page is obviously wrong; last hour's
+prices presented as current are not, which makes silence the worse failure.
+
+**A design that would have shipped broken.** Staleness was first tracked with
+React's `cache()` for per-request state. A throwaway probe route proved it
+returns a *fresh* object on every call outside a render — the banner would never
+have appeared, and no type error or build would have said so. It is now keyed on
+the identity of the returned value in a `WeakMap`: a value served from the
+fallback is marked, a freshly fetched one is a new object and is not, and nothing
+leaks between concurrent requests.
+
+Verified: 11 assertions against a stubbed FPL (fallback serves, fresh values stay
+unmarked, exactly one retry, a genuine 404 is neither retried nor substituted),
+plus a Firestore round-trip on the dev database confirming the document fits and
+the hourly write guard holds.
+
+**Not verified:** the banner has never been seen during a real outage — FPL
+recovered before this shipped. The next 403 is its first live test.
