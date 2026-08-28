@@ -1074,3 +1074,46 @@ facts — six serial awaits and a function on the wrong continent — accounted 
 almost all of it. The bytes were the visible thing; they were not the expensive
 thing. And none of it surfaced until a 30-second screen recording showed the
 skeleton painting instantly and then sitting there.
+
+### Decision 25 — the team page was not slower; the measurement was
+
+Reported as 477ms against 226–249ms for the other routes. That figure was a
+median of **three** samples and it was noise. Nine samples per route, from the
+user's own browser in Bangkok:
+
+| Route | TTFB | Total | HTML |
+|---|---|---|---|
+| /status | 142 ms | 235 ms | 29 KB |
+| /team | 140 ms | **238 ms** | 115 KB |
+| /prices | 159 ms | 240 ms | 132 KB |
+| /analyst | 131 ms | 374 ms | 138 KB |
+
+Server-side timing from inside the deployed region confirms it, on a temporary
+probe route since removed:
+
+```
+stage 1  68 ms   bootstrap 16 · entry 29 · fixtures 36 · transfers 28 · watchlist 67
+stage 2  66 ms   picks 11 · priceContext 65
+total   134 ms
+```
+
+`domContentLoaded` 391 ms, `load` 410 ms, and no API calls after load. The team
+page is now indistinguishable from the others.
+
+**But the phone is not this browser.** `TeamSaveTracker` fires
+`archiveSelectedLeaguesData` from a `useEffect` whenever `localStorage` holds a
+league selection — and that POST re-fetches the entry, picks, history, transfers
+and every selected league's full standings server-side, then writes a Firestore
+batch. On **every** visit, re-archiving the same gameweek. This browser has no
+saved leagues, so it never fired here; the recording shows the user's does.
+
+It never blocked paint — it is fire-and-forget — but on a phone it competes for
+bandwidth with everything the page still needs. Now skipped when the same squad
+and league selection was archived within six hours. The key carries the gameweek
+and the selection, so a new gameweek or a changed selection archives at once
+instead of waiting out the window.
+
+**Correction worth stating plainly:** the question "why is team slower" was
+prompted by a number this document reported as fact. It was not fact. Three
+samples on a variable network is not a measurement, and presenting it as one
+sent the next round chasing a difference that did not exist.
