@@ -1174,3 +1174,32 @@ studied, and would add 20 more reasons to call the FPL API.
 
 `/elite/[id]` renders the stored snapshot instead — the right gameweek, with
 captain, bench and chip, no side effects, and no new upstream requests.
+
+### Round 6 verification
+
+Live on production, GW1, 111KB:
+
+```
+The template         João Pedro 20/20 · Calvert-Lewin, Maguire, B.Fernandes 18/20 · Szoboszlai 16/20
+Captains             B.Fernandes 15/20 · Haaland 5/20        (20 of 20 accounted for)
+Transferred in       "Nobody transfers into the first gameweek"
+Ahead of the crowd   B.Fernandes +117 (165% cohort vs 48% general)
+The managers         20 links · first: De Wahlistiske, 82 pts, #68,962, Bench Boost
+/elite/18203?gw=1    46KB · 11 starters + 4 substitutes · captain and chip shown
+```
+
+The capture-selection rule was extracted into `nextEliteCapture()` and unit
+tested, because it cannot be exercised until the GW2 deadline passes tonight and
+the failure modes are all silent ones — capturing nightly forever, or never
+upgrading a provisional snapshot to a final one. Seven assertions:
+
+- captures the in-flight week provisionally once its deadline has passed
+- does **not** re-capture it the following night
+- **does** re-capture it once FPL data-checks it, this time as final
+- finalised work wins over in-flight work when both are pending
+- captures nothing before the deadline
+- an empty database starts at the first finalised week
+
+**Untested until tonight:** the provisional capture itself. Everything on the
+page today comes from the finalised GW1 snapshot, which was already there. The
+first real test is the cron run after tonight's 00:30 deadline.

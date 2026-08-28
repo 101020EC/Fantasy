@@ -17,7 +17,12 @@ import { getAdminDb, isAdminConfigured, ADMIN_NOT_CONFIGURED } from '@/lib/fireb
 import { ANALYST_ENABLED, finalisedEvents, seasonKey } from '@/lib/analyst';
 import { buildSeasonFixtures } from '@/lib/fixtures-store';
 import { buildPlayerPriors, buildPlayerStatsDoc, sweepPlayerStats } from '@/lib/player-stats';
-import { captureEliteGameweek, computeEliteDerived, ENTRY_FIELDS } from '@/lib/elite-cohort';
+import {
+  captureEliteGameweek,
+  computeEliteDerived,
+  ENTRY_FIELDS,
+  nextEliteCapture,
+} from '@/lib/elite-cohort';
 import { buildArchivePayload, writeArchive } from '@/lib/archive';
 import { getTelegramConfig } from '@/lib/telegram';
 import { loadFeatureInputs } from '@/lib/forecast-inputs';
@@ -313,35 +318,26 @@ async function runAnalystSteps(bootstrap: any) {
         storedEliteGameweeks(season),
         storedEliteGameweeksAny(season),
       ]);
-      const pending = finalised.filter((gw) => !stored.includes(gw));
+      const next = nextEliteCapture({
+        finalised,
+        storedFinal: stored,
+        storedAny: everStored,
+        events: bootstrap.events as FPLEvent[],
+      });
 
-      // A gameweek whose deadline has passed but which FPL has not data-checked.
-      // Squads and transfers are already public and frozen; only points and
-      // ranks are still moving. Captured provisionally so the page has this
-      // week's transfers now rather than two days after they stopped mattering.
-      const now = Date.now();
-      const inFlight = (bootstrap.events as FPLEvent[])
-        .filter((e) => !e.data_checked && Date.parse(e.deadline_time) <= now)
-        .map((e) => e.id)
-        .sort((a, b) => b - a)[0];
-
-      const target = pending[0] ?? (inFlight && !everStored.includes(inFlight) ? inFlight : null);
-
-      if (target == null) {
+      if (!next) {
         results.eliteCohort = { upToDate: true, stored: stored.length };
       } else {
-        const isFinal = pending.includes(target);
-        const snapshot = await captureEliteGameweek(season, target, cohort.managerIds, {
-          dataChecked: isFinal,
+        const snapshot = await captureEliteGameweek(season, next.gameweek, cohort.managerIds, {
+          dataChecked: next.dataChecked,
         });
         await writeEliteGameweek(snapshot, computeEliteDerived(snapshot));
         results.eliteCohort = {
-          gameweek: target,
-          provisional: !isFinal,
+          gameweek: next.gameweek,
+          provisional: !next.dataChecked,
           availableManagerCount: snapshot.availableManagerCount,
           cohortSize: snapshot.cohortSize,
           missing: snapshot.missing,
-          remaining: Math.max(0, pending.length - 1),
         };
       }
     }
