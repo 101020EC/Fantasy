@@ -1,0 +1,23 @@
+name = "fanta-cron"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# The clock, not the app. Fanta stays on Vercel — this Worker exists only
+# because Vercel's Hobby plan caps cron at two jobs, once a day, and the hourly
+# watch needs neither of those limits. Everything below is an HTTP call into the
+# existing /api/cron routes, which already authenticate with a bearer secret.
+#
+# Deliberately not running the app itself here: the routes need firebase-admin,
+# which does not run on Workers, and FPL fingerprints egress IPs — calling it
+# from inside Cloudflare is a risk with no upside.
+
+[vars]
+FANTA_ORIGIN = "https://fantasy-tau-drab.vercel.app"
+
+[triggers]
+# Five past the hour: FPL's own data settles on the hour, and Vercel cold starts
+# are cheaper away from the crowd of jobs everyone else schedules at :00.
+crons = ["5 * * * *"]
+
+# CRON_SECRET is set with `wrangler secret put CRON_SECRET` — it must match the
+# value in the Vercel project, and it must never appear in this file.
