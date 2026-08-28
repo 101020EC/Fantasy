@@ -16,10 +16,19 @@ import { analyzePlayerPrice, PriceContext } from './price-calculator';
 
 const FPL_BASE = 'https://fantasy.premierleague.com/api';
 
-// The FPL API rejects requests without a browser-like User-Agent.
+// FPL sits behind Cloudflare, which fingerprints the whole header set, not just
+// the User-Agent. The previous value was a truncated UA with no Accept headers
+// at all — a shape no real browser produces, and an easy one to filter on. Every
+// request from Vercel started returning 403 on 2026-08-28 while the identical
+// request from a residential IP returned 200, so the egress address is part of
+// it too; matching a real browser is the half we control.
 const FPL_HEADERS = {
   'User-Agent':
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko)',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  Accept: 'application/json, text/plain, */*',
+  'Accept-Language': 'en-GB,en;q=0.9',
+  Referer: 'https://fantasy.premierleague.com/',
+  Origin: 'https://fantasy.premierleague.com',
 };
 
 /**
