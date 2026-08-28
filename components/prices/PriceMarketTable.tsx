@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { FPLElementType, FPLTeam } from '@/lib/types';
-import type { MarketRow } from '@/lib/market-row';
+import { fromMarketCells, type MarketCell } from '@/lib/market-row';
 import { ArrowDown, ArrowUp, Leaf, Rocket, Search, Star, AlertCircle } from 'lucide-react';
 import { PriceChangeDay } from '@/lib/price-changes';
 import PriceChanges from './PriceChanges';
@@ -13,6 +13,9 @@ import { useAuth } from '../AuthContext';
 import { useMarketContext } from './useMarketContext';
 
 const POSITION_IDS: Record<string, number> = { gkp: 1, def: 2, mid: 3, fwd: 4 };
+
+/** Rows rendered before "Show more". */
+const PAGE = 25;
 
 // Laid out as two columns so each chip sits under the summary card it narrows:
 // Trending Up below Rising Tonight, Trending Down below Falling Tonight.
@@ -47,7 +50,7 @@ const SORT_CHIPS = [
  * lookups travel once instead.
  */
 interface PriceMarketTableProps {
-  analyses: MarketRow[];
+  analyses: MarketCell[][];
   /** Twenty clubs, sent once. */
   teams: FPLTeam[];
   /** Four positions, sent once. */
@@ -68,6 +71,11 @@ export default function PriceMarketTable({
   confidence = { riseFitted: false, fallFitted: false },
   aside,
 }: PriceMarketTableProps) {
+  // Rehydrated once, from the positional arrays the server sends. Object keys
+  // repeated 616 times were the single largest thing on this page; decoding
+  // them here keeps the rest of this component written against named fields.
+  const rows = useMemo(() => analyses.map(fromMarketCells), [analyses]);
+
   const teamById = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
 
@@ -91,7 +99,7 @@ export default function PriceMarketTable({
   const filteredData = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return analyses
+    return rows
       .filter((p) => {
         if (q) {
           const matchSearch =
@@ -122,16 +130,27 @@ export default function PriceMarketTable({
         if (valA === valB) return 0;
         return sortAsc ? (valA > valB ? 1 : -1) : valA < valB ? 1 : -1;
       });
-  }, [analyses, search, statusFilter, positionFilter, sortField, sortAsc, watchOnly, watchIds, teamById]);
+  }, [rows, search, statusFilter, positionFilter, sortField, sortAsc, watchOnly, watchIds, teamById]);
 
-  const visibleRows = filteredData.slice(0, 100);
+  // 25, not 100. The rendered rows were 160KB of the page's 351KB at ~1.6KB
+  // each, and the table is already sorted by how close each player is to
+  // moving — the names that matter are at the top. The rest is one click away
+  // and costs no request, since every row is already in the browser.
+  const [limit, setLimit] = useState(PAGE);
+  // A new sort or filter puts different players at the top, so an expanded list
+  // from the previous one is not the answer to the new question.
+  useEffect(() => {
+    setLimit(PAGE);
+  }, [search, statusFilter, positionFilter, sortField, sortAsc, watchOnly, tab]);
+
+  const visibleRows = filteredData.slice(0, limit);
 
   const { criticalRisersCount, criticalFallersCount } = useMemo(
     () => ({
-      criticalRisersCount: analyses.filter((a) => a.status === 'rising_soon').length,
-      criticalFallersCount: analyses.filter((a) => a.status === 'falling_soon').length,
+      criticalRisersCount: rows.filter((a) => a.status === 'rising_soon').length,
+      criticalFallersCount: rows.filter((a) => a.status === 'falling_soon').length,
     }),
-    [analyses]
+    [rows]
   );
 
   const handleSort = (field: typeof sortField) => {
@@ -209,7 +228,7 @@ export default function PriceMarketTable({
       </div>
 
       {tab === 'past' ? (
-        <PriceChanges days={changeDays} analyses={analyses} teams={teams} types={types} />
+        <PriceChanges days={changeDays} analyses={rows} teams={teams} types={types} />
       ) : (
       <>
       {/* Summary cards — each is also the filter for its own status */}
@@ -565,6 +584,16 @@ export default function PriceMarketTable({
             </tbody>
           </table>
         </div>
+
+        {visibleRows.length < filteredData.length && (
+          <button
+            type="button"
+            onClick={() => setLimit((n) => n + PAGE * 3)}
+            className="w-full py-3 text-xs font-black text-[#38003c] hover:bg-purple-50 transition border-t border-black/5"
+          >
+            Show more · {visibleRows.length} of {filteredData.length}
+          </button>
+        )}
 
         {filteredData.length === 0 && (
           <div className="py-12 text-center">

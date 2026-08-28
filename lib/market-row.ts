@@ -43,3 +43,31 @@ export function toMarketRow(a: PriceAnalysis): MarketRow {
   for (const f of MARKET_ROW_FIELDS) (row as Record<string, unknown>)[f] = a[f];
   return row;
 }
+
+/**
+ * The wire format: one positional array per player instead of an object.
+ *
+ * Twelve field names, quoted and repeated 616 times, cost more than the values
+ * they label — roughly 90KB of the 171KB the page was shipping. The same
+ * reasoning already governs `market/{date}` in Firestore; this applies it to the
+ * RSC payload.
+ *
+ * The order lives here and nowhere else, and both directions are derived from
+ * the same constant, so a field cannot be added to one and forgotten in the
+ * other.
+ */
+export const MARKET_CELL_ORDER = [...MARKET_ROW_FIELDS, 'teamId', 'typeId'] as const;
+
+export type MarketCell = string | number | null;
+
+export function toMarketCells(row: MarketRow): MarketCell[] {
+  return MARKET_CELL_ORDER.map((f) => (row as Record<string, MarketCell>)[f] ?? null);
+}
+
+export function fromMarketCells(cells: MarketCell[]): MarketRow {
+  const row = {} as Record<string, MarketCell>;
+  MARKET_CELL_ORDER.forEach((f, i) => {
+    row[f] = cells[i];
+  });
+  return row as unknown as MarketRow;
+}

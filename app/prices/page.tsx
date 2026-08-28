@@ -6,7 +6,7 @@ import { listPriceChangeDays, loadPriceContext } from '@/lib/price-changes-store
 import { PriceChangeDay } from '@/lib/price-changes';
 import { FPLElementType, FPLTeam } from '@/lib/types';
 import PriceMarketTable from '@/components/prices/PriceMarketTable';
-import { MarketRow, toMarketRow } from '@/lib/market-row';
+import { MarketCell, toMarketCells, toMarketRow } from '@/lib/market-row';
 import { Clock, AlertCircle } from 'lucide-react';
 import { stalest } from '@/lib/fpl-resilience';
 import { StaleNotice } from '@/components/system/UpstreamNotice';
@@ -32,7 +32,7 @@ function UpdateWindow() {
 }
 
 export default async function PricesPage() {
-  let analyses: MarketRow[] = [];
+  let analyses: MarketCell[][] = [];
   let teams: FPLTeam[] = [];
   let types: FPLElementType[] = [];
   let currentEventName = '';
@@ -55,7 +55,7 @@ export default async function PricesPage() {
     // repeated 616 times.
     teams = bootstrap.teams;
     types = bootstrap.element_types;
-    analyses = getAllMarketPriceAnalyses(bootstrap, context).map(toMarketRow);
+    analyses = getAllMarketPriceAnalyses(bootstrap, context).map(toMarketRow).map(toMarketCells);
     const t = 'thresholds' in context ? context.thresholds : null;
     confidence = { riseFitted: Boolean(t?.riseFitted), fallFitted: Boolean(t?.fallFitted) };
 
