@@ -160,13 +160,14 @@ body {
 /* ============================================================
    Splash — plays once per session when the app is opened.
 
-   The markup is plain HTML in layout.tsx rather than a React component: a
-   component mounts after hydration, so the app would paint first and then be
-   covered, which reads as a bug.
+   The markup is a server component rendered into the HTML rather than a client
+   one: a client component mounts after hydration, so the app would paint first
+   and then be covered, which reads as a bug.
 
-   Every keyframe moves only transform / opacity / clip-path, so the work stays
-   on the compositor and off the main thread that is busy hydrating. Combined
-   with pointer-events: none for its whole life, the splash never delays use.
+   The lion draws itself, which means stroke-dashoffset — the one property here
+   the compositor cannot own, so it competes with hydration. It is one path, and
+   pointer-events: none for the overlay's whole life means the app underneath
+   stays usable however long the drawing takes.
    ============================================================ */
 #splash {
   position: fixed;
@@ -177,7 +178,7 @@ body {
   place-items: center;
   overflow: hidden;
   background: linear-gradient(115deg, #a9e06a 0%, #74dcae 46%, #3fd0e8 100%);
-  animation: splash-out 300ms ease-in 900ms forwards;
+  animation: splash-out 320ms ease-in 1250ms forwards;
 }
 
 /* The head script sets this from sessionStorage before the first paint. Without
@@ -186,41 +187,40 @@ html[data-splash='done'] #splash {
   display: none;
 }
 
-#splash-logo {
-  position: relative;
-  width: min(58vw, 33vh);
-  aspect-ratio: 320 / 417;
-  animation: splash-logo-out 250ms cubic-bezier(0.4, 0, 0.9, 0.4) 900ms forwards;
+#splash-lion {
+  width: min(46vw, 26vh);
+  aspect-ratio: 43.7 / 54.4;
+  overflow: visible;
+  animation: splash-logo-out 260ms cubic-bezier(0.4, 0, 0.9, 0.4) 1250ms forwards;
 }
 
-#splash-mark {
-  position: absolute;
-  inset: 0;
-  animation: splash-logo-in 320ms cubic-bezier(0.2, 0.8, 0.25, 1) both;
+/* The travelling outline. The dash length is in the path's own user units and
+   comes from getTotalLength() in the browser — 432.8 — not from a guess. A dash
+   shorter than the line would leave a gap travelling through the drawing. */
+#splash-lion .lion-line {
+  fill: none;
+  stroke: #37003c;
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+  stroke-dasharray: 434;
+  stroke-dashoffset: 434;
+  animation: splash-draw 780ms cubic-bezier(0.5, 0, 0.2, 1) 60ms forwards;
 }
 
-#splash-mark > div {
-  position: absolute;
-  background-repeat: no-repeat;
-  background-size: 100% 100%;
+/* The flood, arriving under the outline once most of it exists. */
+#splash-lion .lion-fill {
+  fill: #37003c;
+  opacity: 0;
+  animation: splash-flood 340ms ease-out 560ms forwards;
 }
 
-.splash-body {
-  inset: 0;
-  background-image: url('/splash-logo.webp');
-}
-
-/* The gold crown ships as a crop rather than a second full logo — the two images
-   differ only here, which keeps it at 5.7KB instead of 33KB. The percentages are
-   the crown's real position within the 449x585 source. */
-#splash-crown {
-  background-image: url('/splash-crown.webp');
-  left: 19.6%;
-  top: 0;
-  width: 57%;
-  height: 18.46%;
+/* The crown, last. Clipped to the top fifth of the silhouette and wiped in from
+   the left, so it reads as gold being laid onto the lion rather than a second
+   lion appearing. */
+#splash-lion .lion-crown {
+  fill: #f0c04a;
   clip-path: inset(0 100% 0 0);
-  animation: splash-crown-wipe 340ms cubic-bezier(0.3, 0, 0.2, 1) 420ms forwards;
+  animation: splash-crown-wipe 320ms cubic-bezier(0.3, 0, 0.2, 1) 900ms forwards;
 }
 
 .sp {
@@ -231,12 +231,16 @@ html[data-splash='done'] #splash {
   height: var(--s);
   background: rgba(255, 255, 255, 0.85);
   clip-path: polygon(50% 0, 58% 42%, 100% 50%, 58% 58%, 50% 100%, 42% 58%, 0 50%, 42% 42%);
-  animation: splash-sparkle 1050ms ease-in-out var(--d) both;
+  animation: splash-sparkle 700ms ease-in-out var(--d) both;
 }
 
-@keyframes splash-logo-in {
-  from { opacity: 0; transform: scale(0.86); }
-  to   { opacity: 1; transform: scale(1); }
+@keyframes splash-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes splash-flood {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 @keyframes splash-crown-wipe {

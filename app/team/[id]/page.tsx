@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import {
   fetchFPLBootstrap,
@@ -22,6 +23,7 @@ import { readWatchlist } from '@/lib/watchlist';
 import { analyzePlayerPrice } from '@/lib/price-calculator';
 import { FplError, stalest } from '@/lib/fpl-resilience';
 import { FplUnavailable, StaleNotice } from '@/components/system/UpstreamNotice';
+import { GW_OFFSET_COOKIE } from '@/lib/gw-preference';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,12 +76,22 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       bootstrap.events.find((e) => e.is_next)?.id ||
       currentGwNum;
     const parsedGw = queryGw ? parseInt(queryGw, 10) : NaN;
+
+    // Which of the two chips the viewer picked last time.
+    //
+    // Stored as an offset from the gameweek being played, never as a gameweek
+    // number: gameweeks advance every week, so a remembered "GW 6" is a week in
+    // the past by the next visit. Stored in a cookie rather than localStorage
+    // because this is a server component — localStorage would mean redirecting
+    // after mount, which the viewer sees as the page jumping.
+    const savedOffset = Number((await cookies()).get(GW_OFFSET_COOKIE)?.value);
+    const rememberedGw = savedOffset === 1 ? Math.min(liveGw + 1, 38) : liveGw;
     // Open on the gameweek being played, not the last one with points. The
     // chips offer `liveGw` and the one after it, so defaulting to the scored
     // week left the page sitting on a gameweek the chips no longer showed —
     // and therefore with no chip highlighted at all.
     const initialGw =
-      Number.isFinite(parsedGw) && parsedGw >= 1 && parsedGw <= 38 ? parsedGw : liveGw;
+      Number.isFinite(parsedGw) && parsedGw >= 1 && parsedGw <= 38 ? parsedGw : rememberedGw;
 
     // Which gameweek's fixtures to show. A future gameweek has no squad yet —
     // its deadline has not passed — so the squad falls back while the fixture

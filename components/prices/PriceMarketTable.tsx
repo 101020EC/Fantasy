@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FPLElementType, FPLTeam } from '@/lib/types';
 import { fromMarketCells, type MarketCell } from '@/lib/market-row';
 import { ArrowDown, ArrowUp, Leaf, Rocket, Search, Star, AlertCircle } from 'lucide-react';
@@ -17,6 +17,9 @@ const POSITION_IDS: Record<string, number> = { gkp: 1, def: 2, mid: 3, fwd: 4 };
 
 /** Rows rendered before "Show more". */
 const PAGE = 25;
+
+/** Which of the two tenses the viewer was last reading. */
+const TAB_KEY = 'fanta_market_tab';
 
 // Laid out as two columns so each chip sits under the summary card it narrows:
 // Trending Up below Rising Tonight, Trending Down below Falling Tonight.
@@ -82,6 +85,26 @@ export default function PriceMarketTable({
   const typeById = useMemo(() => new Map(types.map((t) => [t.id, t])), [types]);
 
   const [tab, setTab] = useState<'table' | 'past'>('table');
+
+  // Restored after mount rather than in the initial state: the server has no
+  // localStorage, so reading it during render would make the first client paint
+  // disagree with the HTML it is hydrating.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(TAB_KEY);
+      if (saved === 'past' || saved === 'table') setTab(saved);
+    } catch {
+      // Private browsing, or storage disabled. Opening on Table is the old
+      // behaviour and is still a correct place to land.
+    }
+  }, []);
+
+  const selectTab = useCallback((next: 'table' | 'past') => {
+    setTab(next);
+    try {
+      localStorage.setItem(TAB_KEY, next);
+    } catch {}
+  }, []);
   const [search, setSearch] = useState('');
   // Status and position are separate so they combine; one shared value meant
   // picking a position silently cleared the status filter.
@@ -89,7 +112,7 @@ export default function PriceMarketTable({
   const [positionFilter, setPositionFilter] = useState<string>('all');
   const [sortField, setSortField] = useState<
     'netTransfers' | 'changeScore' | 'currentCost' | 'selectedByPercent'
-  >('netTransfers');
+  >('changeScore');
   const [sortAsc, setSortAsc] = useState(false);
   const [watchMode, setWatchMode] = useState(false);
   const [watchOnly, setWatchOnly] = useState(false);
@@ -214,15 +237,12 @@ export default function PriceMarketTable({
           <button
             key={key}
             type="button"
-            onClick={() => setTab(key)}
+            onClick={() => selectTab(key)}
             className={`px-5 py-1.5 rounded-full text-xs font-black transition ${
               tab === key ? 'bg-white text-[#38003c] shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             {label}
-            {key === 'past' && changeDays.length > 0 && (
-              <span className="ml-1.5 text-[10px] text-gray-400">{changeDays.length}</span>
-            )}
           </button>
         ))}
       </div>

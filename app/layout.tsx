@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import Splash from '@/components/Splash';
 import Navbar from '@/components/Navbar';
 import { AuthProvider } from '@/components/AuthContext';
 
@@ -53,48 +54,18 @@ export default function RootLayout({
             It writes data-splash rather than appending to className: className is a prop
             the server rendered, so touching it mismatches on every hydration.
 
-            When the splash is skipped its images are not preloaded either — that 38KB of
-            priority belongs to the CSS and JS that actually render the page. */}
+            The mark used to be two webp files, which this script also had to preload.
+            It is inline SVG now — already in this HTML — so there is nothing left to
+            fetch and nothing to prioritise. */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{if(sessionStorage.getItem('fanta_splash')){document.documentElement.dataset.splash='done'}else{sessionStorage.setItem('fanta_splash','1');for(var s of ['/splash-logo.webp','/splash-crown.webp']){var l=document.createElement('link');l.rel='preload';l.as='image';l.href=s;l.fetchPriority='high';document.head.appendChild(l)}}}catch(e){}",
+              "try{if(sessionStorage.getItem('fanta_splash')){document.documentElement.dataset.splash='done'}else{sessionStorage.setItem('fanta_splash','1')}}catch(e){}",
           }}
         />
       </head>
       <body className="antialiased min-h-screen flex flex-col bg-pastel-bg text-[#111318] w-full overflow-x-hidden">
-        {/*
-          Open-app splash: the logo scales in, the crown wipes to gold, then the whole
-          mark lifts and fades out. Runs once per session.
-
-          Plain HTML in the layout rather than a client component: a component mounts
-          after hydration, so the app would paint first and then be covered, which reads
-          as a bug.
-
-          CSS gives it pointer-events: none from the first frame, so the app underneath
-          stays touchable throughout. app/page.tsx already shows a skeleton while its
-          four fetches run, so this covers dead time that existed anyway — it does not
-          add any new waiting.
-        */}
-        <div id="splash" aria-hidden="true">
-          <div id="splash-logo">
-            {/* background-image, not <img>. Chrome does not defer an <img loading="lazy">
-                that has no layout box: it fetches immediately even when the parent is
-                display: none, which made every later session pay the 38KB for nothing.
-                A background-image on a display: none element is never fetched, so the
-                skip path costs zero. Sizing and placement live in globals.css. */}
-            <div id="splash-mark">
-              <div className="splash-body" />
-              <div id="splash-crown" />
-            </div>
-          </div>
-          <i className="sp" style={{ ['--x' as string]: '14%', ['--y' as string]: '17%', ['--s' as string]: '18px', ['--d' as string]: '120ms' }} />
-          <i className="sp" style={{ ['--x' as string]: '82%', ['--y' as string]: '13%', ['--s' as string]: '13px', ['--d' as string]: '260ms' }} />
-          <i className="sp" style={{ ['--x' as string]: '88%', ['--y' as string]: '78%', ['--s' as string]: '20px', ['--d' as string]: '190ms' }} />
-          <i className="sp" style={{ ['--x' as string]: '9%', ['--y' as string]: '71%', ['--s' as string]: '12px', ['--d' as string]: '380ms' }} />
-          <i className="sp" style={{ ['--x' as string]: '73%', ['--y' as string]: '46%', ['--s' as string]: '10px', ['--d' as string]: '460ms' }} />
-          <i className="sp" style={{ ['--x' as string]: '21%', ['--y' as string]: '52%', ['--s' as string]: '11px', ['--d' as string]: '520ms' }} />
-        </div>
+        <Splash />
         <AuthProvider>
           <Navbar />
           <div className="flex-1 w-full">{children}</div>

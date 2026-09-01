@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { FPLEntry, PriceStatus, TeamSquadPlayer } from '@/lib/types';
 import { CheckCircle2, History, Star, TrendingUp } from 'lucide-react';
 import { STATUS_META } from '../prices/status-meta';
+import { rememberGwOffset } from '@/lib/gw-preference';
 
 interface TeamPitchTopBarProps {
   entry: FPLEntry;
@@ -127,7 +128,7 @@ export default function TeamPitchTopBar({
             {/* Two plain chips: the squad's gameweek, and the next one to
                 preview fixtures for. No arrows — they implied paging through
                 gameweeks, which is not what this does. */}
-            {[baseGw, baseGw + 1].filter((gw) => gw <= 38).map((gw) => {
+            {[baseGw, baseGw + 1].filter((gw) => gw <= 38).map((gw, offset) => {
               const isShown = gw === shownGw;
               const href = gw === gameweek ? `/team/${entry.id}` : `/team/${entry.id}?gw=${gw}`;
               const isSquadWeek = gw === gameweek;
@@ -140,6 +141,10 @@ export default function TeamPitchTopBar({
                       ? `This squad, gameweek ${gw}`
                       : `Fixtures this squad faces in gameweek ${gw}`
                   }
+                  // Recorded on the click, not from `shownGw` in an effect:
+                  // arriving on a ?gw= link someone shared is not the viewer
+                  // choosing that week, and should not overwrite what they did.
+                  onClick={() => rememberGwOffset(offset === 1 ? 1 : 0)}
                   className={`px-3 py-1 rounded-full text-[11px] font-black shadow-sm transition active:scale-95 ${
                     isShown
                       ? 'bg-[#111318] text-white'
