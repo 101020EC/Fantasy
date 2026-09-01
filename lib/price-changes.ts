@@ -66,11 +66,12 @@ export interface PriceChangeDay {
     missingPlayers: number[];
   };
   /**
-   * Threshold samples for the players who moved, attached by the cron so the
-   * fitter only ever has to read this collection. Absent on documents written
-   * before the fitter existed, and on any day with no usable baselines.
+   * Threshold samples the app used to fit its own prediction from. FPL now
+   * publishes its predictions directly, so nothing writes or reads these any
+   * more; the field stays declared because historical documents still carry it
+   * and dropping it from the type would make them fail to parse.
    */
-  observations?: ThresholdObservation[];
+  observations?: unknown[];
 }
 
 /** Reads one field for one player, by name rather than by position.
@@ -163,164 +164,6 @@ export function diffSnapshots(
     changes,
     skipped: { newPlayers, missingPlayers },
   };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Transfer baselines
-// ─────────────────────────────────────────────────────────────────────────────
-
-export interface TransferBaseline {
-  transfersIn: number;
-  transfersOut: number;
-  /**
-   * The snapshot date the baseline was taken from, or null when the baseline is
-   * the start of the gameweek (the player has not changed price since).
-   */
-  since: string | null;
-}
-
-/**
- * Where each player's price counter was last reset.
- *
- * FPL resets a player's internal progress counter **every time their price
- * changes**, but the public `transfers_in_event` / `transfers_out_event` fields
- * reset only at the gameweek rollover. So once a player has risen, the
- * transfers that caused the rise keep counting, and any score built on the raw
- * gameweek total stays pinned high for the rest of the week.
- *
- * `cost_change_event` is the tell: it is that player's net price movement this
- * gameweek. The last snapshot at which it held a different value is the last
- * state before the reset, so its transfer counts are the baseline to subtract.
- *
- * Snapshots must be oldest first. A player whose `cost_change_event` never moves
- * across the window gets `since: null` and a zero baseline, which is already
- * correct — the raw fields did reset at the gameweek boundary.
- */
-export function findTransferBaselines(
-  snapshots: SnapshotLike[]
-): Map<number, TransferBaseline> {
-  const out = new Map<number, TransferBaseline>();
-  if (!snapshots.length) return out;
-
-  const latest = snapshots[snapshots.length - 1];
-
-  for (const key of Object.keys(latest.players)) {
-    const id = Number(key);
-    const currentChange = num(snapshotValue(latest, key, 'cost_change_event')) ?? 0;
-    const currentIn = num(snapshotValue(latest, key, 'transfers_in_event')) ?? 0;
-    const currentOut = num(snapshotValue(latest, key, 'transfers_out_event')) ?? 0;
-
-    let baseline: TransferBaseline = { transfersIn: 0, transfersOut: 0, since: null };
-
-    for (let i = snapshots.length - 2; i >= 0; i--) {
-      const snap = snapshots[i];
-
-      // A snapshot from a different gameweek is useless as a baseline: both
-      // `cost_change_event` and the transfer counters reset at the rollover, so
-      // its larger transfer totals would subtract to a negative and read as a
-      // collapse that never happened.
-      if (snap.gameweek !== latest.gameweek) break;
-
-      const past = num(snapshotValue(snap, key, 'cost_change_event'));
-      if (past === null || past === currentChange) continue;
-
-      // This is the last state before the most recent change. Its transfer
-      // totals are what FPL had counted at the moment it reset them.
-      const inAt = num(snapshotValue(snap, key, 'transfers_in_event')) ?? 0;
-      const outAt = num(snapshotValue(snap, key, 'transfers_out_event')) ?? 0;
-
-      // Defensive: a baseline above the current total would mean the counters
-      // reset without `cost_change_event` moving, which should not happen. Fall
-      // back to the gameweek start rather than emit a negative net.
-      if (inAt > currentIn || outAt > currentOut) break;
-
-      baseline = { transfersIn: inAt, transfersOut: outAt, since: snap.date };
-      break;
-    }
-
-    out.set(id, baseline);
-  }
-
-  return out;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Threshold observations
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * One labelled sample of FPL's real price-change threshold.
- *
- * When a player's price moves, the net transfers they had accumulated since
- * their previous change IS the threshold they just crossed, at that ownership.
- * That is the only way to see the number: FPL never publishes it, and it drifts
- * through the season as the active manager count changes.
- *
- * `netAtChange` is measured at the snapshot BEFORE the change, so it is a lower
- * bound - the true crossing happened some time in the following half hour. Good
- * enough to fit a scale factor; not a precise measurement of one player.
- */
-export interface ThresholdObservation {
-  elementId: number;
-  /** selected_by_percent at the moment of the change. */
-  ownership: number;
-  /** Net transfers accumulated since the previous change, signed. */
-  netAtChange: number;
-  direction: 'rise' | 'fall';
-}
-
-/**
- * Builds threshold samples for the players who moved in `day`.
- *
- * `snapshots` must be oldest first and must END at the snapshot immediately
- * before the change - i.e. `day.previousDate`. Passing the later snapshot would
- * measure transfers accumulated after the reset instead of before it.
- */
-export function buildThresholdObservations(
-  snapshots: SnapshotLike[],
-  day: PriceChangeDay
-): ThresholdObservation[] {
-  if (!snapshots.length) return [];
-
-  const atChange = snapshots[snapshots.length - 1];
-  if (atChange.date !== day.previousDate) {
-    throw new Error(
-      `observations must end at ${day.previousDate}, got ${atChange.date}`
-    );
-  }
-
-  // Baselines as they stood BEFORE this night's changes reset them.
-  const baselines = findTransferBaselines(snapshots);
-
-  const out: ThresholdObservation[] = [];
-  for (const change of day.changes) {
-    const base = baselines.get(change.id);
-    if (!base) continue;
-
-    const inAt = num(snapshotValue(atChange, change.id, 'transfers_in_event'));
-    const outAt = num(snapshotValue(atChange, change.id, 'transfers_out_event'));
-    const ownership = num(snapshotValue(atChange, change.id, 'selected_by_percent'));
-    if (inAt === null || outAt === null) continue;
-
-    const netAtChange = inAt - base.transfersIn - (outAt - base.transfersOut);
-
-    // A rise needs positive net and a fall needs negative net. Anything else
-    // means the baseline is wrong for this player - most likely the change
-    // happened during a gap in the snapshots - and a wrong sample is worse than
-    // no sample.
-    const direction = change.delta > 0 ? 'rise' : 'fall';
-    if (direction === 'rise' && netAtChange <= 0) continue;
-    if (direction === 'fall' && netAtChange >= 0) continue;
-
-    out.push({
-      elementId: change.id,
-      ownership: ownership ?? 0,
-      netAtChange,
-      direction,
-    });
-  }
-
-  return out;
 }
 
 /**

@@ -20,7 +20,6 @@ import { AlertCircle, Search } from 'lucide-react';
 import { seasonKey } from '@/lib/analyst';
 import { readWatchlist } from '@/lib/watchlist';
 import { analyzePlayerPrice } from '@/lib/price-calculator';
-import { loadPriceContext } from '@/lib/price-changes-store';
 import { FplError, stalest } from '@/lib/fpl-resilience';
 import { FplUnavailable, StaleNotice } from '@/components/system/UpstreamNotice';
 
@@ -98,7 +97,6 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
     // Started, not awaited. The same price context the market page uses — so a
     // player cannot read "Rising Tonight" on one page and "Trending Up" on the
     // other — and it has no reason to wait behind the squad request.
-    const priceContextPromise = loadPriceContext(seasonKey(bootstrap)).catch(() => ({}));
 
     try {
       picksData = await fetchFPLPicks(id, activeGw);
@@ -119,7 +117,6 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       throw new Error(`Unable to find squad lineup for this team (Please check Team ID)`);
     }
 
-    const priceContext = await priceContextPromise;
     const activeEvent = bootstrap.events.find((e) => e.id === activeGw) || currentEvent;
     // The requested gameweek runs ahead of the squad's when its deadline has
     // not passed — there is no squad or points for it yet, only fixtures.
@@ -129,7 +126,6 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       bootstrap,
       fixtures,
       fixtureGw,
-      priceContext
     );
 
     // Watchlisted players that are moving, resolved to names. A count alone
@@ -144,7 +140,7 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       .map((el) => ({
         name: el.web_name,
         club: teamMap.get(el.team)?.short_name ?? '',
-        status: analyzePlayerPrice(el, bootstrap, priceContext).status,
+        status: analyzePlayerPrice(el, bootstrap).status,
       }))
       .filter((p) => p.status !== 'stable');
 

@@ -27,10 +27,24 @@ export const MARKET_ROW_FIELDS = [
   'chanceOfPlaying',
 ] as const;
 
+/**
+ * FPL's projection for each upcoming deadline, flattened.
+ *
+ * `PriceAnalysis.projections` is an array of objects and the wire format is a
+ * positional array of scalars, so it is spread across six columns instead:
+ * percent and likelihood for tonight, tomorrow and the night after. Kept as
+ * separate names rather than a nested value so `toMarketCells` stays a plain
+ * scalar map.
+ *
+ * Note these are the PROJECTED figures at each deadline, which is not the same
+ * number as `changeScore` — that one is where the player stands right now.
+ */
+export const PROJECTION_FIELDS = ['proj0', 'lk0', 'proj1', 'lk1', 'proj2', 'lk2'] as const;
+
 export type MarketRow = Pick<PriceAnalysis, (typeof MARKET_ROW_FIELDS)[number]> & {
   teamId: number;
   typeId: number;
-};
+} & { [K in (typeof PROJECTION_FIELDS)[number]]: number | null };
 
 /** Lookups sent once instead of once per player. */
 export interface MarketLookups {
@@ -41,6 +55,11 @@ export interface MarketLookups {
 export function toMarketRow(a: PriceAnalysis): MarketRow {
   const row = { teamId: a.team.id, typeId: a.elementType.id } as MarketRow;
   for (const f of MARKET_ROW_FIELDS) (row as Record<string, unknown>)[f] = a[f];
+  for (let i = 0; i < 3; i++) {
+    const p = a.projections[i];
+    (row as Record<string, unknown>)[`proj${i}`] = p ? p.percent : null;
+    (row as Record<string, unknown>)[`lk${i}`] = p ? p.likelihood : null;
+  }
   return row;
 }
 
@@ -56,7 +75,12 @@ export function toMarketRow(a: PriceAnalysis): MarketRow {
  * the same constant, so a field cannot be added to one and forgotten in the
  * other.
  */
-export const MARKET_CELL_ORDER = [...MARKET_ROW_FIELDS, 'teamId', 'typeId'] as const;
+export const MARKET_CELL_ORDER = [
+  ...MARKET_ROW_FIELDS,
+  ...PROJECTION_FIELDS,
+  'teamId',
+  'typeId',
+] as const;
 
 export type MarketCell = string | number | null;
 

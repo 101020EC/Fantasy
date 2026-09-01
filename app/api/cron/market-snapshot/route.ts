@@ -2,16 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import type { FPLEvent } from '@/lib/types';
 import { fetchFPLBootstrap, fetchFPLFixtures } from '@/lib/fpl-api';
 import { buildMarketSnapshot } from '@/lib/market-snapshot';
-import { buildThresholdObservations, diffSnapshots } from '@/lib/price-changes';
-import { fitPriceThresholds } from '@/lib/price-thresholds';
+import { diffSnapshots } from '@/lib/price-changes';
 import {
-  collectObservations,
-  listSnapshotDates,
   previousSnapshotDate,
   readSnapshot,
   prunePriceChanges,
   writePriceChanges,
-  writePriceThresholds,
 } from '@/lib/price-changes-store';
 import { getAdminDb, isAdminConfigured, ADMIN_NOT_CONFIGURED } from '@/lib/firebase-admin';
 import { ANALYST_ENABLED, finalisedEvents, seasonKey } from '@/lib/analyst';
@@ -62,9 +58,14 @@ export const maxDuration = 60;
 /**
  * Captures the day's player market into Firestore.
  *
- * Scheduled for 01:00 UTC — just before the nightly price change window
- * (01:30–02:30 UTC), which is the most valuable moment to record: it is the
- * last state before prices move.
+ * Scheduled for 22:30 UTC, half an hour before the deadline FPL publishes in
+ * `game_config.settings.price_change_deadlines` — the last state before prices
+ * move, which is the only moment worth recording.
+ *
+ * Fired by the Cloudflare Worker rather than by Vercel: Hobby crons run once a
+ * day and are not guaranteed to run on time, and half an hour of slippage here
+ * captures the market AFTER the change instead of before it, which silently
+ * corrupts every diff built on top.
  *
  * Writes market/{YYYY-MM-DD}. Re-running on the same day overwrites that day's
  * document rather than adding another, so a retry is safe.
@@ -106,7 +107,6 @@ export async function GET(req: NextRequest) {
     // of it.
     const priceChanges = await computePriceChanges(snapshot.date);
     const priceChangesPruned = await prunePriceChanges().catch(() => 0);
-    const priceThresholds = await fitThresholds(seasonKey(bootstrap), bootstrap.total_players);
 
     // ── Analyst steps ────────────────────────────────────────────────────
     // Everything below is additive and OFF by default. It runs only after the
@@ -126,7 +126,6 @@ export async function GET(req: NextRequest) {
       rosterUpdated: rosterChanged,
       priceChanges,
       priceChangesPruned,
-      priceThresholds,
       analyst,
     });
   } catch (err: any) {
@@ -140,8 +139,8 @@ export async function GET(req: NextRequest) {
 /**
  * Diffs today's snapshot against the previous one and stores the result.
  *
- * The snapshot runs at 01:00 UTC, half an hour before FPL's 01:30-02:30 change
- * window, so two consecutive documents bracket exactly one night of changes and
+ * The snapshot runs half an hour before FPL's published deadline, so two
+ * consecutive documents bracket exactly one night of changes and
  * `priceChanges/{today}` describes what happened on the PREVIOUS day. That
  * asymmetry is carried in `changedOn` rather than left to the reader.
  *
@@ -161,25 +160,6 @@ async function computePriceChanges(date: string) {
 
     const day = diffSnapshots(prev, curr);
 
-    // Threshold samples, measured at the snapshot BEFORE the change — that is
-    // where the transfer counters stood when FPL reset them. Attaching them to
-    // the same document keeps the fitter reading one collection.
-    try {
-      if (day.changes.length) {
-        const dates = await listSnapshotDates();
-        const window = dates.filter((d) => d <= prevDate).slice(-8);
-        const history = (await Promise.all(window.map((d) => readSnapshot(d)))).filter(
-          (x): x is NonNullable<typeof x> => x !== null
-        );
-        if (history.length && history[history.length - 1].date === prevDate) {
-          day.observations = buildThresholdObservations(history, day);
-        }
-      }
-    } catch {
-      // A missing sample costs accuracy later; a thrown error would cost the
-      // change record itself, which cannot be rebuilt once the snapshots roll.
-    }
-
     await writePriceChanges(day);
     return {
       date: day.date,
@@ -188,34 +168,6 @@ async function computePriceChanges(date: string) {
       rises: day.risesCount,
       falls: day.fallsCount,
       compared: day.comparedPlayers,
-      observations: day.observations?.length ?? 0,
-    };
-  } catch (err: any) {
-    return { error: err.message };
-  }
-}
-
-/**
- * Refits the price-change thresholds from every sample observed so far.
- *
- * Cheap and idempotent: it reads the change documents, takes a median per
- * direction and overwrites one small document. While the sample is below the
- * minimum it writes a fit that is deliberately identical to the unfitted
- * formula, with `fitted: false` and a note saying so — which is what lets the
- * UI label the number as an estimate instead of implying it was measured.
- */
-async function fitThresholds(season: string, totalPlayers?: number) {
-  try {
-    const { observations, sourceDays } = await collectObservations();
-    const fitted = fitPriceThresholds(observations, { season, sourceDays, totalPlayers });
-    await writePriceThresholds(fitted);
-    return {
-      riseFitted: fitted.riseFitted,
-      fallFitted: fitted.fallFitted,
-      riseSamples: fitted.riseSamples,
-      fallSamples: fitted.fallSamples,
-      riseFraction: Number(fitted.riseFraction.toFixed(5)),
-      fallPerPercent: Math.round(fitted.fallPerPercent),
     };
   } catch (err: any) {
     return { error: err.message };

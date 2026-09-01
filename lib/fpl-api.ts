@@ -12,7 +12,7 @@ import {
   TeamSquadPlayer,
   placeholderTeam,
 } from './types';
-import { analyzePlayerPrice, PriceContext } from './price-calculator';
+import { analyzePlayerPrice } from './price-calculator';
 import { FplError, markStale, recall, recallEntry, remember, withRetry } from './fpl-resilience';
 import { loadBootstrapFallback, saveBootstrapFallback } from './fpl-fallback-store';
 
@@ -91,6 +91,12 @@ const ELEMENT_FIELDS: (keyof FPLElement)[] = [
   'now_cost', 'cost_change_event', 'cost_change_start', 'transfers_in_event',
   'transfers_out_event', 'selected_by_percent', 'total_points', 'event_points', 'form',
   'status', 'news', 'chance_of_playing_next_round', 'ep_this', 'ep_next',
+  // FPL's own price prediction. This list is an allow-list, so a field that is
+  // not named here never reaches the app — the price page rendered an empty
+  // countdown and a blank forecast column until these were added, with no error
+  // anywhere, because every one of them is optional by design.
+  'price_change_percent', 'price_change_hourly_rate', 'price_change_projections',
+  'price_change_locked_until', 'price_change_calibrating',
 ];
 const TEAM_FIELDS: (keyof FPLTeam)[] = [
   'id', 'name', 'short_name', 'code', 'strength',
@@ -125,6 +131,16 @@ function trimBootstrap(raw: any): FPLBootstrap {
     // keep, and without it the rise threshold has to fall back to a hard-coded
     // manager count that ages badly.
     total_players: typeof raw?.total_players === 'number' ? raw.total_players : undefined,
+    // When prices next move, straight from FPL. Three timestamps, and the only
+    // thing standing between the app and a hardcoded window that goes stale the
+    // next time the game moves it.
+    game_config: {
+      settings: {
+        price_change_deadlines: Array.isArray(raw?.game_config?.settings?.price_change_deadlines)
+          ? raw.game_config.settings.price_change_deadlines
+          : undefined,
+      },
+    },
   };
 }
 
@@ -266,13 +282,7 @@ export function buildSquadPlayers(
   picks: FPLPicksResponse['picks'] = [],
   bootstrap: FPLBootstrap,
   fixtures: FPLFixture[] = [],
-  currentEventId: number = 1,
-  /**
-   * Baselines and fitted thresholds for the price score. Optional: without them
-   * every player falls back to a gameweek-start baseline and the unfitted
-   * threshold, which is what this did before they existed.
-   */
-  priceContext: PriceContext = {}
+  currentEventId: number = 1
 ): TeamSquadPlayer[] {
   const elementMap = new Map(bootstrap.elements.map((el) => [el.id, el]));
   const teamMap = new Map(bootstrap.teams.map((t) => [t.id, t]));
@@ -327,7 +337,7 @@ export function buildSquadPlayers(
         element,
         team,
         elementType,
-        priceAnalysis: analyzePlayerPrice(element, bootstrap, priceContext),
+        priceAnalysis: analyzePlayerPrice(element, bootstrap),
         nextFixture,
         fixtures: playerFixtures,
       };

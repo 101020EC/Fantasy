@@ -12,6 +12,16 @@ export interface Env {
  */
 const JOBS: Record<string, string> = {
   '5 * * * *': '/api/cron/hourly',
+  // 30 minutes before FPL's published deadline: the snapshot has to be the last
+  // state BEFORE prices move, or every diff built from it describes the wrong
+  // night. Vercel's Hobby crons are not guaranteed to run on time, and half an
+  // hour of slippage is enough to land on the wrong side of the deadline, which
+  // is why both of these moved here.
+  '30 22 * * *': '/api/cron/market-snapshot',
+  // 21:00 Bangkok. The alert used to fire at the deadline itself, which is too
+  // late to act on, and the obvious fix — moving it earlier — put it at 06:00
+  // local, where it goes unread.
+  '0 14 * * *': '/api/cron/price-alert',
 };
 
 async function run(path: string, env: Env): Promise<void> {

@@ -5,6 +5,7 @@ import { FPLElementType, FPLTeam } from '@/lib/types';
 import { fromMarketCells, type MarketCell } from '@/lib/market-row';
 import { ArrowDown, ArrowUp, Leaf, Rocket, Search, Star, AlertCircle } from 'lucide-react';
 import { PriceChangeDay } from '@/lib/price-changes';
+import { statusFromLikelihood } from '@/lib/price-calculator';
 import PriceChanges from './PriceChanges';
 import PlayerJersey from '../pitch/PlayerJersey';
 import { STATUS_META, StatusPill } from './status-meta';
@@ -34,6 +35,9 @@ const POSITION_FILTERS = [
   { key: 'all', label: 'All' },
 ];
 
+/** Column tooltips for the three projected deadlines. */
+const FORECAST_DAYS = ['Tonight', 'Tomorrow', 'The night after'];
+
 const SORT_CHIPS = [
   { field: 'changeScore', label: 'Target' },
   { field: 'currentCost', label: 'Price' },
@@ -58,7 +62,6 @@ interface PriceMarketTableProps {
   /** Newest first. Empty until a second snapshot exists to diff against. */
   changeDays?: PriceChangeDay[];
   /** Whether each direction's threshold rests on observed changes yet. */
-  confidence?: { riseFitted: boolean; fallFitted: boolean };
   /** Rendered on the right of the tab row — the page's update-window card. */
   aside?: React.ReactNode;
 }
@@ -68,7 +71,6 @@ export default function PriceMarketTable({
   teams,
   types,
   changeDays = [],
-  confidence = { riseFitted: false, fallFitted: false },
   aside,
 }: PriceMarketTableProps) {
   // Rehydrated once, from the positional arrays the server sends. Object keys
@@ -423,6 +425,11 @@ export default function PriceMarketTable({
                     column silently cut the label in half. The mobile label is
                     one word, so the narrow width is only used where it fits. */}
                 <th className="px-2 py-3 text-center w-24 sm:w-36">Status</th>
+                {/* FPL projects three deadlines ahead, so the table shows all
+                    three. Hidden below sm: on a phone the row already carries
+                    Target and Status, and a fourth numeric column pushes the
+                    player's name into two lines. */}
+                <th className="px-2 py-3 text-center w-28 hidden sm:table-cell">Forecast</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-black/5">
@@ -578,6 +585,45 @@ export default function PriceMarketTable({
                     <td className="px-2 py-2.5 text-center">
                       <StatusPill status={player.status} />
                     </td>
+
+                    {/* Tonight, tomorrow, the night after. The colour comes from
+                        FPL's own likelihood band rather than from the percentage,
+                        so this column and the Status pill can never disagree. */}
+                    <td className="px-2 py-2.5 hidden sm:table-cell">
+                      <div className="flex items-center justify-center gap-1 font-mono text-[11px] font-bold">
+                        {[0, 1, 2].map((i) => {
+                          const percent = player[`proj${i}` as 'proj0'];
+                          const likelihood = player[`lk${i}` as 'lk0'];
+                          if (percent == null) {
+                            return (
+                              <span key={i} className="w-9 text-center text-gray-300">
+                                –
+                              </span>
+                            );
+                          }
+                          const st = statusFromLikelihood(Number(likelihood ?? 0));
+                          const tone =
+                            st === 'rising_soon'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : st === 'likely_riser'
+                              ? 'bg-emerald-50 text-emerald-600'
+                              : st === 'falling_soon'
+                              ? 'bg-rose-100 text-rose-700'
+                              : st === 'likely_faller'
+                              ? 'bg-rose-50 text-rose-600'
+                              : 'text-gray-400';
+                          return (
+                            <span
+                              key={i}
+                              className={`w-9 text-center rounded py-0.5 ${tone}`}
+                              title={FORECAST_DAYS[i]}
+                            >
+                              {percent > 0 ? `+${percent}` : percent}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -612,13 +658,12 @@ export default function PriceMarketTable({
             is the difference between a number and a number that misleads. */}
         <div className="px-3 pt-2.5 text-center text-[10px] text-gray-400 leading-snug space-y-0.5">
           <p>
-            Target is progress toward a price change; 100% means a change is expected tonight.
-            Rises need a share of all managers to buy in{confidence.riseFitted ? ', fitted to observed changes' : ' (estimated)'}; falls
-            need a share of that player&rsquo;s owners to sell{confidence.fallFitted ? ', fitted to observed changes' : ' (estimated)'}.
+            Target is how far along a price change is right now; 100% means it lands at the next
+            deadline. Forecast is where FPL expects the player to be at each of the next three
+            deadlines — tonight, tomorrow, the night after.
           </p>
           <p className="text-gray-300">
-            Falling percentages are the less reliable half — read them as a direction, not a
-            measurement.
+            Both numbers come from FPL itself, not from an estimate made here.
           </p>
         </div>
 

@@ -8,7 +8,6 @@ import { storedPlayerStatGameweeks } from '@/lib/analyst-store';
 import { listNotifications } from '@/lib/notifications';
 import {
   listSnapshotDates,
-  readPriceThresholds,
   storedChangeDates,
 } from '@/lib/price-changes-store';
 import { getTelegramConfig, maskToken } from '@/lib/telegram';
@@ -52,11 +51,10 @@ export default async function StatusPage() {
       const current = bootstrap.events.find((e) => e.is_current);
       const next = bootstrap.events.find((e) => e.is_next);
 
-      const [snapshotDates, changeDates, thresholds, telegram, notifications, stats] =
+      const [snapshotDates, changeDates, telegram, notifications, stats] =
         await Promise.all([
           listSnapshotDates().catch((): string[] => []),
           storedChangeDates().catch((): string[] => []),
-          readPriceThresholds(season).catch(() => null),
           getTelegramConfig().catch(() => null),
           listNotifications(30).catch(() => []),
           storedPlayerStatGameweeks(season).catch((): number[] => []),
@@ -109,21 +107,21 @@ export default async function StatusPage() {
             : `${snapshotDates.length} snapshots are stored, so the first diffs appear with the next 01:00 UTC capture. If this is still empty after that, the step is failing.`,
       });
 
-      // ── Target threshold ─────────────────────────────────────────────────
-      // Reported per direction: rises and falls are fitted from separate
-      // samples and reach confidence at different times, so one combined
-      // "fitted" flag would overstate whichever half is behind.
+      // ── Prediction source ────────────────────────────────────────────────
+      // The app used to fit FPL's hidden threshold from the changes it observed
+      // and report how confident that fit was. FPL publishes its own prediction
+      // now, so the only thing worth reporting is whether it arrived.
+      const predicted = bootstrap.elements.filter(
+        (e) => (e.price_change_projections?.length ?? 0) > 0
+      ).length;
       checks.push({
-        label: 'Target threshold',
-        tone: thresholds?.riseFitted && thresholds?.fallFitted ? 'ok' : 'idle',
-        value: thresholds
-          ? `rises ${thresholds.riseFitted ? 'fitted' : 'estimated'} · falls ${
-              thresholds.fallFitted ? 'fitted' : 'estimated'
-            }`
-          : 'estimated',
-        detail: thresholds?.notes?.length
-          ? thresholds.notes.join(' ')
-          : 'FPL never publishes the threshold. Rises need a fixed share of all managers to buy in; falls need a share of that player\u2019s owners to sell. Both rest on starting estimates until real changes have been observed.',
+        label: 'Price prediction',
+        tone: predicted > 0 ? 'ok' : 'bad',
+        value: predicted > 0 ? `${predicted} players from FPL` : 'not published',
+        detail:
+          predicted > 0
+            ? 'Read straight from bootstrap-static: FPL ships progress, a projection per upcoming deadline, and the deadlines themselves.'
+            : 'FPL sent no price_change_projections in this response. Every player reads as stable until it does — the app no longer keeps an estimate of its own to fall back on.',
       });
 
       // ── Telegram ─────────────────────────────────────────────────────────
@@ -142,12 +140,12 @@ export default async function StatusPage() {
           ? `last sent ${lastSent.date}`
           : 'configured, nothing sent yet',
         detail: !telegram?.configured
-          ? 'No bot token or chat id, so the 23:00 UTC job exits before it looks at any price.'
+          ? 'No bot token or chat id, so the alert job exits before it looks at any price.'
           : failedSinceSent
           ? `Telegram rejected it: ${lastFailure!.error ?? 'no reason given'}`
           : lastSent
-          ? `Bot ${maskToken(telegram.botToken) ?? ''}, from ${telegram.source}. Runs 06:00 Bangkok.`
-          : 'Configured but no message has gone out. Most likely nothing has met the thresholds.',
+          ? `Bot ${maskToken(telegram.botToken) ?? ''}, from ${telegram.source}. Runs 21:00 Bangkok.`
+          : 'Configured but no message has gone out. Most likely no player has been close enough to a change.',
       });
 
       // ── Alert attempts ───────────────────────────────────────────────────

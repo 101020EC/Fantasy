@@ -25,6 +25,43 @@ export interface FPLElement {
   chance_of_playing_next_round: number | null;
   ep_this: string | null;
   ep_next: string | null;
+  /**
+   * FPL's own price-change prediction, shipped in bootstrap-static since the
+   * game started publishing /price-changes. Every field is optional: they are
+   * new, and a season that predates them — or a day FPL stops sending them —
+   * must read as "no prediction" rather than as zero, which would claim every
+   * player is sitting still.
+   *
+   * `price_change_percent` is progress toward the threshold as a percentage,
+   * signed: positive climbs toward a rise, negative toward a fall. It passes
+   * 100 before the change lands, so values beyond ±100 are normal.
+   */
+  price_change_percent?: string;
+  /** Percentage points of progress per hour. */
+  price_change_hourly_rate?: number;
+  /** One entry per upcoming deadline, aligned with `price_change_deadlines`. */
+  price_change_projections?: PriceChangeProjection[];
+  /** Price frozen until this instant — FPL locks players around their fixtures. */
+  price_change_locked_until?: string | null;
+  /** FPL's own flag for a player whose figures it does not yet trust. */
+  price_change_calibrating?: boolean;
+}
+
+/**
+ * A projection for one upcoming deadline.
+ *
+ * `likelihood` reads like a confidence score but is not one: measured across
+ * all 626 players on 2026-09-01 it is a pure band of `projected_percent`, with
+ * no exceptions — 5 is >=100, 4 is 95-100, 3 is 40-95, 2 is 20-40, 1 is 0-20,
+ * 0 is exactly 0, and the negatives mirror those. FPL's own page treats only
+ * |likelihood| >= 4 as a prediction and greys out the rest, which is the line
+ * this app draws too.
+ */
+export interface PriceChangeProjection {
+  /** 0 is the next deadline, 1 the one after, 2 the one after that. */
+  offset: number;
+  projected_percent: string;
+  likelihood: number;
 }
 
 export interface FPLTeam {
@@ -112,6 +149,17 @@ export interface FPLBootstrap {
    * the threshold has to track this as the base grows through the season.
    */
   total_players?: number;
+  /**
+   * `settings.price_change_deadlines` is when prices next move, newest first —
+   * the clock the Prices page counts down to, and the reason the crons are
+   * scheduled where they are. FPL owns this number; hardcoding it went stale
+   * the moment the game moved the window.
+   */
+  game_config?: {
+    settings?: {
+      price_change_deadlines?: string[];
+    };
+  };
 }
 
 export interface FPLEntry {
@@ -196,20 +244,10 @@ export interface PriceAnalysis {
   costChangeEvent: number;
   transfersInEvent: number;
   transfersOutEvent: number;
-  /**
-   * Net transfers since this player's price last changed — the number FPL
-   * actually measures against the threshold. NOT the gameweek total: FPL resets
-   * a player's counter at every price change, while `transfers_in_event` resets
-   * only at the gameweek rollover.
-   */
+  /** Net transfers this gameweek. Context for the reader, not an input any more. */
   netTransfers: number;
-  /** The raw gameweek total, kept so the two can be told apart. */
+  /** Kept as a distinct name because callers and columns already use both. */
   netTransfersEvent: number;
-  /**
-   * Snapshot date the baseline came from, or null when the player has not
-   * changed price this gameweek and the gameweek start is the correct baseline.
-   */
-  baselineSince: string | null;
   selectedByPercent: number;
   status: PriceStatus;
   /**
@@ -220,16 +258,22 @@ export interface PriceAnalysis {
    */
   changeScore: number;
   /**
-   * True while the threshold behind `changeScore` is a starting estimate rather
-   * than one fitted to observed changes. Tracked per direction, because rises
-   * and falls are fitted separately and can be at different stages.
+   * FPL's projection for each upcoming deadline, nearest first, already reduced
+   * to what the UI needs. Empty when FPL sends none.
    */
-  targetEstimated: boolean;
+  projections: { percent: number; likelihood: number; status: PriceStatus }[];
   /**
-   * Which threshold `changeScore` was measured against. Falls are the less
-   * certain half — two players at the same ownership demonstrably imply
-   * different thresholds — so the UI hedges them and not rises.
+   * True when FPL shipped no prediction for this player. The app says so rather
+   * than falling back to the threshold it used to estimate itself: that estimate
+   * once reported 26 players rising on a night when one did, and a wrong number
+   * presented as a right one is worse than an absent one.
    */
+  predictionUnavailable: boolean;
+  /** Price frozen until this instant, straight from FPL. */
+  lockedUntil: string | null;
+  /** Percentage points of progress per hour, straight from FPL. */
+  hourlyRate: number;
+  /** Which way `changeScore` points. */
   targetDirection: 'rise' | 'fall';
   news: string;
   /** FPL's own 0/25/50/75 estimate; always sent alongside a flag. */

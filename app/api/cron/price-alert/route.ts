@@ -11,7 +11,7 @@ import { getAdminDb, isAdminConfigured } from '@/lib/firebase-admin';
 import { recordNotification, pruneNotifications } from '@/lib/notifications';
 import { analyzePlayerPrice } from '@/lib/price-calculator';
 import { seasonKey } from '@/lib/analyst';
-import { loadPriceContext, listSnapshotDates, readSnapshot } from '@/lib/price-changes-store';
+import { listSnapshotDates, readSnapshot } from '@/lib/price-changes-store';
 import { diffAgainstLive, PriceChangeDay } from '@/lib/price-changes';
 
 export const dynamic = 'force-dynamic';
@@ -100,13 +100,11 @@ export async function GET(req: NextRequest) {
       bootstrap.events[0];
 
     const picksData = await fetchFPLPicks(teamId, entry.current_event || currentEvent.id);
-    const priceContext = await loadPriceContext(seasonKey(bootstrap)).catch(() => ({}));
     const squadPlayers = buildSquadPlayers(
       picksData.picks,
       bootstrap,
       [],
       currentEvent.id,
-      priceContext
     );
     const squadIds = new Set(squadPlayers.map((p) => p.element.id));
 
@@ -129,7 +127,7 @@ export async function GET(req: NextRequest) {
         .map((el) => ({
           name: el.web_name,
           short: teamMap.get(el.team)?.short_name ?? 'CLB',
-          analysis: analyzePlayerPrice(el, bootstrap, priceContext),
+          analysis: analyzePlayerPrice(el, bootstrap),
         }));
     }
 

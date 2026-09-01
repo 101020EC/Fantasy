@@ -1,14 +1,5 @@
-import { unstable_cache } from 'next/cache';
 import { getAdminDb, isAdminConfigured } from './firebase-admin';
-import {
-  findTransferBaselines,
-  PriceChangeDay,
-  SnapshotLike,
-  ThresholdObservation,
-  TransferBaseline,
-} from './price-changes';
-import { PriceContext } from './price-calculator';
-import { PriceThresholds } from './price-thresholds';
+import { PriceChangeDay, SnapshotLike } from './price-changes';
 
 /**
  * Firestore access for price changes. Kept apart from lib/price-changes.ts so
@@ -131,81 +122,4 @@ export async function storedChangeDates(): Promise<string[]> {
   if (!isAdminConfigured) return [];
   const snap = await getAdminDb().collection(CHANGES).select().get();
   return snap.docs.map((d) => d.id).sort();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Fitted thresholds
-// ─────────────────────────────────────────────────────────────────────────────
-
-export async function readPriceThresholds(season: string): Promise<PriceThresholds | null> {
-  if (!isAdminConfigured) return null;
-  const doc = await getAdminDb().collection(THRESHOLDS).doc(season).get();
-  return doc.exists ? (doc.data() as PriceThresholds) : null;
-}
-
-export async function writePriceThresholds(t: PriceThresholds): Promise<void> {
-  await getAdminDb().collection(THRESHOLDS).doc(t.season).set(t);
-}
-
-/**
- * Every threshold sample recorded on recent change documents, newest days first.
- *
- * Reads the same `priceChanges/` documents the UI uses rather than keeping a
- * second store, so a sample can never exist that the Past tab cannot account
- * for.
- */
-export async function collectObservations(
-  limit = FIT_WINDOW_DAYS
-): Promise<{ observations: ThresholdObservation[]; sourceDays: string[] }> {
-  const days = await listPriceChangeDays(limit);
-  const observations: ThresholdObservation[] = [];
-  const sourceDays: string[] = [];
-  for (const day of days) {
-    if (!day.observations?.length) continue;
-    observations.push(...day.observations);
-    sourceDays.push(day.date);
-  }
-  return { observations, sourceDays };
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Page-facing context
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Baselines and thresholds, ready to hand to analyzePlayerPrice().
- *
- * Both change at most once a day — baselines only when FPL resets a counter,
- * thresholds only when the nightly cron refits — so this is cached rather than
- * re-read on every request. Reading the raw snapshots costs ~330KB; only the
- * derived baselines are cached, which is a fraction of that.
- *
- * Every failure degrades to an empty context rather than propagating: without
- * it the score falls back to a gameweek-start baseline and the unfitted
- * formula, which is exactly what the page did before any of this existed.
- */
-const baselineCache = unstable_cache(
-  async () => {
-    const snapshots = await readRecentSnapshots(8);
-    const map = findTransferBaselines(snapshots);
-    return {
-      snapshotDates: snapshots.map((s) => s.date),
-      baselines: Object.fromEntries([...map].map(([id, b]) => [String(id), b])),
-    };
-  },
-  ['price-baselines'],
-  { revalidate: 900, tags: ['price-baselines'] }
-);
-
-export async function loadPriceContext(season: string): Promise<PriceContext> {
-  const [cached, thresholds] = await Promise.all([
-    baselineCache().catch(() => ({ snapshotDates: [], baselines: {} })),
-    readPriceThresholds(season).catch(() => null),
-  ]);
-
-  const baselines = new Map<number, TransferBaseline>(
-    Object.entries(cached.baselines).map(([id, b]) => [Number(id), b as TransferBaseline])
-  );
-
-  return { baselines, thresholds };
 }

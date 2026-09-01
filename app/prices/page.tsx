@@ -1,35 +1,18 @@
 import React from 'react';
 import { fetchFPLBootstrap } from '@/lib/fpl-api';
-import { getAllMarketPriceAnalyses } from '@/lib/price-calculator';
+import { getAllMarketPriceAnalyses, nextPriceDeadline } from '@/lib/price-calculator';
 import { seasonKey } from '@/lib/analyst';
-import { listPriceChangeDays, loadPriceContext } from '@/lib/price-changes-store';
+import { listPriceChangeDays } from '@/lib/price-changes-store';
 import { PriceChangeDay } from '@/lib/price-changes';
 import { FPLElementType, FPLTeam } from '@/lib/types';
 import PriceMarketTable from '@/components/prices/PriceMarketTable';
+import PriceDeadlineCountdown from '@/components/prices/PriceDeadlineCountdown';
 import { MarketCell, toMarketCells, toMarketRow } from '@/lib/market-row';
 import { Clock, AlertCircle } from 'lucide-react';
 import { stalest } from '@/lib/fpl-resilience';
 import { StaleNotice } from '@/components/system/UpstreamNotice';
 
 export const dynamic = 'force-dynamic';
-
-/** The nightly change window, in the timezone this is read in. */
-function UpdateWindow() {
-  return (
-    <div className="px-3 py-1.5 rounded-2xl bg-white border border-black/5 flex items-center gap-2 text-xs shadow-sm shrink-0">
-      <div className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold shrink-0">
-        <Clock className="w-3.5 h-3.5" />
-      </div>
-      <div className="leading-tight">
-        <span className="font-black text-[#111318] block text-[10px] sm:text-xs">Update Window</span>
-        <span className="block text-[10px] sm:text-xs font-bold text-[#38003c]">
-          08:30 - 09:30 Bangkok
-        </span>
-        <span className="block text-gray-400 text-[9px] sm:text-[10px]">01:30 - 02:30 UTC</span>
-      </div>
-    </div>
-  );
-}
 
 export default async function PricesPage() {
   let analyses: MarketCell[][] = [];
@@ -38,7 +21,7 @@ export default async function PricesPage() {
   let currentEventName = '';
   let errorMsg: string | null = null;
   let changeDays: PriceChangeDay[] = [];
-  let confidence = { riseFitted: false, fallFitted: false };
+  let deadline: string | null = null;
 
   let bootstrapForStaleness: unknown = null;
 
@@ -50,18 +33,13 @@ export default async function PricesPage() {
     const bootstrap = await fetchFPLBootstrap();
     bootstrapForStaleness = bootstrap;
 
-    // Baselines and thresholds make the target percentage mean something. Both
-    // degrade to the old behaviour if Firestore is unreachable, so a database
-    // problem costs accuracy rather than the page.
-    const context = await loadPriceContext(seasonKey(bootstrap)).catch(() => ({}));
     // Club and position travel once each, not once per player. Embedding them
     // in every row cost 394KB of the page — twenty clubs and four positions,
     // repeated 616 times.
     teams = bootstrap.teams;
     types = bootstrap.element_types;
-    analyses = getAllMarketPriceAnalyses(bootstrap, context).map(toMarketRow).map(toMarketCells);
-    const t = 'thresholds' in context ? context.thresholds : null;
-    confidence = { riseFitted: Boolean(t?.riseFitted), fallFitted: Boolean(t?.fallFitted) };
+    analyses = getAllMarketPriceAnalyses(bootstrap).map(toMarketRow).map(toMarketCells);
+    deadline = nextPriceDeadline(bootstrap);
 
     // Only days with a computed diff exist, so an empty list is a real answer —
     // there is no history before the second snapshot.
@@ -118,8 +96,7 @@ export default async function PricesPage() {
           teams={teams}
           types={types}
           changeDays={changeDays}
-          confidence={confidence}
-          aside={<UpdateWindow />}
+          aside={<PriceDeadlineCountdown deadline={deadline} />}
         />
       )}
     </div>

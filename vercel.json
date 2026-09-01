@@ -3,15 +3,5 @@
   "framework": "nextjs",
   "regions": [
     "sin1"
-  ],
-  "crons": [
-    {
-      "path": "/api/cron/market-snapshot",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/price-alert",
-      "schedule": "0 23 * * *"
-    }
   ]
 }

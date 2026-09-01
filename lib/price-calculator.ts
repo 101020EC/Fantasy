@@ -1,6 +1,12 @@
-import { FPLBootstrap, FPLElement, FPLElementType, FPLTeam, PriceAnalysis, PriceStatus, placeholderTeam } from './types';
-import { TransferBaseline } from './price-changes';
-import { isFitted, PriceThresholds, thresholdFor } from './price-thresholds';
+import {
+  FPLBootstrap,
+  FPLElement,
+  FPLElementType,
+  FPLTeam,
+  PriceAnalysis,
+  PriceStatus,
+  placeholderTeam,
+} from './types';
 
 const FALLBACK_TEAM: FPLTeam = placeholderTeam();
 const FALLBACK_TYPE: FPLElementType = {
@@ -24,55 +30,39 @@ function buildLookups(bootstrap: FPLBootstrap): Lookups {
 }
 
 /**
- * Context the caller can supply to make the score accurate. Both are optional
- * and both degrade to the old behaviour when absent, so a page that has not
- * loaded Firestore still renders a sensible table.
+ * FPL's `likelihood` as one of this app's five states.
+ *
+ * Only |likelihood| >= 4 is a prediction. FPL's own page colours those two
+ * bands and greys everything else out, and the bands are wide: 3 covers
+ * 40%-95% of the way to a change, which is a player to watch rather than one
+ * that will move tonight. Drawing the line anywhere lower buries the handful of
+ * names that matter — on 2026-09-01 it would have marked 167 players as falling
+ * when 17 were within reach of the threshold.
  */
-export interface PriceContext {
-  /** Where each player's counter was last reset, from findTransferBaselines(). */
-  baselines?: Map<number, TransferBaseline> | null;
-  /** Thresholds fitted from observed changes, if any have been observed. */
-  thresholds?: PriceThresholds | null;
-  lookups?: Lookups;
+export function statusFromLikelihood(likelihood: number): PriceStatus {
+  if (likelihood >= 5) return 'rising_soon';
+  if (likelihood >= 4) return 'likely_riser';
+  if (likelihood <= -5) return 'falling_soon';
+  if (likelihood <= -4) return 'likely_faller';
+  return 'stable';
 }
 
 /**
- * `rising_soon` / `falling_soon` at 100% of the threshold, the trending tiers
- * at half of it. 100 is the real line — a player at 100% is expected to move in
- * tonight's window — so the tiers are anchored to it rather than to an
- * arbitrary point on a clamped index.
- */
-const TONIGHT = 100;
-const TRENDING = 50;
-
-/** Beyond this the exact figure stops meaning anything; only the sign does. */
-const SCORE_CAP = 300;
-
-/**
- * Progress toward a price change, as a percentage of FPL's threshold.
+ * A player's price outlook, read straight from FPL.
  *
- * Two things make this different from a naive net-transfers score, and both
- * were wrong before:
- *
- * 1. **The counter resets at every price change.** `transfers_in_event` resets
- *    only at the gameweek rollover, so a player who rose on Monday carried the
- *    transfers that caused the rise for the rest of the week and stayed pinned
- *    at the top of the table. `baselines` subtracts them.
- * 2. **The threshold is measurable.** It used to be a formula nobody had ever
- *    checked against a real change. `thresholds` carries one fitted to the
- *    changes we have actually observed, and falls back to that formula while
- *    the sample is too small.
+ * This used to reverse-engineer FPL's threshold — a fitted constant for rises,
+ * an ownership-scaled one for falls, both measured against price changes as we
+ * observed them, with net transfers rebased at every change because the game's
+ * own counter does not reset there. FPL now publishes the answer in
+ * bootstrap-static, so all of that machinery is gone: `price_change_percent` is
+ * the same quantity `changeScore` always meant, sourced rather than estimated.
  */
 export function analyzePlayerPrice(
   element: FPLElement,
   bootstrap: FPLBootstrap,
-  context: PriceContext | Lookups = {}
+  lookupsArg?: Lookups
 ): PriceAnalysis {
-  // Callers used to pass a bare Lookups as the third argument. Both shapes are
-  // accepted so every existing call site keeps working untouched.
-  const ctx: PriceContext =
-    'teams' in context && 'types' in context ? { lookups: context as Lookups } : (context as PriceContext);
-  const lookups = ctx.lookups ?? buildLookups(bootstrap);
+  const lookups = lookupsArg ?? buildLookups(bootstrap);
 
   const team = lookups.teams.get(element.team) || { ...FALLBACK_TEAM, id: element.team };
   const elementType = lookups.types.get(element.element_type) || {
@@ -81,47 +71,33 @@ export function analyzePlayerPrice(
   };
 
   const currentCost = element.now_cost / 10;
-  const ownership = parseFloat(element.selected_by_percent) || 1.0;
-
+  const ownership = parseFloat(element.selected_by_percent) || 0;
   const netTransfersEvent = element.transfers_in_event - element.transfers_out_event;
 
-  // Absent baselines mean "we have no snapshot history yet", which is the same
-  // answer as "this player has not changed price this gameweek": zero. That is
-  // correct for most of the table for most of a gameweek, so the fix is useful
-  // from the first day even with no stored history at all.
-  const baseline = ctx.baselines?.get(element.id) ?? null;
-  const netTransfers =
-    element.transfers_in_event -
-    (baseline?.transfersIn ?? 0) -
-    (element.transfers_out_event - (baseline?.transfersOut ?? 0));
+  const rawProjections = element.price_change_projections ?? [];
+  // A player with no projections and no percentage has no prediction at all.
+  // Distinguished from a genuine zero, which means "sitting exactly still".
+  const predictionUnavailable =
+    rawProjections.length === 0 && element.price_change_percent == null;
 
-  // Rises and falls do not share a threshold shape: anyone can buy a player, so
-  // a rise is measured against the whole manager base, while only an owner can
-  // sell, so a fall is measured against that player's ownership. Measured
-  // against livefpl, a single ownership-proportional divisor reported 26 players
-  // rising tonight where one was rising.
-  const direction: 'rise' | 'fall' = netTransfers >= 0 ? 'rise' : 'fall';
-  const threshold = thresholdFor(
-    ownership,
-    direction,
-    ctx.thresholds,
-    bootstrap.total_players
-  );
-  let rawScore = (netTransfers / threshold) * 100;
+  const changeScore = Math.round(Number(element.price_change_percent ?? 0)) || 0;
 
-  // Injured or suspended players are sold off faster than transfers alone show.
-  // Applied before rounding, so the score stays a whole number in the UI.
-  if (element.status !== 'a' && rawScore < 0) {
-    rawScore *= 1.25;
-  }
+  const projections = rawProjections
+    .slice()
+    .sort((a, b) => a.offset - b.offset)
+    .map((p) => {
+      const likelihood = Number(p.likelihood ?? 0) || 0;
+      return {
+        percent: Math.round(Number(p.projected_percent ?? 0)) || 0,
+        likelihood,
+        status: statusFromLikelihood(likelihood),
+      };
+    });
 
-  const changeScore = Math.round(Math.min(SCORE_CAP, Math.max(-SCORE_CAP, rawScore)));
-
-  let status: PriceStatus = 'stable';
-  if (changeScore >= TONIGHT) status = 'rising_soon';
-  else if (changeScore >= TRENDING) status = 'likely_riser';
-  else if (changeScore <= -TONIGHT) status = 'falling_soon';
-  else if (changeScore <= -TRENDING) status = 'likely_faller';
+  // The nearest deadline decides the badge. `price_change_percent` is where the
+  // player stands now; the projection is where FPL expects him to be when the
+  // change actually happens, which is the question a manager is asking.
+  const status: PriceStatus = predictionUnavailable ? 'stable' : projections[0]?.status ?? 'stable';
 
   let availability: PriceAnalysis['availability'] = 'available';
   if (element.status === 'd') availability = 'doubtful';
@@ -139,27 +115,33 @@ export function analyzePlayerPrice(
     costChangeEvent: element.cost_change_event / 10,
     transfersInEvent: element.transfers_in_event,
     transfersOutEvent: element.transfers_out_event,
-    netTransfers,
+    netTransfers: netTransfersEvent,
     netTransfersEvent,
-    baselineSince: baseline?.since ?? null,
     selectedByPercent: ownership,
     status,
     changeScore,
-    targetEstimated: !isFitted(direction, ctx.thresholds),
-    targetDirection: direction,
+    projections,
+    predictionUnavailable,
+    lockedUntil: element.price_change_locked_until ?? null,
+    hourlyRate: element.price_change_hourly_rate ?? 0,
+    targetDirection: changeScore < 0 ? 'fall' : 'rise',
     news: element.news,
     chanceOfPlaying: element.chance_of_playing_next_round,
     availability,
   };
 }
 
-export function getAllMarketPriceAnalyses(
-  bootstrap: FPLBootstrap,
-  context: Omit<PriceContext, 'lookups'> = {}
-): PriceAnalysis[] {
+export function getAllMarketPriceAnalyses(bootstrap: FPLBootstrap): PriceAnalysis[] {
   // Build the lookups once rather than scanning teams and positions per player.
   const lookups = buildLookups(bootstrap);
-  return bootstrap.elements.map((el) =>
-    analyzePlayerPrice(el, bootstrap, { ...context, lookups })
-  );
+  return bootstrap.elements.map((el) => analyzePlayerPrice(el, bootstrap, lookups));
+}
+
+/**
+ * When prices next move, from FPL rather than from a constant in this repo.
+ * The window used to be written into the page as "01:30 - 02:30 UTC"; FPL now
+ * publishes 23:00Z, and the hardcoded string had no way of noticing.
+ */
+export function nextPriceDeadline(bootstrap: FPLBootstrap): string | null {
+  return bootstrap.game_config?.settings?.price_change_deadlines?.[0] ?? null;
 }
