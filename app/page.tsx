@@ -170,7 +170,7 @@ function HistoryView() {
       setIsSetupModalOpen(false);
       setPreviewNewEntry(null);
       setNewTeamInput('');
-      router.push(`/team/${newId}`);
+      router.push(`/team/${newId}/live`);
     }
   };
 

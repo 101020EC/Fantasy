@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { Search, Menu, LogOut, Send, Shield, History, TrendingUp, Database, X, Bell, Brain, Activity, Crown } from 'lucide-react';
+import { gwSegment } from '@/lib/gw-preference';
 import { useAuth } from './AuthContext';
 import TelegramSettingsModal from './telegram/TelegramSettingsModal';
 import PremierLeagueLogo from './PremierLeagueLogo';
@@ -56,7 +57,9 @@ export default function Navbar() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (quickTeamId.trim()) {
-      router.push(`/team/${quickTeamId.trim()}`);
+      // A team you just typed in is one you want to look at now, not the week
+      // you last previewed on a different team.
+      router.push(`/team/${quickTeamId.trim()}/live`);
       setQuickTeamId('');
     }
   };
@@ -75,7 +78,9 @@ export default function Navbar() {
   // The login screen stands alone — no chrome around it.
   if (pathname === '/login') return null;
 
-  const teamUrl = savedTeamId ? `/team/${savedTeamId}` : '/?switch=true';
+  // Straight to the gameweek segment, so the menu's own link is the cached,
+  // prefetchable URL rather than one the middleware has to rewrite.
+  const teamUrl = savedTeamId ? `/team/${savedTeamId}/${gwSegment()}` : '/?switch=true';
 
   return (
     <>

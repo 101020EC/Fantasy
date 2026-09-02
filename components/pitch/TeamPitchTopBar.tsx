@@ -130,7 +130,11 @@ export default function TeamPitchTopBar({
                 gameweeks, which is not what this does. */}
             {[baseGw, baseGw + 1].filter((gw) => gw <= 38).map((gw, offset) => {
               const isShown = gw === shownGw;
-              const href = gw === gameweek ? `/team/${entry.id}` : `/team/${entry.id}?gw=${gw}`;
+              // The named segments, not the numbers behind them. `live` and
+              // `next` are the same two URLs every week, so switching chips
+              // lands on a page that is already cached and already prefetched —
+              // a numbered href would mint a new one every gameweek.
+              const href = `/team/${entry.id}/${offset === 1 ? 'next' : 'live'}`;
               const isSquadWeek = gw === gameweek;
               return (
                 <Link

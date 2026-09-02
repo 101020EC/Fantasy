@@ -1,6 +1,5 @@
 import React from 'react';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import {
   fetchFPLBootstrap,
@@ -16,49 +15,81 @@ import FootballPitch from '@/components/pitch/FootballPitch';
 import TeamPitchTopBar from '@/components/pitch/TeamPitchTopBar';
 import PrivateLeaguesCard from '@/components/team/PrivateLeaguesCard';
 import GlobalLeaguesCard from '@/components/team/GlobalLeaguesCard';
-import TeamSaveTracker from './TeamSaveTracker';
+import TeamSaveTracker from '../TeamSaveTracker';
 import { AlertCircle, Search } from 'lucide-react';
 import { seasonKey } from '@/lib/analyst';
 import { readWatchlist } from '@/lib/watchlist';
 import { analyzePlayerPrice } from '@/lib/price-calculator';
 import { FplError, stalest } from '@/lib/fpl-resilience';
 import { FplUnavailable, StaleNotice } from '@/components/system/UpstreamNotice';
-import { GW_OFFSET_COOKIE } from '@/lib/gw-preference';
 
-export const dynamic = 'force-dynamic';
+/**
+ * Cached, not rendered per visit.
+ *
+ * This page used to be `force-dynamic`, which meant `<Link>` could prefetch its
+ * `loading.tsx` and nothing else — every click on the Team menu started from
+ * zero, which is exactly what "the skeleton sits there" felt like. Two things
+ * were forcing that: `cookies()`, and reading `searchParams` for `?gw=`. Both
+ * are gone — the gameweek is a path segment now, and the cookie is read by the
+ * middleware that rewrites into it.
+ *
+ * 60 seconds costs nothing in freshness: `fetchFPLEntry` and `fetchFPLPicks`
+ * already cache for 60, so the app has always been willing to show numbers up
+ * to a minute old. This only moves where that minute is stored. Wanting fresher
+ * means lowering those first — lowering it here alone would re-render on a
+ * schedule and get the same cached numbers back.
+ *
+ * Sharing the cache between viewers is correct here: everything on this page is
+ * a function of (team id, gameweek), the watchlist included — it is keyed by
+ * team, not by viewer.
+ */
+export const revalidate = 60;
 
-interface TeamPageProps {
-  params: Promise<{ id: string }>;
-  searchParams: Promise<{ gw?: string }>;
+/**
+ * Empty on purpose — and required.
+ *
+ * Nothing is prerendered at build time: there is no list of team ids to build,
+ * and every page here is rendered on the first request for it. But a dynamic
+ * route with no `generateStaticParams` at all is not merely un-prerendered, it
+ * is excluded from the prerender manifest entirely, and `revalidate` above then
+ * describes a cache the route never joins. Verified rather than assumed: the
+ * build listed this route as `ƒ` with an empty `dynamicRoutes`, and adding this
+ * moved it to `●`.
+ */
+export function generateStaticParams() {
+  return [];
 }
 
-export default async function TeamPage({ params, searchParams }: TeamPageProps) {
-  const { id } = await params;
-  const { gw: queryGw } = await searchParams;
+/** `live` and `next` keep their meaning all season; a number pins one week. */
+type GwSegment = string;
+
+interface TeamPageProps {
+  params: Promise<{ id: string; gw: GwSegment }>;
+}
+
+export default async function TeamPage({ params }: TeamPageProps) {
+  const { id, gw: gwSegment } = await params;
 
   if (!id || isNaN(Number(id))) {
     notFound();
   }
 
+  // A segment that is neither of the two words nor a gameweek is a bad URL, not
+  // a gameweek to go looking for.
+  const segmentGw = Number(gwSegment);
+  const isNamedGw = gwSegment === 'live' || gwSegment === 'next';
+  if (!isNamedGw && !(Number.isInteger(segmentGw) && segmentGw >= 1 && segmentGw <= 38)) {
+    notFound();
+  }
+
   try {
-    // One waiting stage, not five.
+    // Bootstrap first, and bootstrap alone.
     //
-    // These were awaited one after another, so the page cost six serial round
-    // trips before it could render — visible in a screen recording as three
-    // seconds of skeleton. Only two of them actually depend on anything: picks
-    // needs the entry's current event, and the price context needs the season
-    // from the bootstrap. Everything else was queued behind a request it had no
-    // relationship to.
-    const [bootstrap, entry, fixtures, transfers, watchIds] = await Promise.all([
-      fetchFPLBootstrap(),
-      fetchFPLEntry(id),
-      fetchFPLFixtures(),
-      // Transfers give the purchase price behind every squad value.
-      fetchFPLTransfers(id).catch((): any[] => []),
-      // Watchlisted players move too, and this is the page you would act on it
-      // from. One small document.
-      readWatchlist(id).catch((): number[] => []),
-    ]);
+    // It is the only thing the gameweek depends on — `live` and `next` mean
+    // nothing until the event list says which week is being played — and
+    // `unstable_cache` holds it for 300s, so this is almost never a round trip.
+    // Everything else goes in one batch behind it, squad included.
+    const bootstrap = await fetchFPLBootstrap();
 
     const currentEvent =
       bootstrap.events.find((e) => e.is_current) ||
@@ -75,23 +106,16 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
       bootstrap.events.find((e) => e.is_current && !e.finished)?.id ||
       bootstrap.events.find((e) => e.is_next)?.id ||
       currentGwNum;
-    const parsedGw = queryGw ? parseInt(queryGw, 10) : NaN;
 
-    // Which of the two chips the viewer picked last time.
-    //
-    // Stored as an offset from the gameweek being played, never as a gameweek
-    // number: gameweeks advance every week, so a remembered "GW 6" is a week in
-    // the past by the next visit. Stored in a cookie rather than localStorage
-    // because this is a server component — localStorage would mean redirecting
-    // after mount, which the viewer sees as the page jumping.
-    const savedOffset = Number((await cookies()).get(GW_OFFSET_COOKIE)?.value);
-    const rememberedGw = savedOffset === 1 ? Math.min(liveGw + 1, 38) : liveGw;
-    // Open on the gameweek being played, not the last one with points. The
-    // chips offer `liveGw` and the one after it, so defaulting to the scored
-    // week left the page sitting on a gameweek the chips no longer showed —
-    // and therefore with no chip highlighted at all.
-    const initialGw =
-      Number.isFinite(parsedGw) && parsedGw >= 1 && parsedGw <= 38 ? parsedGw : rememberedGw;
+    // `live` and `next` resolve here rather than in the middleware, which has no
+    // way to know which week is being played without fetching this same
+    // bootstrap on the edge — a round trip on every request, to save one that is
+    // already cached.
+    const initialGw = isNamedGw
+      ? gwSegment === 'next'
+        ? Math.min(liveGw + 1, 38)
+        : liveGw
+      : segmentGw;
 
     // Which gameweek's fixtures to show. A future gameweek has no squad yet —
     // its deadline has not passed — so the squad falls back while the fixture
@@ -99,24 +123,42 @@ export default async function TeamPage({ params, searchParams }: TeamPageProps) 
     // squad plays next, not for a squad that does not exist.
     const fixtureGw = initialGw;
 
-    // Start from the last gameweek that actually has picks. Asking for the
-    // upcoming one first would spend a guaranteed 404 on every page load, since
-    // its deadline has not passed; the walk-back below stays for the cases the
-    // entry itself is behind.
-    let activeGw = Math.min(initialGw, entry.current_event || initialGw);
-    let picksData: FPLPicksResponse | null = null;
+    // The squad joins the batch instead of waiting for it.
+    //
+    // It used to be awaited after everything else, because `activeGw` clamps to
+    // `entry.current_event` — one more serial round trip on a page that had just
+    // been cut down to one. But the clamp that actually matters is `liveGw`,
+    // which the bootstrap above already gave us: no squad exists past the week
+    // being played, so asking for one is the guaranteed 404 the old code was
+    // careful to avoid. Clamping here buys the parallelism without it.
+    //
+    // `entry.current_event` can still be behind — an entry that skipped a week —
+    // and the walk-back below covers that, now on the rare path rather than
+    // every load.
+    const guessGw = Math.min(initialGw, liveGw);
 
-    // Started, not awaited. The same price context the market page uses — so a
-    // player cannot read "Rising Tonight" on one page and "Trending Up" on the
-    // other — and it has no reason to wait behind the squad request.
+    const [entry, fixtures, transfers, watchIds, guessedPicks] = await Promise.all([
+      fetchFPLEntry(id),
+      fetchFPLFixtures(),
+      // Transfers give the purchase price behind every squad value.
+      fetchFPLTransfers(id).catch((): any[] => []),
+      // Watchlisted players move too, and this is the page you would act on it
+      // from. One small document.
+      readWatchlist(id).catch((): number[] => []),
+      fetchFPLPicks(id, guessGw).catch((): null => null),
+    ]);
 
-    try {
-      picksData = await fetchFPLPicks(id, activeGw);
-    } catch {
-      // Walk back a few gameweeks for a squad — enough to cover a deadline that
-      // has not passed yet. Scanning all 38 meant up to 37 blocking requests.
-      const floor = Math.max(1, activeGw - 3);
-      for (let fallbackGw = activeGw - 1; fallbackGw >= floor; fallbackGw--) {
+    let activeGw = guessGw;
+    let picksData: FPLPicksResponse | null = guessedPicks;
+
+    // The guess only misses when the entry is behind the gameweek being played.
+    if (!picksData) {
+      const from = Math.min(guessGw, entry.current_event || guessGw);
+      // Enough to cover a deadline that has not passed yet. Scanning all 38
+      // meant up to 37 blocking requests.
+      const floor = Math.max(1, from - 3);
+      for (let fallbackGw = from; fallbackGw >= floor; fallbackGw--) {
+        if (fallbackGw === guessGw) continue;
         try {
           picksData = await fetchFPLPicks(id, fallbackGw);
           activeGw = fallbackGw;

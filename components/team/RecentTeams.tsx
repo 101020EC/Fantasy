@@ -68,7 +68,7 @@ export default function RecentTeams() {
         {recentTeams.map((team) => (
           <Link
             key={team.id}
-            href={`/team/${team.id}`}
+            href={`/team/${team.id}/live`}
             className="group flex items-center gap-1.5 px-3 py-1 rounded-full bg-pastel-bg hover:bg-pastel-blueLight transition text-[#111318] text-xs shadow-sm border border-black/5"
           >
             <span className="font-bold">
