@@ -143,3 +143,28 @@ suggestions) is down ~40%. Remaining cost is `forecast` CPU (~120–190 ms) — 
 
 Everything found is DONE. Not pursued, deliberately: `forecast` CPU (~150 ms) in transfer
 suggestions; a cross-request cache of data-checked `playerStats`.
+
+---
+
+# Round 2 — AI transfer advice (reopened 2026-10-07)
+
+The user pointed out the round above missed the feature they care about: AI advice on what to
+buy and sell. No plan document for it exists in the repo or in older sessions; the state below
+is read from the code and from `/analyst` on production.
+
+## What exists
+
+| Piece | State on production |
+|---|---|
+| Forecast engine (xPts per player, deterministic, no LLM) | ON. Accuracy 37% within ±2 pts (players projected 3+), MAE ≈ 1.9–2.1 over GW2–5 — about level with FPL's own `ep` |
+| Transfer suggestions (`lib/transfer-optimizer.ts`) | ON. Single swaps only, ranked by xPts over 1/3/5 GW, budget + 3-per-club |
+| Written analysis (LLM, `lib/analysis.ts` + `ai-jobs` Phase 1 + `ai-budget`) | **OFF — no API key configured** ("Written analysis is off") |
+| LLM sees the transfer suggestions? | **No.** `buildAnalysisContext` gets the forecast, squad and elite signals only |
+
+## Findings
+
+| # | Finding | Status |
+|---|---|---|
+| F8 | Transfer budget uses `now_cost` as the selling price. For a player who has risen, FPL pays back only half the rise, so `now_cost` **overstates** the budget — the optimiser can suggest a swap the manager cannot afford. The route comment and the on-page note both claim the opposite ("understates"). `lib/squad-value.ts` already computes the real selling price from the transfer history. | OPEN |
+| F9 | `DEFAULT_MODEL.anthropic = 'claude-sonnet-5'` — not a model id this environment lists (current: `claude-sonnet-5-5`). Would fail on first call if Anthropic were picked. | OPEN |
+| F10 | Free transfers are always assumed to be 1; FPL's history (`event_transfers`, chips per GW) is enough to derive the banked count. | OPEN |
