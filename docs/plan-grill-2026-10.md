@@ -167,7 +167,7 @@ is read from the code and from `/analyst` on production.
 |---|---|---|
 | F8 | Transfer budget uses `now_cost` as the selling price. For a player who has risen, FPL pays back only half the rise, so `now_cost` **overstates** the budget — the optimiser can suggest a swap the manager cannot afford. The route comment and the on-page note both claim the opposite ("understates"). `lib/squad-value.ts` already computes the real selling price from the transfer history. | DONE 7195b9c |
 | F9 | ~~`claude-sonnet-5` is not a valid id~~ — wrong: it is a valid previous-generation id (current Sonnet is `claude-sonnet-5-5`). The real risk on the Claude path: `complete()` caps output at **700 tokens** and Sonnet 5 runs adaptive thinking by default, so thinking can eat the cap and the prose comes back cut or empty (`text` only reads `b.text`). No `stop_reason` check either. Inactive today (no key), so deferred to the provider decision. | DEFERRED |
-| F10 | Free transfers are always assumed to be 1; FPL's history (`event_transfers`, chips per GW) is enough to derive the banked count. | OPEN |
+| F10 | Free transfers are always assumed to be 1; FPL's history (`event_transfers`, chips per GW) is enough to derive the banked count. | DONE 8de440d |
 
 **Q12 · Fix bugs first (user).** F8 shipped 7195b9c: `squadSellingPrices()` in
 `lib/squad-value.ts` (tested), transfers fetched alongside picks/entry, on-page note corrected.
@@ -187,4 +187,18 @@ Options on the table when it resumes:
 
 ## Open when work resumes
 - Q11 decision, then the work above.
-- F9 (only if the Claude provider is chosen), F10.
+- F9 (only if the Claude provider is chosen).
+
+**F10 · Count banked free transfers (user: "ทำ f10").** Shipped 8de440d.
+`lib/free-transfers.ts` `freeTransfersFor()`: the entry's first GW is squad selection; each
+later deadline adds one up to a bank of 5 (`game_settings.max_extra_free_transfers` = 4, +1);
+free transfers used = `event_transfers − event_transfers_cost/4`; a Wildcard or Free Hit week
+spends none and still adds one; transfers already made for the next GW (transfer list,
+`event = next`) come off. `?freeTransfers=` still overrides; if the history cannot be read,
+one is assumed and the page says so. Not modelled: one-off top-ups FPL announces mid-season
+(AFCON 2024/25) — undercounts until the bank fills.
+
+8 tests (34 total). Checked against the real team: GW2 1 transfer → GW3 Wildcard → GW4 none →
+GW5 2 free ⇒ **2 for GW 6**; production `/analyst` now reads "2 free transfers for GW 6,
+counted from your transfer history." The single-swap optimiser only uses this for hit vs no
+hit, so today's suggestions are unchanged; it matters once multi-swap (option C) exists.
