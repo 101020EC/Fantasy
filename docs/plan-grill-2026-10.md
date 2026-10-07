@@ -13,7 +13,7 @@ Status key: **OPEN** · **DECIDED** · **DONE**
 
 | # | Finding | Status |
 |---|---|---|
-| F1 | `hourly`: `squadIds()` swallows an FPL failure as an empty set, then `writeHourlyState(next)` drops every squad player from the watermark. Next hour they are re-seeded, so a price move / injury in that window is never alerted. | DONE (local, not deployed) |
+| F1 | `hourly`: `squadIds()` swallows an FPL failure as an empty set, then `writeHourlyState(next)` drops every squad player from the watermark. Next hour they are re-seeded, so a price move / injury in that window is never alerted. | DONE — live 75fcda1 (Vercel Production, 2026-10-07) |
 | F2 | Stale comments: `price-alert/route.ts` says scheduled by `vercel.json` (it is the Cloudflare Worker); `hourly` mentions 06:00 Bangkok (alert is 21:00). `plan-ui-round-3.md` table still says OPEN. | Comments DONE; round-3 table OPEN |
 | F3 | Provisional elite capture was marked "untested until tonight" (GW2) and never recorded as verified. | OPEN |
 | F4 | ~1s click-to-table delay on menu navigation, cause unknown (Decision 23). | OPEN |
@@ -29,3 +29,6 @@ run keep their previous watermark (`lib/hourly-watermark.ts` `nextWatermark`); a
 still replaces it wholesale. Rejected: skipping the write (re-alerts watchlist changes) and a
 Telegram "lookup failed" message (noisy during FPL updates). First automated test in the repo:
 `tests/hourly-watermark.test.mjs`, run by `npm test` (Node strips the types; no new deps).
+
+**Q3 · Ship.** Confirmed: the Vercel project is wired to GitHub — a push to `main` builds and
+deploys Production (commit status `Vercel: success`, deployment `Production`).
