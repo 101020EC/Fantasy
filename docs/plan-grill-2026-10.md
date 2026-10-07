@@ -175,3 +175,16 @@ Production, same squad, before → after `bankAfter`: Palmer→Saka 0.4→**0.3*
 0.4→0.3, Rogers→Mbeumo 0.2→**0.1**, Wissa→Calvert-Lewin 0.5→0.4, Hall→Bogle 1.0→0.8,
 João Pedro→Calvert-Lewin 2.0→1.9. Every budget was overstated by £0.1–0.2m; none of today's
 eight happened to become unaffordable, but the margin was wrong on all of them.
+
+**Q11 · Scope of "AI transfer advice" — PARKED by the user (2026-10-07).** Not decided.
+Options on the table when it resumes:
+- **A (recommended):** the optimiser chooses the swaps; the LLM explains them in prose. Needs:
+  pass `suggestions` into `buildAnalysisContext`, choose a provider + key, set the monthly
+  ceiling in the AI budget panel, and fix F9 (raise the 700-token cap / handle thinking +
+  `stop_reason` on the Claude path) if Claude is chosen.
+- B: the LLM picks swaps itself — unmeasurable and non-reproducible; against the design rule.
+- C: no LLM; a smarter optimiser — multi-swap, real banked free transfers (F10), −4 hits.
+
+## Open when work resumes
+- Q11 decision, then the work above.
+- F9 (only if the Claude provider is chosen), F10.
