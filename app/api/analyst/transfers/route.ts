@@ -24,8 +24,30 @@ export const maxDuration = 60;
  * recommended — buying a player because he is about to rise is how you end up
  * with a squad chosen by the crowd.
  */
+/**
+ * Each step's duration, sent as a `Server-Timing` header so the browser's
+ * network panel shows where the time goes. Parallel steps are timed on their
+ * own, so they can add up to more than `total`.
+ */
+function stepTimer() {
+  const started = performance.now();
+  const steps: string[] = [];
+  return {
+    async time<T>(name: string, run: () => Promise<T> | T): Promise<T> {
+      const s = performance.now();
+      try {
+        return await run();
+      } finally {
+        steps.push(`${name};dur=${(performance.now() - s).toFixed(1)}`);
+      }
+    },
+    header: () => [...steps, `total;dur=${(performance.now() - started).toFixed(1)}`].join(', '),
+  };
+}
+
 export async function GET(req: NextRequest) {
-  if (!(await requireSession())) {
+  const timer = stepTimer();
+  if (!(await timer.time('auth', () => requireSession()))) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   if (!ANALYST_ENABLED) {
@@ -39,7 +61,7 @@ export async function GET(req: NextRequest) {
   const horizon = Math.min(Math.max(Number(params.get('horizon')) || 3, 1), 6);
 
   try {
-    const bootstrap = await fetchFPLBootstrap();
+    const bootstrap = await timer.time('bootstrap', () => fetchFPLBootstrap());
     const season = seasonKey(bootstrap);
     const teamId = params.get('teamId') || (await getTelegramConfig()).teamId;
 
@@ -71,10 +93,12 @@ export async function GET(req: NextRequest) {
     // None of these depend on each other: the squad, the bank and each
     // gameweek's inputs are fetched together rather than one after another.
     const [picks, entry, inputsByGw] = await Promise.all([
-      latestPicks(),
-      fetchFPLEntry(teamId).catch(() => null),
-      Promise.all(
-        horizonGws.map((gw) => loadFeatureInputs(bootstrap, season, gw, { includeElite: false }))
+      timer.time('picks', latestPicks),
+      timer.time('entry', () => fetchFPLEntry(teamId).catch(() => null)),
+      timer.time('inputs', () =>
+        Promise.all(
+          horizonGws.map((gw) => loadFeatureInputs(bootstrap, season, gw, { includeElite: false }))
+        )
       ),
     ]);
 
@@ -91,13 +115,15 @@ export async function GET(req: NextRequest) {
     // and stated rather than guessed at silently.
     const freeTransfers = Math.max(0, Math.min(Number(params.get('freeTransfers')) || 1, 5));
 
-    const forecasts: GameweekForecast[] = inputsByGw.map((inputs) =>
-      forecast(buildFeatures(inputs, { includeElite: false }), {
-        fixtures: inputs.fixtures,
-        teams: bootstrap.teams,
-        scoring: bootstrap.scoring,
-        calibration: inputs.calibration,
-      })
+    const forecasts: GameweekForecast[] = await timer.time('forecast', () =>
+      inputsByGw.map((inputs) =>
+        forecast(buildFeatures(inputs, { includeElite: false }), {
+          fixtures: inputs.fixtures,
+          teams: bootstrap.teams,
+          scoring: bootstrap.scoring,
+          calibration: inputs.calibration,
+        })
+      )
     );
 
     // Selling price is not public, so purchase price is used. That understates
@@ -110,18 +136,21 @@ export async function GET(req: NextRequest) {
     }));
 
     const priceAnalyses = new Map<number, PriceAnalysis>();
-    for (const a of getAllMarketPriceAnalyses(bootstrap)) priceAnalyses.set(a.elementId, a);
+    const analyses = await timer.time('prices', () => getAllMarketPriceAnalyses(bootstrap));
+    for (const a of analyses) priceAnalyses.set(a.elementId, a);
 
-    const result = optimiseTransfers({
-      bootstrap,
-      forecasts,
-      squad,
-      bank,
-      freeTransfers,
-      priceAnalyses,
-    });
+    const result = await timer.time('optimise', () =>
+      optimiseTransfers({
+        bootstrap,
+        forecasts,
+        squad,
+        bank,
+        freeTransfers,
+        priceAnalyses,
+      })
+    );
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       season,
       teamId,
       fromGameweek: next,
@@ -134,6 +163,8 @@ export async function GET(req: NextRequest) {
       unassessed: result.unassessed.map((p) => ({ elementId: p.elementId, name: p.name, teamShort: p.teamShort })),
       suggestions: result.suggestions,
     });
+    res.headers.set('Server-Timing', timer.header());
+    return res;
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Could not build suggestions' }, { status: 500 });
   }
