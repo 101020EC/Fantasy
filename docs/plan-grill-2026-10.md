@@ -40,3 +40,9 @@ exactly 45 days); price changes 40 days from 2026-08-28 (also gapless); player s
 finalised GWs; elite cohort GW1–GW5, matching FPL (GW5 current and data-checked, GW6 deadline
 not yet passed). The provisional path is not separately proven, but every finalised week
 landed, which is what the data needs.
+
+**Q5 · Next round — option A, commit the missing tests.** (User typed `d`: ก on the Thai
+layout.) `nextEliteCapture` moved to Firebase-free `lib/elite-capture.ts` (re-exported from
+`elite-cohort.ts`, so callers are unchanged); `squad-value.ts` imports its types with
+`import type` so Node can load it. Tests: `elite-capture` 7, `squad-value` 14,
+`hourly-watermark` 4 → `npm test` 25/25. `tsc`, eslint and `next build` clean.

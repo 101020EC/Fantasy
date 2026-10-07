@@ -1,4 +1,4 @@
-import { FPLElement, FPLPicksResponse } from './types';
+import type { FPLElement, FPLPicksResponse } from './types';
 
 /**
  * What FPL would pay you for a player today.
