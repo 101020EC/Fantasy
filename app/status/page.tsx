@@ -63,7 +63,7 @@ export default async function StatusPage() {
       // ── Market snapshot ──────────────────────────────────────────────────
       const last = snapshotDates[snapshotDates.length - 1] ?? null;
       const daysSince = last
-        ? Math.floor((Date.now() - Date.parse(`${last}T01:00:00Z`)) / 86_400_000)
+        ? Math.floor((Date.now() - Date.parse(`${last}T01:00:00Z`) /* flags a missed 22:30 run ~2.5h later */) / 86_400_000)
         : null;
       const gaps = countGaps(snapshotDates);
       checks.push({
@@ -75,16 +75,16 @@ export default async function StatusPage() {
         detail: !last
           ? 'The daily cron has never written a snapshot. Everything below depends on it.'
           : daysSince! > 1
-          ? `No capture for ${daysSince} day${daysSince === 1 ? '' : 's'} — the 01:00 UTC cron has stopped.`
+          ? `No capture for ${daysSince} day${daysSince === 1 ? '' : 's'} — the 22:30 UTC cron has stopped.`
           : gaps > 0
           ? `${gaps} missing day${gaps === 1 ? '' : 's'} in the series. A diff across a gap covers more than one night.`
-          : 'Captured daily at 01:00 UTC, 30 minutes before prices move.',
+          : 'Captured daily at 22:30 UTC, 30 minutes before the 23:00 UTC price deadline.',
       });
 
       // ── Price changes ────────────────────────────────────────────────────
       //
       // "No diffs yet" is not evidence of a failure. The diff is written by the
-      // 01:00 UTC capture, so between shipping it and that job's next run there
+      // 22:30 UTC capture, so between shipping it and that job's next run there
       // are legitimately snapshots and no changes. Only a diff that has fallen
       // BEHIND the snapshots is a real signal, and saying otherwise sends the
       // reader looking for a bug that is not there.
@@ -104,7 +104,7 @@ export default async function StatusPage() {
             ? `History runs from ${changeDates[0]}. Shown on the Past tab of the market page.`
             : snapshotDates.length < 2
             ? 'Needs two snapshots to compare. Nothing is wrong — there is simply nothing to diff yet.'
-            : `${snapshotDates.length} snapshots are stored, so the first diffs appear with the next 01:00 UTC capture. If this is still empty after that, the step is failing.`,
+            : `${snapshotDates.length} snapshots are stored, so the first diffs appear with the next 22:30 UTC capture. If this is still empty after that, the step is failing.`,
       });
 
       // ── Prediction source ────────────────────────────────────────────────

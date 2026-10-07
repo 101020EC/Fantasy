@@ -15,7 +15,8 @@ Status key: **OPEN** · **DECIDED** · **DONE**
 |---|---|---|
 | F1 | `hourly`: `squadIds()` swallows an FPL failure as an empty set, then `writeHourlyState(next)` drops every squad player from the watermark. Next hour they are re-seeded, so a price move / injury in that window is never alerted. | DONE — live 75fcda1 (Vercel Production, 2026-10-07) |
 | F2 | Stale comments: `price-alert/route.ts` says scheduled by `vercel.json` (it is the Cloudflare Worker); `hourly` mentions 06:00 Bangkok (alert is 21:00). `plan-ui-round-3.md` table still says OPEN. | Comments DONE; round-3 table OPEN |
-| F3 | Provisional elite capture was marked "untested until tonight" (GW2) and never recorded as verified. | OPEN |
+| F3 | Provisional elite capture was marked "untested until tonight" (GW2) and never recorded as verified. | Healthy — see Q4 |
+| F5 | `/status` and `snapshotDateKey` still said the snapshot runs at 01:00 UTC; it moved to 22:30 UTC (Worker), 30 min before the 23:00 UTC price deadline. Copy only — the "stopped" alarm math still fires ~2.5h after a missed run. | DONE |
 | F4 | ~1s click-to-table delay on menu navigation, cause unknown (Decision 23). | OPEN |
 
 ## Decisions
@@ -32,3 +33,10 @@ Telegram "lookup failed" message (noisy during FPL updates). First automated tes
 
 **Q3 · Ship.** Confirmed: the Vercel project is wired to GitHub — a push to `main` builds and
 deploys Production (commit status `Vercel: success`, deployment `Production`).
+
+**Q4 · Did the silent jobs survive 5 idle weeks?** Yes, per `/status` and `/elite` on
+2026-10-07: market snapshot 45 days, last 2026-10-06, no gap warning (2026-08-23 → 10-06 is
+exactly 45 days); price changes 40 days from 2026-08-28 (also gapless); player stats 5/5
+finalised GWs; elite cohort GW1–GW5, matching FPL (GW5 current and data-checked, GW6 deadline
+not yet passed). The provisional path is not separately proven, but every finalised week
+landed, which is what the data needs.

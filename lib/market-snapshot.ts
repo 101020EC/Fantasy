@@ -64,7 +64,7 @@ export interface MarketRoster {
   checksum: string;
 }
 
-/** UTC date key. The capture runs at 01:00 UTC, so a local date would drift. */
+/** UTC date key. The capture runs at 22:30 UTC — already the next day in Bangkok — so a local date would drift. */
 export function snapshotDateKey(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);
 }
