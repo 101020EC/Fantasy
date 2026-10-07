@@ -17,7 +17,7 @@ Status key: **OPEN** · **DECIDED** · **DONE**
 | F2 | Stale comments: `price-alert/route.ts` says scheduled by `vercel.json` (it is the Cloudflare Worker); `hourly` mentions 06:00 Bangkok (alert is 21:00). `plan-ui-round-3.md` table still says OPEN. | Comments DONE; round-3 table OPEN |
 | F3 | Provisional elite capture was marked "untested until tonight" (GW2) and never recorded as verified. | Healthy — see Q4 |
 | F5 | `/status` and `snapshotDateKey` still said the snapshot runs at 01:00 UTC; it moved to 22:30 UTC (Worker), 30 min before the 23:00 UTC price deadline. Copy only — the "stopped" alarm math still fires ~2.5h after a missed run. | DONE |
-| F4 | ~1s click-to-table delay on menu navigation, cause unknown (Decision 23). | OPEN |
+| F4 | ~1s click-to-table delay on menu navigation, cause unknown (Decision 23). | DONE — see Q6–Q9 |
 
 ## Decisions
 
@@ -104,3 +104,23 @@ horizon it reads the same documents repeatedly — `fixtures`, `playerPriors` an
 `market/{date}` (the deadline filter resolves to the same newest doc for future GWs) three
 times each, and the overlapping 6-GW `playerStats` windows ≈ 14 reads for ~6 distinct docs.
 About 26 document reads where ~10 are distinct, several of them large (market ≈ 616 players).
+
+**Q9 · Read each document once per request — option A.** Shipped 4ad1f8b.
+`loadFeatureInputs` takes an optional `memo` (`ReadMemo`, a `Map` created per request — never
+kept across requests, so nothing goes stale). Snapshots are shared, `.data()` is not, so one
+gameweek's inputs cannot mutate another's. The market query is keyed by
+`min(deadline day, tomorrow)`: no snapshot is dated in the future, so every upcoming GW
+resolves to the same read. Only `/api/analyst/transfers` passes a memo; other callers are
+unchanged. Rejected: a cross-request cache of data-checked `playerStats` (option B) — Vercel
+instances recycle, so the gain would be uneven.
+
+Production, 5 warm calls (+1 cold), body hash still `61313a7de2fd`:
+
+| | before (8e3ff88) | after (4ad1f8b) |
+|---|---|---|
+| inputs | 495–555 ms | **220–262 ms** |
+| server total | 665–745 ms | **372–472 ms** |
+| client round trip | 807–873 ms | **487–585 ms** |
+
+**F4 closed.** Menu navigation was already instant; the slowest post-paint wait (analyst
+suggestions) is down ~40%. Remaining cost is `forecast` CPU (~120–190 ms) — not pursued.
