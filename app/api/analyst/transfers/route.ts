@@ -3,7 +3,7 @@ import { fetchFPLBootstrap, fetchFPLEntry, fetchFPLPicks } from '@/lib/fpl-api';
 import { isAdminConfigured, ADMIN_NOT_CONFIGURED } from '@/lib/firebase-admin';
 import { requireSession } from '@/lib/auth-server';
 import { ANALYST_ENABLED, ANALYST_DISABLED_MESSAGE, seasonKey } from '@/lib/analyst';
-import { loadFeatureInputs } from '@/lib/forecast-inputs';
+import { loadFeatureInputs, ReadMemo } from '@/lib/forecast-inputs';
 import { buildFeatures } from '@/lib/feature-builder';
 import { forecast } from '@/lib/forecast-engine';
 import { optimiseTransfers, SquadPlayer } from '@/lib/transfer-optimizer';
@@ -87,6 +87,8 @@ export async function GET(req: NextRequest) {
       return null;
     };
 
+    // One memo for this request: the horizon gameweeks share most of their reads.
+    const reads: ReadMemo = new Map();
     const horizonGws: number[] = [];
     for (let gw = next; gw < next + horizon && gw <= 38; gw++) horizonGws.push(gw);
 
@@ -97,7 +99,9 @@ export async function GET(req: NextRequest) {
       timer.time('entry', () => fetchFPLEntry(teamId).catch(() => null)),
       timer.time('inputs', () =>
         Promise.all(
-          horizonGws.map((gw) => loadFeatureInputs(bootstrap, season, gw, { includeElite: false }))
+          horizonGws.map((gw) =>
+            loadFeatureInputs(bootstrap, season, gw, { includeElite: false, memo: reads })
+          )
         )
       ),
     ]);
