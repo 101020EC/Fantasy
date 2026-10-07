@@ -28,20 +28,23 @@ export function useMarketContext(savedTeamId: string) {
 
     (async () => {
       try {
-        const entryRes = await fetch(`/api/fpl/entry/${savedTeamId}`, { signal: ac.signal });
-        const entry = entryRes.ok ? await entryRes.json() : null;
-        const gw = entry?.current_event;
+        // The watchlist does not depend on the gameweek, so it starts now rather
+        // than queueing behind entry → picks.
+        const watchP = fetch(`/api/watchlist?teamId=${savedTeamId}`, { signal: ac.signal }).then(
+          (r) => (r.ok ? r.json() : null)
+        );
+        const picksP = fetch(`/api/fpl/entry/${savedTeamId}`, { signal: ac.signal })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((entry) => {
+            const gw = entry?.current_event;
+            return gw
+              ? fetch(`/api/fpl/picks/${savedTeamId}/${gw}`, { signal: ac.signal }).then((r) =>
+                  r.ok ? r.json() : null
+                )
+              : null;
+          });
 
-        const [picks, watch] = await Promise.all([
-          gw
-            ? fetch(`/api/fpl/picks/${savedTeamId}/${gw}`, { signal: ac.signal }).then((r) =>
-                r.ok ? r.json() : null
-              )
-            : Promise.resolve(null),
-          fetch(`/api/watchlist?teamId=${savedTeamId}`, { signal: ac.signal }).then((r) =>
-            r.ok ? r.json() : null
-          ),
-        ]);
+        const [picks, watch] = await Promise.all([picksP, watchP]);
 
         // Every pick counts, bench included — they are still your players.
         setSquadIds(new Set<number>((picks?.picks ?? []).map((p: any) => Number(p.element))));

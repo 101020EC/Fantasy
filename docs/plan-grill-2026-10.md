@@ -46,3 +46,25 @@ layout.) `nextEliteCapture` moved to Firebase-free `lib/elite-capture.ts` (re-ex
 `elite-cohort.ts`, so callers are unchanged); `squad-value.ts` imports its types with
 `import type` so Node can load it. Tests: `elite-capture` 7, `squad-value` 14,
 `hourly-watermark` 4 → `npm test` 25/25. `tsc`, eslint and `next build` clean.
+
+**Q6 · F4, the ~1s menu delay — measured again, 2026-10-07, production, desktop Chrome,
+logged in.** Instrumented with a MutationObserver + PerformanceObserver (no rAF polling, which
+froze the harness in Round 5), then clicked the real menu links:
+
+| Route | Click → content | What follows |
+|---|---|---|
+| /prices | table in **111 ms** | entry 115→324, then picks 325→438 and watchlist 325→**831** (waterfall) |
+| /status | **16 ms** | — |
+| /backup | instant shell | `/api/market/status` →482, `/api/fpl/entry` →**1045** |
+| /analyst | instant shell | `/api/analyst/transfers` 1.0–**2.3 s**, `x-vercel-cache: MISS` every call |
+
+So the navigation itself no longer waits — F4 as described does not reproduce. The second
+the user feels is now **after** the page paints, in three client-visible waits:
+
+- F4a `useMarketContext`: the watchlist fetch waits for `/api/fpl/entry` though it does not
+  need the gameweek.
+- F4b `/api/analyst/transfers`: picks, then entry, then `loadFeatureInputs` once per horizon
+  gameweek, all sequential.
+- F4c `/backup`'s entry call took ~1 s (cold function or FPL), not investigated.
+
+Also noticed: the navbar menu button has no `aria-label` (F6).

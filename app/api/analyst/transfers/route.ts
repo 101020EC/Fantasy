@@ -57,10 +57,27 @@ export async function GET(req: NextRequest) {
 
     // The most recent confirmed squad. Picks for an upcoming gameweek stay
     // private until its deadline passes.
-    let picks = null;
-    for (let gw = next - 1; gw >= Math.max(1, next - 3) && !picks; gw--) {
-      picks = await fetchFPLPicks(teamId, gw).catch(() => null);
-    }
+    const latestPicks = async () => {
+      for (let gw = next - 1; gw >= Math.max(1, next - 3); gw--) {
+        const p = await fetchFPLPicks(teamId, gw).catch(() => null);
+        if (p) return p;
+      }
+      return null;
+    };
+
+    const horizonGws: number[] = [];
+    for (let gw = next; gw < next + horizon && gw <= 38; gw++) horizonGws.push(gw);
+
+    // None of these depend on each other: the squad, the bank and each
+    // gameweek's inputs are fetched together rather than one after another.
+    const [picks, entry, inputsByGw] = await Promise.all([
+      latestPicks(),
+      fetchFPLEntry(teamId).catch(() => null),
+      Promise.all(
+        horizonGws.map((gw) => loadFeatureInputs(bootstrap, season, gw, { includeElite: false }))
+      ),
+    ]);
+
     if (!picks?.picks?.length) {
       return NextResponse.json(
         { error: `No confirmed squad found for team ${teamId} in the last three gameweeks.` },
@@ -68,26 +85,20 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const entry = await fetchFPLEntry(teamId).catch(() => null);
     const bank = Number((picks as any).entry_history?.bank ?? entry?.last_deadline_bank ?? 0);
 
     // FPL does not expose banked free transfers, so it is assumed to be one
     // and stated rather than guessed at silently.
     const freeTransfers = Math.max(0, Math.min(Number(params.get('freeTransfers')) || 1, 5));
 
-    const forecasts: GameweekForecast[] = [];
-    for (let gw = next; gw < next + horizon && gw <= 38; gw++) {
-      const inputs = await loadFeatureInputs(bootstrap, season, gw, { includeElite: false });
-      const features = buildFeatures(inputs, { includeElite: false });
-      forecasts.push(
-        forecast(features, {
-          fixtures: inputs.fixtures,
-          teams: bootstrap.teams,
-          scoring: bootstrap.scoring,
-          calibration: inputs.calibration,
-        })
-      );
-    }
+    const forecasts: GameweekForecast[] = inputsByGw.map((inputs) =>
+      forecast(buildFeatures(inputs, { includeElite: false }), {
+        fixtures: inputs.fixtures,
+        teams: bootstrap.teams,
+        scoring: bootstrap.scoring,
+        calibration: inputs.calibration,
+      })
+    );
 
     // Selling price is not public, so purchase price is used. That understates
     // the budget for a player who has risen, which errs towards suggesting
