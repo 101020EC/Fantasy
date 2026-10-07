@@ -84,3 +84,23 @@ Measured on production, 5 warm calls each, same browser:
 **Honest result: F4b barely moved (~1.0 → ~0.9 s).** The sequential reads were not where
 the time goes. Still unknown: `requireSession`, `fetchFPLBootstrap`,
 `getAllMarketPriceAnalyses`, or `optimiseTransfers` CPU. Needs server-side timing to say.
+
+**Q8 · Server-Timing — option A.** Shipped 8e3ff88: `/api/analyst/transfers` sends a
+`Server-Timing` header per step (parallel steps timed on their own). Production, 6 calls,
+body hash unchanged (`61313a7de2fd`), warm runs (one cold outlier at 1.47 s server):
+
+| step | ms |
+|---|---|
+| bootstrap | 25–40 |
+| picks / entry (parallel) | 25–50 |
+| **inputs** (`loadFeatureInputs` × 3 GWs, parallel) | **495–555** |
+| forecast (CPU, 3 GWs) | 120–155 |
+| prices, optimise | 1–2 |
+| total (server) | 665–745 |
+| client round trip | 807–873 |
+
+**The time is Firestore reads in `loadFeatureInputs`: ~70% of the server's time.** With a 3-GW
+horizon it reads the same documents repeatedly — `fixtures`, `playerPriors` and the latest
+`market/{date}` (the deadline filter resolves to the same newest doc for future GWs) three
+times each, and the overlapping 6-GW `playerStats` windows ≈ 14 reads for ~6 distinct docs.
+About 26 document reads where ~10 are distinct, several of them large (market ≈ 616 players).
