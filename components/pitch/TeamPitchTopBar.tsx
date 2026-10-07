@@ -111,7 +111,7 @@ export default function TeamPitchTopBar({
         : 'bg-rose-600/15 text-rose-900 border-rose-700/25 hover:bg-rose-600/25';
     }
     return tone === 'rise'
-      ? 'bg-emerald-600 text-white border-white/20 hover:bg-emerald-700 animate-pulse-fall'
+      ? 'bg-emerald-600 text-white border-white/20 hover:bg-emerald-700 animate-pulse-rise'
       : 'bg-rose-600 text-white border-white/20 hover:bg-rose-700 animate-pulse-fall';
   };
 
