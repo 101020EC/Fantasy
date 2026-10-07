@@ -5,6 +5,7 @@ import { escapeMarkdown, getTelegramConfig, sendTelegramMessage } from '@/lib/te
 import { getAdminDb, isAdminConfigured } from '@/lib/firebase-admin';
 import { recordNotification } from '@/lib/notifications';
 import { readHourlyState, writeHourlyState } from '@/lib/hourly-state';
+import { nextWatermark } from '@/lib/hourly-watermark';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // firebase-admin cannot run on the Edge runtime
@@ -15,7 +16,7 @@ export const runtime = 'nodejs'; // firebase-admin cannot run on the Edge runtim
  * The nightly price-alert answers "what is likely to happen tonight". This
  * answers "what has changed since the last hour" — a price that has already
  * moved, an injury note that has appeared, a player flagged out. Those events
- * do not wait for 06:00 Bangkok, and acting on them late costs a transfer.
+ * do not wait for the 21:00 Bangkok alert, and acting on them late costs a transfer.
  *
  * Deliberately small: bootstrap (cached 300s), entry, picks, two Firestore
  * reads and one write. It must stay cheap enough to run twenty-four times a day
@@ -46,25 +47,26 @@ interface Tracked {
   owned: boolean;
 }
 
-/** Squad element ids for the current gameweek, or an empty set if FPL will not say. */
-async function squadIds(teamId: string): Promise<Set<number>> {
+/** Squad element ids for the current gameweek, or null if FPL will not say. */
+async function squadIds(teamId: string): Promise<Set<number> | null> {
   try {
     const entry = await fetchFPLEntry(teamId);
     const picks = await fetchFPLPicks(teamId, entry.current_event);
     return new Set(picks.picks.map((p) => p.element));
   } catch {
     // The watchlist half is still worth reporting without the squad.
-    return new Set();
+    return null;
   }
 }
 
-async function watchlistIds(teamId: string): Promise<Set<number>> {
+/** Watchlist element ids, or null if Firestore would not say. */
+async function watchlistIds(teamId: string): Promise<Set<number> | null> {
   if (!isAdminConfigured) return new Set();
   try {
     const snap = await getAdminDb().collection('watchlists').doc(String(teamId)).get();
     return new Set<number>(snap.data()?.elementIds ?? []);
   } catch {
-    return new Set();
+    return null;
   }
 }
 
@@ -92,11 +94,16 @@ export async function GET(req: NextRequest) {
     }
 
     const bootstrap = await fetchFPLBootstrap();
-    const [owned, watched, state] = await Promise.all([
+    const [ownedOrNull, watchedOrNull, state] = await Promise.all([
       squadIds(teamId),
       alerts.watchlist ? watchlistIds(teamId) : Promise.resolve(new Set<number>()),
       readHourlyState(),
     ]);
+    // A failed lookup leaves that half unknown this hour, not empty: its players
+    // keep their old watermark (see nextWatermark) and are compared next hour.
+    const lookupFailed = ownedOrNull === null || watchedOrNull === null;
+    const owned = ownedOrNull ?? new Set<number>();
+    const watched = watchedOrNull ?? new Set<number>();
 
     const teamMap = new Map(bootstrap.teams.map((t) => [t.id, t]));
     const tracked: Tracked[] = bootstrap.elements
@@ -110,16 +117,17 @@ export async function GET(req: NextRequest) {
     // The watermark to store, built from what is tracked right now. Written
     // whether or not anything is sent, so a change is reported once and a
     // player who leaves the squad stops being carried forever.
-    const next = {
+    const seen = {
       price: {} as Record<string, number>,
       news: {} as Record<string, string>,
       flag: {} as Record<string, string>,
     };
     tracked.forEach(({ el }) => {
-      next.price[el.id] = el.now_cost;
-      next.news[el.id] = el.news ?? '';
-      next.flag[el.id] = el.status;
+      seen.price[el.id] = el.now_cost;
+      seen.news[el.id] = el.news ?? '';
+      seen.flag[el.id] = el.status;
     });
+    const next = nextWatermark(state, seen, lookupFailed);
 
     // The first ever run has nothing to compare against. Seeding silently is
     // the only honest option: every tracked player differs from nothing.

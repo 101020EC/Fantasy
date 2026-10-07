@@ -52,8 +52,8 @@ async function recentPriceChanges(
 }
 
 /**
- * Nightly price-change alert. Scheduled by vercel.json, which sends
- * `Authorization: Bearer $CRON_SECRET`. Credentials come from the environment
+ * Nightly price-change alert, 14:00 UTC (21:00 Bangkok). Scheduled by the
+ * Cloudflare Worker in `worker/`, which sends `Authorization: Bearer $CRON_SECRET`. Credentials come from the environment
  * only — accepting them from the query string would make this an open relay.
  */
 export async function GET(req: NextRequest) {
