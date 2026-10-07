@@ -14,7 +14,7 @@ Status key: **OPEN** · **DECIDED** · **DONE**
 | # | Finding | Status |
 |---|---|---|
 | F1 | `hourly`: `squadIds()` swallows an FPL failure as an empty set, then `writeHourlyState(next)` drops every squad player from the watermark. Next hour they are re-seeded, so a price move / injury in that window is never alerted. | DONE — live 75fcda1 (Vercel Production, 2026-10-07) |
-| F2 | Stale comments: `price-alert/route.ts` says scheduled by `vercel.json` (it is the Cloudflare Worker); `hourly` mentions 06:00 Bangkok (alert is 21:00). `plan-ui-round-3.md` table still says OPEN. | Comments DONE; round-3 table OPEN |
+| F2 | Stale comments: `price-alert/route.ts` says scheduled by `vercel.json` (it is the Cloudflare Worker); `hourly` mentions 06:00 Bangkok (alert is 21:00). `plan-ui-round-3.md` table still says OPEN. | DONE |
 | F3 | Provisional elite capture was marked "untested until tonight" (GW2) and never recorded as verified. | Healthy — see Q4 |
 | F5 | `/status` and `snapshotDateKey` still said the snapshot runs at 01:00 UTC; it moved to 22:30 UTC (Worker), 30 min before the 23:00 UTC price deadline. Copy only — the "stopped" alarm math still fires ~2.5h after a missed run. | DONE |
 | F4 | ~1s click-to-table delay on menu navigation, cause unknown (Decision 23). | DONE — see Q6–Q9 |
@@ -124,3 +124,22 @@ Production, 5 warm calls (+1 cold), body hash still `61313a7de2fd`:
 
 **F4 closed.** Menu navigation was already instant; the slowest post-paint wait (analyst
 suggestions) is down ~40%. Remaining cost is `forecast` CPU (~120–190 ms) — not pursued.
+
+**Q10 · Close the leftovers — option A.** Checked on production, logged in, 2026-10-07:
+
+- Round 3 #2: icons use `animate-blink` (opacity), no transform clash — done.
+- Round 3 #3: `/team/2792350` shows two buttons (GW 6 / GW 7), no arrows; on `/`, picking the
+  unplayed GW 6 shows "Squad Lineup (Gameweek 6)" with every points tile "—" — done.
+- Round 3 #4: mode B cells read `HUL / A`, `CHE / H` …; win/loss/draw tint is in
+  `PlayerCard.tsx` (draw neutral) — done. D5 (16px inputs on iOS) — done.
+- `plan-ui-round-3.md` table updated; F2 closed.
+- **F7 (new, fixed 826e18c):** the green "rising tonight" badge in `TeamPitchTopBar` used
+  `animate-pulse-fall`, so it pulsed with the red ring. Now `animate-pulse-rise`. No squad
+  player was rising tonight, so the fix is verified in code, not on screen.
+- **F6 fixed 826e18c:** menu button has `aria-label` (Open/Close menu) and `aria-expanded`;
+  confirmed on production.
+
+## Round closed — 2026-10-07
+
+Everything found is DONE. Not pursued, deliberately: `forecast` CPU (~150 ms) in transfer
+suggestions; a cross-request cache of data-checked `playerStats`.

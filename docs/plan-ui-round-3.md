@@ -8,10 +8,12 @@ Status: **OPEN** · **DECIDED** · **DONE**
 
 | # | Request | Status |
 |---|---|---|
-| 1 | Alert settings — schedule, and what to alert on | OPEN |
-| 2 | Market: the pulsing icon on Rising / Falling does nothing | DIAGNOSED |
-| 3 | Team: picking GW2 still shows GW1; drop the arrow; tidy it | OPEN |
-| 4 | Mode B: full club abbreviation, H/A under it, win/loss colour on the score | OPEN |
+| 1 | Alert settings — schedule, and what to alert on | DONE — schedule later moved to 21:00 Bangkok (Worker), superseding D2's 06:00 |
+| 2 | Market: the pulsing icon on Rising / Falling does nothing | DONE — `animate-blink` (opacity) |
+| 3 | Team: picking GW2 still shows GW1; drop the arrow; tidy it | DONE — two GW buttons, points read "—" / "not played yet" |
+| 4 | Mode B: full club abbreviation, H/A under it, win/loss colour on the score | DONE |
+
+_Table brought up to date 2026-10-07, checked on production — see `plan-grill-2026-10.md` Q10._
 
 ---
 
