@@ -165,6 +165,13 @@ is read from the code and from `/analyst` on production.
 
 | # | Finding | Status |
 |---|---|---|
-| F8 | Transfer budget uses `now_cost` as the selling price. For a player who has risen, FPL pays back only half the rise, so `now_cost` **overstates** the budget — the optimiser can suggest a swap the manager cannot afford. The route comment and the on-page note both claim the opposite ("understates"). `lib/squad-value.ts` already computes the real selling price from the transfer history. | OPEN |
-| F9 | `DEFAULT_MODEL.anthropic = 'claude-sonnet-5'` — not a model id this environment lists (current: `claude-sonnet-5-5`). Would fail on first call if Anthropic were picked. | OPEN |
+| F8 | Transfer budget uses `now_cost` as the selling price. For a player who has risen, FPL pays back only half the rise, so `now_cost` **overstates** the budget — the optimiser can suggest a swap the manager cannot afford. The route comment and the on-page note both claim the opposite ("understates"). `lib/squad-value.ts` already computes the real selling price from the transfer history. | DONE 7195b9c |
+| F9 | ~~`claude-sonnet-5` is not a valid id~~ — wrong: it is a valid previous-generation id (current Sonnet is `claude-sonnet-5-5`). The real risk on the Claude path: `complete()` caps output at **700 tokens** and Sonnet 5 runs adaptive thinking by default, so thinking can eat the cap and the prose comes back cut or empty (`text` only reads `b.text`). No `stop_reason` check either. Inactive today (no key), so deferred to the provider decision. | DEFERRED |
 | F10 | Free transfers are always assumed to be 1; FPL's history (`event_transfers`, chips per GW) is enough to derive the banked count. | OPEN |
+
+**Q12 · Fix bugs first (user).** F8 shipped 7195b9c: `squadSellingPrices()` in
+`lib/squad-value.ts` (tested), transfers fetched alongside picks/entry, on-page note corrected.
+Production, same squad, before → after `bankAfter`: Palmer→Saka 0.4→**0.3**, Egan→Thomas
+0.4→0.3, Rogers→Mbeumo 0.2→**0.1**, Wissa→Calvert-Lewin 0.5→0.4, Hall→Bogle 1.0→0.8,
+João Pedro→Calvert-Lewin 2.0→1.9. Every budget was overstated by £0.1–0.2m; none of today's
+eight happened to become unaffordable, but the margin was wrong on all of them.
