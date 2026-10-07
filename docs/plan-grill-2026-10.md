@@ -68,3 +68,19 @@ the user feels is now **after** the page paints, in three client-visible waits:
 - F4c `/backup`'s entry call took ~1 s (cold function or FPL), not investigated.
 
 Also noticed: the navbar menu button has no `aria-label` (F6).
+
+**Q7 · Fix F4a + F4b — option A (reorder only, no cache).** Shipped 86bb936.
+- F4a: `useMarketContext` starts the watchlist fetch alongside entry → picks.
+- F4b: `/api/analyst/transfers` fetches latest picks, entry and every horizon gameweek's
+  `loadFeatureInputs` in one `Promise.all` (all read-only).
+
+Measured on production, 5 warm calls each, same browser:
+
+| | before | after |
+|---|---|---|
+| `/api/analyst/transfers` | 1331, 1271, 975, 889, 1033 ms | (cold 2474), 988, 862, 855, 946 ms |
+| response body sha-256 | `61313a7de2fd` | `61313a7de2fd` — identical |
+
+**Honest result: F4b barely moved (~1.0 → ~0.9 s).** The sequential reads were not where
+the time goes. Still unknown: `requireSession`, `fetchFPLBootstrap`,
+`getAllMarketPriceAnalyses`, or `optimiseTransfers` CPU. Needs server-side timing to say.
