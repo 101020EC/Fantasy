@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sellingPrice, purchaseCosts, squadValue } from '../lib/squad-value.ts';
+import { sellingPrice, purchaseCosts, squadValue, squadSellingPrices } from '../lib/squad-value.ts';
 
 // Everything is in tenths, as FPL sends it: 55 = £5.5m.
 
@@ -64,4 +64,15 @@ test('squad value: a fall is a real loss', () => {
 test('squad value: a +0.3 rise counts 0.1 of profit', () => {
   const v = squadValue(picks(1), [el(1, 63)], [{ element_in: 1, element_in_cost: 60, event: 4 }]);
   assert.deepEqual(v, { selling: 61, paid: 60, profit: 1 });
+});
+
+// F8: the transfer planner's budget. A riser frees less than its current price.
+
+test('selling prices: a riser frees half the rise, a faller its full current price', () => {
+  const elements = [el(1, 97), el(2, 50, -3), el(3, 60)];
+  const transfers = [{ element_in: 1, element_in_cost: 90, event: 2 }];
+  const m = squadSellingPrices(picks(1, 2, 3), elements, transfers);
+  assert.equal(m.get(1), 93); // bought 9.0, now 9.7 → sells 9.3, not 9.7
+  assert.equal(m.get(2), 50); // fell from 5.3 → sells at 5.0
+  assert.equal(m.get(3), 60); // unchanged
 });

@@ -66,6 +66,27 @@ export function purchaseCosts(
   return out;
 }
 
+/**
+ * What FPL would pay for each player in the squad today — the budget a sale
+ * actually frees. Using `now_cost` instead overstates it by half of every rise,
+ * which lets a transfer planner suggest a swap the manager cannot afford.
+ */
+export function squadSellingPrices(
+  picks: FPLPicksResponse['picks'] = [],
+  elements: FPLElement[],
+  transfers: TransferRow[] = []
+): Map<number, number> {
+  const elementById = new Map(elements.map((el) => [el.id, el]));
+  const costs = purchaseCosts(picks, elements, transfers);
+  const out = new Map<number, number>();
+  for (const pick of picks) {
+    const element = elementById.get(pick.element);
+    if (!element) continue;
+    out.set(pick.element, sellingPrice(element.now_cost, costs.get(pick.element) ?? element.now_cost));
+  }
+  return out;
+}
+
 export interface SquadValue {
   /** What the squad would sell for now, in tenths. */
   selling: number;

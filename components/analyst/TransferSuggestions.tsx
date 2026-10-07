@@ -129,8 +129,8 @@ export default function TransferSuggestions({ teamId }: { teamId: string }) {
               {data.note ? `${data.note} ` : ''}
               {data.assumedFreeTransfers &&
                 'FPL does not publish banked free transfers, so one is assumed. '}
-              Selling price uses the current price, which understates the budget for a player who
-              has risen.
+              Budget uses FPL&apos;s selling price: you get back only half of any rise since you
+              bought a player.
             </p>
           </div>
         </>

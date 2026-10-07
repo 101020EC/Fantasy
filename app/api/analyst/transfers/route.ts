@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchFPLBootstrap, fetchFPLEntry, fetchFPLPicks } from '@/lib/fpl-api';
+import { fetchFPLBootstrap, fetchFPLEntry, fetchFPLPicks, fetchFPLTransfers } from '@/lib/fpl-api';
+import { squadSellingPrices } from '@/lib/squad-value';
 import { isAdminConfigured, ADMIN_NOT_CONFIGURED } from '@/lib/firebase-admin';
 import { requireSession } from '@/lib/auth-server';
 import { ANALYST_ENABLED, ANALYST_DISABLED_MESSAGE, seasonKey } from '@/lib/analyst';
@@ -94,9 +95,10 @@ export async function GET(req: NextRequest) {
 
     // None of these depend on each other: the squad, the bank and each
     // gameweek's inputs are fetched together rather than one after another.
-    const [picks, entry, inputsByGw] = await Promise.all([
+    const [picks, entry, transfers, inputsByGw] = await Promise.all([
       timer.time('picks', latestPicks),
       timer.time('entry', () => fetchFPLEntry(teamId).catch(() => null)),
+      timer.time('transfers', () => fetchFPLTransfers(teamId)),
       timer.time('inputs', () =>
         Promise.all(
           horizonGws.map((gw) =>
@@ -130,13 +132,12 @@ export async function GET(req: NextRequest) {
       )
     );
 
-    // Selling price is not public, so purchase price is used. That understates
-    // the budget for a player who has risen, which errs towards suggesting
-    // fewer affordable swaps rather than recommending one the manager cannot make.
-    const elements = new Map(bootstrap.elements.map((e) => [e.id, e]));
+    // What a sale actually frees: FPL returns only half of a rise, rounded down.
+    // `now_cost` would overstate the budget and suggest swaps that cannot be made.
+    const selling = squadSellingPrices(picks.picks, bootstrap.elements, transfers);
     const squad: SquadPlayer[] = picks.picks.map((p) => ({
       elementId: p.element,
-      sellingPrice: elements.get(p.element)?.now_cost ?? 0,
+      sellingPrice: selling.get(p.element) ?? 0,
     }));
 
     const priceAnalyses = new Map<number, PriceAnalysis>();
