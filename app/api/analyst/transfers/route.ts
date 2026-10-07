@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { fetchFPLBootstrap, fetchFPLEntry, fetchFPLPicks, fetchFPLTransfers } from '@/lib/fpl-api';
+import {
+  fetchFPLBootstrap,
+  fetchFPLEntry,
+  fetchFPLHistory,
+  fetchFPLPicks,
+  fetchFPLTransfers,
+} from '@/lib/fpl-api';
+import { freeTransfersFor, MAX_BANKED_FREE_TRANSFERS } from '@/lib/free-transfers';
 import { squadSellingPrices } from '@/lib/squad-value';
 import { isAdminConfigured, ADMIN_NOT_CONFIGURED } from '@/lib/firebase-admin';
 import { requireSession } from '@/lib/auth-server';
@@ -95,10 +102,11 @@ export async function GET(req: NextRequest) {
 
     // None of these depend on each other: the squad, the bank and each
     // gameweek's inputs are fetched together rather than one after another.
-    const [picks, entry, transfers, inputsByGw] = await Promise.all([
+    const [picks, entry, transfers, history, inputsByGw] = await Promise.all([
       timer.time('picks', latestPicks),
       timer.time('entry', () => fetchFPLEntry(teamId).catch(() => null)),
       timer.time('transfers', () => fetchFPLTransfers(teamId)),
+      timer.time('history', () => fetchFPLHistory(teamId)),
       timer.time('inputs', () =>
         Promise.all(
           horizonGws.map((gw) =>
@@ -117,9 +125,24 @@ export async function GET(req: NextRequest) {
 
     const bank = Number((picks as any).entry_history?.bank ?? entry?.last_deadline_bank ?? 0);
 
-    // FPL does not expose banked free transfers, so it is assumed to be one
-    // and stated rather than guessed at silently.
-    const freeTransfers = Math.max(0, Math.min(Number(params.get('freeTransfers')) || 1, 5));
+    // FPL does not publish banked free transfers; they are counted from the
+    // public history (lib/free-transfers.ts). `?freeTransfers=` still overrides,
+    // and if the history cannot be read one is assumed — and said so.
+    const given = params.get('freeTransfers');
+    const counted = Array.isArray(history?.current)
+      ? freeTransfersFor({
+          history: history.current,
+          chips: history.chips ?? [],
+          nextGameweek: next,
+          pendingTransfers: transfers.filter((t: any) => t.event === next).length,
+        })
+      : null;
+    const freeTransfersSource: 'given' | 'history' | 'assumed' =
+      given !== null ? 'given' : counted !== null ? 'history' : 'assumed';
+    const freeTransfers = Math.max(
+      0,
+      Math.min(given !== null ? Number(given) || 0 : counted ?? 1, MAX_BANKED_FREE_TRANSFERS)
+    );
 
     const forecasts: GameweekForecast[] = await timer.time('forecast', () =>
       inputsByGw.map((inputs) =>
@@ -162,7 +185,8 @@ export async function GET(req: NextRequest) {
       horizon: result.horizon,
       bank: bank / 10,
       freeTransfers,
-      assumedFreeTransfers: !params.get('freeTransfers'),
+      assumedFreeTransfers: freeTransfersSource === 'assumed',
+      freeTransfersSource,
       qualityFlags: forecasts[0]?.qualityFlags ?? [],
       note: result.note,
       unassessed: result.unassessed.map((p) => ({ elementId: p.elementId, name: p.name, teamShort: p.teamShort })),

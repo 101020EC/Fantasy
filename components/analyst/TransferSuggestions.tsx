@@ -19,6 +19,7 @@ interface Response {
   bank?: number;
   freeTransfers?: number;
   assumedFreeTransfers?: boolean;
+  freeTransfersSource?: 'given' | 'history' | 'assumed';
   note?: string;
   suggestions?: Suggestion[];
   error?: string;
@@ -127,8 +128,12 @@ export default function TransferSuggestions({ teamId }: { teamId: string }) {
             <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
             <p>
               {data.note ? `${data.note} ` : ''}
+              {data.freeTransfersSource === 'history' &&
+                `${data.freeTransfers} free transfer${data.freeTransfers === 1 ? '' : 's'} for GW ${
+                  data.fromGameweek
+                }, counted from your transfer history. `}
               {data.assumedFreeTransfers &&
-                'FPL does not publish banked free transfers, so one is assumed. '}
+                'Your transfer history could not be read, so one free transfer is assumed. '}
               Budget uses FPL&apos;s selling price: you get back only half of any rise since you
               bought a player.
             </p>
