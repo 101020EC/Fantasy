@@ -74,7 +74,7 @@ export default function Modal({ isOpen, onClose, labelledBy, children, className
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 animate-fadeIn"
       onClick={onClose}
     >
       <div
@@ -83,13 +83,13 @@ export default function Modal({ isOpen, onClose, labelledBy, children, className
         aria-modal="true"
         aria-labelledby={labelledBy}
         onClick={(e) => e.stopPropagation()}
-        className={`relative w-full bg-white border border-black/5 rounded-4xl p-6 sm:p-7 shadow-2xl text-[#111318] max-h-[90vh] overflow-y-auto ${className}`}
+        className={`relative w-full bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] p-5 sm:p-6 text-[var(--text)] max-h-[90vh] overflow-y-auto ${className}`}
       >
         <button
           onClick={onClose}
           type="button"
           aria-label="Close dialog"
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-[#111318] rounded-full bg-gray-100 transition"
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-[var(--text)] rounded-lg hover:bg-gray-100 transition"
         >
           <X className="w-5 h-5" />
         </button>

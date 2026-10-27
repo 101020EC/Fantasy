@@ -60,8 +60,8 @@ export default function RecentTeams() {
 
   return (
     <div className="w-full mt-4 text-left">
-      <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-bold uppercase tracking-wider mb-2">
-        <History className="w-3 h-3 text-pastel-blueDark" />
+      <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-medium uppercase tracking-wider mb-2">
+        <History className="w-3 h-3 text-[var(--text)]" />
         <span>Recent Teams</span>
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -69,9 +69,9 @@ export default function RecentTeams() {
           <Link
             key={team.id}
             href={`/team/${team.id}/live`}
-            className="group flex items-center gap-1.5 px-3 py-1 rounded-full bg-pastel-bg hover:bg-pastel-blueLight transition text-[#111318] text-xs shadow-sm border border-black/5"
+            className="group flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--bg)] hover:bg-gray-100 transition text-[var(--text)] text-xs border border-[var(--line)]"
           >
-            <span className="font-bold">
+            <span className="font-medium">
               {team.name || `Team #${team.id}`}
             </span>
             <span className="text-[10px] text-gray-400 font-mono">#{team.id}</span>

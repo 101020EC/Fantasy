@@ -21,18 +21,18 @@ export default function GlobalLeaguesCard({ leagues }: GlobalLeaguesCardProps) {
   if (systemLeagues.length === 0) return null;
 
   return (
-    <div className="pastel-card p-5 sm:p-7 shadow-sm mb-6">
-      <div className="flex items-center justify-between mb-4 pb-3 border-b border-black/5">
+    <div className="pastel-card p-5 sm:p-7 mb-6">
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--line)]">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center shrink-0">
+          <div className="w-9 h-9 rounded-full bg-gray-100 text-[var(--muted)] flex items-center justify-center shrink-0">
             <Globe2 className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-black text-[#111318]">Global &amp; Club Leagues</h3>
+            <h3 className="text-base font-semibold text-[var(--text)]">Global &amp; Club Leagues</h3>
             <p className="text-xs text-gray-500">Your position in the leagues FPL enrols you into</p>
           </div>
         </div>
-        <span className="text-xs font-bold text-gray-400 font-mono shrink-0">
+        <span className="text-xs font-medium text-gray-400 font-mono shrink-0">
           {systemLeagues.length} leagues
         </span>
       </div>
@@ -46,26 +46,26 @@ export default function GlobalLeaguesCard({ leagues }: GlobalLeaguesCardProps) {
           return (
             <div
               key={league.id}
-              className="p-3.5 rounded-2xl bg-gray-50/80 border border-black/5 flex items-center justify-between gap-2"
+              className="p-3.5 rounded-xl bg-gray-50/80 border border-[var(--line)] flex items-center justify-between gap-2"
             >
               <div className="min-w-0">
-                <span className="font-bold text-xs text-[#111318] block truncate">
+                <span className="font-medium text-xs text-[var(--text)] block truncate">
                   {league.name}
                 </span>
                 <span className="text-[10px] text-gray-400 font-mono">ID: {league.id}</span>
               </div>
 
               <div className="text-right shrink-0">
-                <span className="text-sm font-black text-[#38003c] block">
+                <span className="text-sm font-semibold text-[var(--accent)] block">
                   {rank ? `#${rank.toLocaleString()}` : '—'}
                 </span>
-                <div className="flex items-center justify-end gap-1 text-[10px] font-bold">
+                <div className="flex items-center justify-end gap-1 text-[10px] font-medium">
                   {movement > 0 ? (
-                    <span className="text-emerald-600 flex items-center font-black">
+                    <span className="text-emerald-600 flex items-center font-semibold">
                       <ArrowUp className="w-2.5 h-2.5 stroke-[3]" /> {movement.toLocaleString()}
                     </span>
                   ) : movement < 0 ? (
-                    <span className="text-rose-600 flex items-center font-black">
+                    <span className="text-rose-600 flex items-center font-semibold">
                       <ArrowDown className="w-2.5 h-2.5 stroke-[3]" />{' '}
                       {Math.abs(movement).toLocaleString()}
                     </span>

@@ -26,28 +26,28 @@ export default function PlayerCard({
   const renderPriceBadge = () => {
     if (priceAnalysis.status === 'rising_soon') {
       return (
-        <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-emerald-500 text-white rounded-full font-black text-[10px] shadow-md animate-pulse-rise" title="Rising tonight">
+        <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-emerald-500 text-white rounded-full font-semibold text-[10px] animate-pulse-rise" title="Rising tonight">
           <TrendingUp className="w-3 h-3 stroke-[3]" />
         </span>
       );
     }
     if (priceAnalysis.status === 'likely_riser') {
       return (
-        <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 bg-emerald-600 text-white rounded-full text-[9px] shadow" title="Trending up">
+        <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 bg-emerald-600 text-white rounded-full text-[9px]" title="Trending up">
           <TrendingUp className="w-2.5 h-2.5 stroke-[2.5]" />
         </span>
       );
     }
     if (priceAnalysis.status === 'falling_soon') {
       return (
-        <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-rose-600 text-white rounded-full font-black text-[10px] shadow-md animate-pulse-fall" title="Falling tonight">
+        <span className="absolute -top-1 -right-1 flex items-center justify-center w-5 h-5 bg-rose-600 text-white rounded-full font-semibold text-[10px] animate-pulse-fall" title="Falling tonight">
           <TrendingDown className="w-3 h-3 stroke-[3]" />
         </span>
       );
     }
     if (priceAnalysis.status === 'likely_faller') {
       return (
-        <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] shadow" title="Trending down">
+        <span className="absolute -top-1 -right-1 flex items-center justify-center w-4 h-4 bg-rose-500 text-white rounded-full text-[9px]" title="Trending down">
           <TrendingDown className="w-2.5 h-2.5 stroke-[2.5]" />
         </span>
       );
@@ -97,7 +97,7 @@ export default function PlayerCard({
     <button
       onClick={() => onClick(player)}
       className={`group relative flex flex-col items-center w-[76px] sm:w-24 md:w-28 transition-transform transform active:scale-95 focus:outline-none ${
-        isBench ? 'opacity-90 hover:opacity-100' : 'hover:scale-105'
+        isBench ? 'opacity-90 hover:opacity-100' : ''
       }`}
     >
       {/* Jersey + Badges Container */}
@@ -105,17 +105,17 @@ export default function PlayerCard({
         <PlayerJersey
           teamCode={element.team_code}
           isGkp={elementType.id === 1}
-          className="w-10 h-10 sm:w-12 sm:h-12 drop-shadow-md group-hover:scale-105 transition-all"
+          className="w-10 h-10 sm:w-12 sm:h-12 transition-all"
         />
 
         {/* Captain / Vice Captain Badge */}
         {pick.is_captain && (
-          <span className="absolute -bottom-1 -left-1 bg-[#111318] text-white font-black text-[9px] sm:text-[10px] w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center border-2 border-white shadow">
+          <span className="absolute -bottom-1 -left-1 bg-[var(--text)] text-white font-semibold text-[9px] sm:text-[10px] w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center border-2 border-white">
             C
           </span>
         )}
         {pick.is_vice_captain && (
-          <span className="absolute -bottom-1 -left-1 bg-pastel-orange text-[#111318] font-black text-[9px] sm:text-[10px] w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center border-2 border-white shadow">
+          <span className="absolute -bottom-1 -left-1 bg-gray-200 text-[var(--text)] font-semibold text-[9px] sm:text-[10px] w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center border-2 border-white">
             V
           </span>
         )}
@@ -130,7 +130,7 @@ export default function PlayerCard({
         {element.status !== 'a' && (
           <span
             title={element.news || undefined}
-            className={`absolute top-0 -left-1 px-1 py-0.5 rounded-full text-[8px] font-black text-white shadow ${
+            className={`absolute top-0 -left-1 px-1 py-0.5 rounded-full text-[8px] font-semibold text-white ${
               element.status === 'd' ? 'bg-amber-500' : 'bg-rose-500'
             }`}
           >
@@ -140,10 +140,10 @@ export default function PlayerCard({
       </div>
 
       {/* Player Info Squircle Box */}
-      <div className="w-full bg-white/95 border border-black/5 rounded-xl sm:rounded-2xl overflow-hidden shadow-md group-hover:ring-2 group-hover:ring-purple-400 transition">
+      <div className="w-full bg-white/95 border border-[var(--line)] rounded-xl sm:rounded-xl overflow-hidden group-hover:ring-2 group-hover:ring-[var(--accent)] transition">
         {/* Name and Team Tag */}
-        <div className="px-1 py-0.5 text-center bg-gray-50 border-b border-black/5 flex items-center justify-center">
-          <span className="text-[10px] sm:text-xs font-black text-[#111318] truncate max-w-[65px] sm:max-w-[85px]">
+        <div className="px-1 py-0.5 text-center bg-gray-50 border-b border-[var(--line)] flex items-center justify-center">
+          <span className="text-[10px] sm:text-xs font-semibold text-[var(--text)] truncate max-w-[65px] sm:max-w-[85px]">
             {element.web_name}
           </span>
         </div>
@@ -151,21 +151,21 @@ export default function PlayerCard({
         {mode === 'stats' ? (
           <>
             {/* Price & GW Points */}
-            <div className="px-1 py-0.5 flex items-center justify-between text-[9px] sm:text-[10px] font-bold bg-white">
+            <div className="px-1 py-0.5 flex items-center justify-between text-[9px] sm:text-[10px] font-medium bg-white">
               <span className="text-gray-600 font-mono">£{priceAnalysis.currentCost.toFixed(1)}</span>
-              <span className="text-[#111318] px-1.5 py-0.5 rounded-full bg-pastel-blueLight font-black text-[9px]">
+              <span className="text-[var(--text)] px-1.5 py-0.5 rounded-full bg-gray-100 font-semibold text-[9px]">
                 {isPreview ? '—' : `${element.event_points}pt`}
               </span>
             </div>
 
             {/* Next Fixture & FDR */}
             {nextFixture && (
-              <div className="px-1 py-0.5 text-[8px] sm:text-[9px] flex items-center justify-between border-t border-black/5 bg-gray-50/80">
+              <div className="px-1 py-0.5 text-[8px] sm:text-[9px] flex items-center justify-between border-t border-[var(--line)] bg-gray-50/80">
                 <span className="text-gray-500 font-semibold truncate">
                   {nextFixture.opponent.short_name} ({nextFixture.isHome ? 'H' : 'A'})
                 </span>
                 <span
-                  className={`px-1 py-0.5 rounded-full font-bold text-[8px] ${getFDRBadgeColor(
+                  className={`px-1 py-0.5 rounded-full font-medium text-[8px] ${getFDRBadgeColor(
                     nextFixture.difficulty
                   )}`}
                 >
@@ -176,14 +176,14 @@ export default function PlayerCard({
           </>
         ) : (
           /* Three matches from this gameweek on, difficulty shown as colour */
-          <div className="grid grid-cols-3 divide-x divide-white/25 border-t border-black/5">
+          <div className="grid grid-cols-3 divide-x divide-white/25 border-t border-[var(--line)]">
             {[0, 1, 2].map((slot) => {
               const fx = fixtures[slot];
               if (!fx) {
                 return (
                   <div
                     key={slot}
-                    className="py-1 text-center text-[8px] font-bold bg-gray-100 text-gray-400"
+                    className="py-1 text-center text-[8px] font-medium bg-gray-100 text-gray-400"
                     title="No fixture"
                   >
                     —
@@ -210,15 +210,15 @@ export default function PlayerCard({
                 >
                   {/* The abbreviation is only three letters — never truncate it,
                       or the cell shows something that is not a club. */}
-                  <span className="block text-[9px] sm:text-[10px] font-black tracking-tight">
+                  <span className="block text-[9px] sm:text-[10px] font-semibold tracking-tight">
                     {fx.opponent.short_name}
                   </span>
-                  <span className="block text-[7px] sm:text-[8px] font-bold opacity-80">
+                  <span className="block text-[7px] sm:text-[8px] font-medium opacity-80">
                     {fx.isHome ? 'H' : 'A'}
                   </span>
                   {played && (
                     <span
-                      className={`block mt-0.5 rounded-sm text-[8px] font-black tabular-nums ${outcome}`}
+                      className={`block mt-0.5 rounded-sm text-[8px] font-semibold tabular-nums ${outcome}`}
                     >
                       {fx.scoreFor}-{fx.scoreAgainst}
                     </span>

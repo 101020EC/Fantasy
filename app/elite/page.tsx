@@ -107,10 +107,10 @@ export default async function ElitePage({ searchParams }: Props) {
     <div className="max-w-4xl mx-auto px-3 sm:px-6 pt-2 pb-6 sm:pt-3 space-y-3">
       <div className="flex items-end justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl sm:text-4xl font-black text-[#111318] tracking-tight">
+          <h1 className="text-2xl sm:text-4xl font-semibold text-[var(--text)] tracking-tight">
             Elite Cohort
           </h1>
-          <p className="text-[11px] text-gray-400 font-bold mt-0.5">
+          <p className="text-[11px] text-gray-400 font-medium mt-0.5">
             {available} managers · Gameweek {gameweek}
             {!snapshot.dataChecked && ' · provisional'}
           </p>
@@ -121,10 +121,10 @@ export default async function ElitePage({ searchParams }: Props) {
               <Link
                 key={n}
                 href={`/elite?gw=${n}`}
-                className={`px-3 py-1.5 rounded-full text-[11px] font-black transition ${
+                className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition ${
                   n === gameweek
-                    ? 'bg-[#111318] text-white'
-                    : 'bg-white border border-black/5 text-[#38003c] hover:bg-purple-50'
+                    ? 'bg-[var(--text)] text-white'
+                    : 'bg-white border border-[var(--line)] text-[var(--accent)] hover:bg-[var(--accent-soft)]'
                 }`}
               >
                 GW {n}
@@ -137,9 +137,9 @@ export default async function ElitePage({ searchParams }: Props) {
       {/* What this sample is. Stated before any number, because a
           survivorship-selected group of twenty reads as authority unless it is
           named as a sample. */}
-      <div className="rounded-2xl bg-purple-50 border border-purple-200 p-3.5 flex items-start gap-2.5">
-        <Info className="w-4 h-4 text-[#38003c] shrink-0 mt-0.5" />
-        <p className="text-[11px] text-[#38003c] font-semibold leading-snug">
+      <div className="rounded-xl bg-[var(--accent-soft)] border border-[var(--accent)] p-3.5 flex items-start gap-2.5">
+        <Info className="w-4 h-4 text-[var(--accent)] shrink-0 mt-0.5" />
+        <p className="text-[11px] text-[var(--accent)] font-semibold leading-snug">
           Twenty managers picked for <em>past</em> Top 1K finishes. They read the same public
           information as everyone else and their choices correlate, so this is a consensus among
           strong managers — not a population statistic and not proof anyone is right.
@@ -149,9 +149,9 @@ export default async function ElitePage({ searchParams }: Props) {
       </div>
 
       {derived.missing?.length > 0 && (
-        <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3.5 flex items-start gap-2.5">
+        <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 flex items-start gap-2.5">
           <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-          <p className="text-[11px] text-amber-900 font-bold leading-snug">
+          <p className="text-[11px] text-amber-900 font-medium leading-snug">
             {derived.cohortSize - available} of {derived.cohortSize} managers were unreachable this
             gameweek, so every percentage is out of {available}, not {derived.cohortSize}.
           </p>
@@ -159,15 +159,15 @@ export default async function ElitePage({ searchParams }: Props) {
       )}
 
       {chips.length > 0 && (
-        <div className="pastel-card p-4 shadow-sm">
-          <p className="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2">
+        <div className="pastel-card p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">
             Chips played
           </p>
           <div className="flex items-center gap-2 flex-wrap">
             {chips.map(([chip, n]) => (
               <span
                 key={chip}
-                className="px-3 py-1.5 rounded-full bg-[#38003c] text-white text-[11px] font-black"
+                className="px-3 py-1.5 rounded-full bg-[var(--accent)] text-white text-[11px] font-semibold"
               >
                 {CHIP_LABEL[chip] ?? chip} · {n}
               </span>
@@ -184,9 +184,9 @@ export default async function ElitePage({ searchParams }: Props) {
 
       <EliteSummary rows={rows} available={available} gameweek={gameweek} />
 
-      <section className="pastel-card overflow-hidden shadow-sm">
-        <div className="px-4 py-3 border-b border-black/5">
-          <h2 className="font-black text-[#111318] text-sm">The managers</h2>
+      <section className="pastel-card overflow-hidden">
+        <div className="px-4 py-3 border-b border-[var(--line)]">
+          <h2 className="font-semibold text-[var(--text)] text-sm">The managers</h2>
           <p className="text-[11px] text-gray-400 font-semibold mt-0.5">
             Ranked by overall rank in GW{gameweek}. Open one to see the squad.
           </p>
@@ -196,10 +196,10 @@ export default async function ElitePage({ searchParams }: Props) {
             <li key={m.managerId}>
               <Link
                 href={`/elite/${m.managerId}?gw=${gameweek}`}
-                className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-purple-50 transition"
+                className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-[var(--accent-soft)] transition"
               >
                 <div className="min-w-0">
-                  <p className="font-bold text-[#111318] text-[13px] truncate">{m.teamName}</p>
+                  <p className="font-medium text-[var(--text)] text-[13px] truncate">{m.teamName}</p>
                   <p className="text-[10px] text-gray-400 font-semibold truncate">
                     {m.managerName}
                     {m.activeChip ? ` · ${CHIP_LABEL[m.activeChip] ?? m.activeChip}` : ''}
@@ -207,7 +207,7 @@ export default async function ElitePage({ searchParams }: Props) {
                 </div>
                 <div className="shrink-0 flex items-center gap-3">
                   <div className="text-right">
-                    <p className="font-black text-[13px] text-[#111318]">{m.points ?? '—'} pts</p>
+                    <p className="font-semibold text-[13px] text-[var(--text)]">{m.points ?? '—'} pts</p>
                     <p className="text-[10px] text-gray-400 font-semibold">
                       {m.overallRank ? `#${m.overallRank.toLocaleString()}` : '—'}
                     </p>
@@ -226,8 +226,8 @@ export default async function ElitePage({ searchParams }: Props) {
 function Empty({ title, body }: { title: string; body: string }) {
   return (
     <div className="max-w-md mx-auto px-4 py-16 text-center">
-      <div className="p-8 rounded-4xl bg-white border border-black/5 shadow-xl">
-        <h2 className="text-xl font-black text-[#111318] mb-2">{title}</h2>
+      <div className="p-8 rounded-xl bg-white border border-[var(--line)]">
+        <h2 className="text-xl font-semibold text-[var(--text)] mb-2">{title}</h2>
         <p className="text-xs text-gray-500 leading-relaxed">{body}</p>
       </div>
     </div>

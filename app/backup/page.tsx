@@ -136,7 +136,7 @@ export default function BackupPage() {
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-3 sm:px-6 py-16 flex justify-center">
-        <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
+        <Loader2 className="w-6 h-6 text-[var(--accent)] animate-spin" />
       </div>
     );
   }
@@ -144,11 +144,11 @@ export default function BackupPage() {
   if (!status?.configured) {
     return (
       <div className="max-w-md mx-auto px-4 py-16 text-center">
-        <div className="p-8 rounded-4xl bg-white border border-amber-200 shadow-xl">
+        <div className="p-8 rounded-xl bg-white border border-amber-200">
           <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
             <Database className="w-7 h-7" />
           </div>
-          <h2 className="text-xl font-black text-[#111318] mb-2">Backup is not set up</h2>
+          <h2 className="text-xl font-semibold text-[var(--text)] mb-2">Backup is not set up</h2>
           <p className="text-xs text-gray-500 leading-relaxed">
             {status?.message ?? 'The server has no Firebase credentials.'}
           </p>
@@ -160,17 +160,17 @@ export default function BackupPage() {
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4">
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+        <div className="w-11 h-11 rounded-xl bg-gray-100 text-[var(--muted)] flex items-center justify-center shrink-0">
           <Database className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-[#111318] tracking-tight">Backup</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold text-[var(--text)] tracking-tight">Backup</h1>
           <p className="text-xs text-gray-500">What has been captured, and what it shows</p>
         </div>
       </div>
 
       {/* Archive health */}
-      <div className="pastel-card p-5 sm:p-6 shadow-sm">
+      <div className="pastel-card p-5 sm:p-6">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
           <Stat label="Days captured" value={String(status.dayCount ?? 0)} />
           <Stat label="First" value={status.firstDate ?? '—'} />
@@ -179,7 +179,7 @@ export default function BackupPage() {
         </div>
 
         {(status.missingDates?.length ?? 0) > 0 ? (
-          <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-bold flex items-start gap-2">
+          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium flex items-start gap-2">
             <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <span>
               {status.missingDates!.length} day
@@ -189,7 +189,7 @@ export default function BackupPage() {
             </span>
           </div>
         ) : (
-          <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2">
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-2">
             <Check className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>No gaps. Every day between the first and latest capture is stored.</span>
           </div>
@@ -197,10 +197,10 @@ export default function BackupPage() {
       </div>
 
       {/* Player history */}
-      <div className="pastel-card p-5 sm:p-6 shadow-sm">
+      <div className="pastel-card p-5 sm:p-6">
         <div className="flex items-center gap-2 mb-3">
-          <History className="w-4 h-4 text-purple-600" />
-          <h2 className="text-base font-black text-[#111318]">Player history</h2>
+          <History className="w-4 h-4 text-[var(--accent)]" />
+          <h2 className="text-base font-semibold text-[var(--text)]">Player history</h2>
         </div>
 
         <div className="relative mb-4">
@@ -208,17 +208,17 @@ export default function BackupPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search a player by name..."
-            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-black/5 rounded-full text-base sm:text-sm text-[#111318] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600"
+            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-[var(--line)] rounded-full text-base sm:text-sm text-[var(--text)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
           />
           <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
 
           {matches.length > 0 && (
-            <div className="absolute z-10 mt-1.5 w-full bg-white border border-black/10 rounded-2xl shadow-xl overflow-hidden">
+            <div className="absolute z-10 mt-1.5 w-full bg-white border border-[var(--line)] rounded-xl overflow-hidden">
               {matches.map((m) => (
                 <button
                   key={m.id}
                   onClick={() => openPlayer(m)}
-                  className="w-full text-left px-4 py-2.5 text-sm font-bold text-[#111318] hover:bg-purple-50 transition"
+                  className="w-full text-left px-4 py-2.5 text-sm font-medium text-[var(--text)] hover:bg-[var(--accent-soft)] transition"
                 >
                   {m.name}
                 </button>
@@ -230,12 +230,12 @@ export default function BackupPage() {
         {selected ? (
           <>
             <div className="flex items-baseline gap-2 mb-3">
-              <span className="text-lg font-black text-[#111318]">{selected.name}</span>
+              <span className="text-lg font-semibold text-[var(--text)]">{selected.name}</span>
               <span className="text-xs text-gray-400 font-mono">#{selected.id}</span>
             </div>
             {seriesLoading ? (
               <div className="py-16 flex justify-center">
-                <Loader2 className="w-5 h-5 text-purple-600 animate-spin" />
+                <Loader2 className="w-5 h-5 text-[var(--accent)] animate-spin" />
               </div>
             ) : (
               <PlayerSeriesChart series={series ?? []} />
@@ -249,10 +249,10 @@ export default function BackupPage() {
       </div>
 
       {/* League rebuild */}
-      <div className="pastel-card p-5 sm:p-6 shadow-sm">
+      <div className="pastel-card p-5 sm:p-6">
         <div className="flex items-center gap-2 mb-1">
-          <Save className="w-4 h-4 text-indigo-600" />
-          <h2 className="text-base font-black text-[#111318]">Back up leagues</h2>
+          <Save className="w-4 h-4 text-[var(--accent)]" />
+          <h2 className="text-base font-semibold text-[var(--text)]">Back up leagues</h2>
         </div>
         <p className="text-xs text-gray-500 mb-4">
           Rebuilds every finalised gameweek&apos;s table from each member&apos;s own history.
@@ -273,24 +273,24 @@ export default function BackupPage() {
                   <button
                     key={l.id}
                     onClick={() => togglePick(Number(l.id))}
-                    className={`w-full p-3 rounded-2xl border transition flex items-center justify-between gap-2 text-left ${
-                      isPicked ? 'border-indigo-300 bg-indigo-50/50' : 'border-black/5 bg-gray-50'
+                    className={`w-full p-3 rounded-xl border transition flex items-center justify-between gap-2 text-left ${
+                      isPicked ? 'border-[var(--accent)] bg-[var(--accent-soft)]' : 'border-[var(--line)] bg-gray-50'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div
-                        className={`w-5 h-5 rounded-lg flex items-center justify-center text-xs font-black shrink-0 ${
-                          isPicked ? 'bg-indigo-600 text-white' : 'border border-gray-300 bg-white text-transparent'
+                        className={`w-5 h-5 rounded-lg flex items-center justify-center text-xs font-semibold shrink-0 ${
+                          isPicked ? 'bg-[var(--accent)] text-white' : 'border border-gray-300 bg-white text-transparent'
                         }`}
                       >
                         ✓
                       </div>
                       <div className="min-w-0">
-                        <span className="font-bold text-xs text-[#111318] block truncate">{l.name}</span>
+                        <span className="font-medium text-xs text-[var(--text)] block truncate">{l.name}</span>
                         <span className="text-[10px] text-gray-400 font-mono">ID: {l.id}</span>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold text-gray-500 shrink-0">
+                    <span className="text-[10px] font-medium text-gray-500 shrink-0">
                       {stored ? `${stored.gameweeks.length} GW stored` : 'nothing stored'}
                     </span>
                   </button>
@@ -300,7 +300,7 @@ export default function BackupPage() {
 
             {backfillResult && (
               <div
-                className={`mb-3 p-3 rounded-2xl border text-xs font-bold flex items-start gap-2 ${
+                className={`mb-3 p-3 rounded-xl border text-xs font-medium flex items-start gap-2 ${
                   backfillError
                     ? 'bg-rose-50 border-rose-200 text-rose-800'
                     : 'bg-emerald-50 border-emerald-200 text-emerald-800'
@@ -318,7 +318,7 @@ export default function BackupPage() {
             <button
               onClick={runBackfill}
               disabled={backfilling || picked.length === 0}
-              className="w-full py-3.5 bg-[#38003c] hover:bg-[#520258] text-white font-black text-sm rounded-full shadow-lg flex items-center justify-center gap-2 active:scale-95 transition disabled:opacity-50"
+              className="w-full py-3.5 bg-[var(--accent)] hover:bg-[var(--accent)] text-white font-semibold text-sm rounded-full flex items-center justify-center gap-2 active:scale-95 transition disabled:opacity-50"
             >
               {backfilling ? (
                 <>
@@ -341,9 +341,9 @@ export default function BackupPage() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="p-3.5 rounded-2xl bg-pastel-bg text-center">
+    <div className="p-3.5 rounded-xl bg-[var(--bg)] text-center">
       <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">{label}</span>
-      <span className="text-base font-black text-[#111318] truncate block">{value}</span>
+      <span className="text-base font-semibold text-[var(--text)] truncate block">{value}</span>
     </div>
   );
 }

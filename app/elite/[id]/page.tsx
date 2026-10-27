@@ -75,9 +75,9 @@ export default async function EliteManagerPage({ params, searchParams }: Props) 
     return (
       <li className="px-4 py-2.5 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <span className="w-9 text-[10px] font-black text-gray-400 shrink-0">{info.position}</span>
+          <span className="w-9 text-[10px] font-semibold text-gray-400 shrink-0">{info.position}</span>
           <div className="min-w-0">
-            <p className="font-bold text-[#111318] text-[13px] truncate flex items-center gap-1.5">
+            <p className="font-medium text-[var(--text)] text-[13px] truncate flex items-center gap-1.5">
               {info.name}
               {p.isCaptain && <Crown className="w-3 h-3 text-amber-500" />}
               {p.isViceCaptain && <Shield className="w-3 h-3 text-gray-400" />}
@@ -90,7 +90,7 @@ export default async function EliteManagerPage({ params, searchParams }: Props) 
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <p className="font-black text-[12px] text-[#111318]">
+          <p className="font-semibold text-[12px] text-[var(--text)]">
             £{info.cost == null ? '—' : info.cost.toFixed(1)}m
           </p>
           {/* multiplier is the authoritative signal: 0 benched, 1 playing,
@@ -108,17 +108,17 @@ export default async function EliteManagerPage({ params, searchParams }: Props) 
     <div className="max-w-2xl mx-auto px-3 sm:px-6 pt-2 pb-6 sm:pt-3 space-y-3">
       <Link
         href={`/elite?gw=${gameweek}`}
-        className="inline-flex items-center gap-1.5 text-[11px] font-black text-[#38003c]"
+        className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--accent)]"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         Elite Cohort
       </Link>
 
-      <div className="pastel-card p-5 shadow-sm">
-        <h1 className="text-xl sm:text-2xl font-black text-[#111318] tracking-tight">
+      <div className="pastel-card p-5">
+        <h1 className="text-xl sm:text-2xl font-semibold text-[var(--text)] tracking-tight">
           {manager.teamName}
         </h1>
-        <p className="text-[11px] text-gray-400 font-bold mt-0.5">
+        <p className="text-[11px] text-gray-400 font-medium mt-0.5">
           {manager.managerName} · GW{gameweek}
           {!snapshot.dataChecked && ' · provisional'}
           {manager.activeChip ? ` · ${CHIP_LABEL[manager.activeChip] ?? manager.activeChip}` : ''}
@@ -139,18 +139,18 @@ export default async function EliteManagerPage({ params, searchParams }: Props) 
       </div>
 
       {manager.transfers.length > 0 && (
-        <section className="pastel-card overflow-hidden shadow-sm">
-          <h2 className="px-4 py-3 border-b border-black/5 font-black text-[#111318] text-sm">
+        <section className="pastel-card overflow-hidden">
+          <h2 className="px-4 py-3 border-b border-[var(--line)] font-semibold text-[var(--text)] text-sm">
             Transfers for GW{gameweek}
           </h2>
           <ul className="divide-y divide-black/5">
             {manager.transfers.map((t, i) => (
               <li key={i} className="px-4 py-2.5 flex items-center justify-between gap-3 text-[13px]">
-                <span className="font-bold text-emerald-700">
+                <span className="font-medium text-emerald-700">
                   ▲ {look(t.inId).name}{' '}
                   <span className="text-[10px] text-gray-400">£{(t.inCost / 10).toFixed(1)}m</span>
                 </span>
-                <span className="font-bold text-rose-700">
+                <span className="font-medium text-rose-700">
                   ▼ {look(t.outId).name}{' '}
                   <span className="text-[10px] text-gray-400">£{(t.outCost / 10).toFixed(1)}m</span>
                 </span>
@@ -160,8 +160,8 @@ export default async function EliteManagerPage({ params, searchParams }: Props) 
         </section>
       )}
 
-      <section className="pastel-card overflow-hidden shadow-sm">
-        <h2 className="px-4 py-3 border-b border-black/5 font-black text-[#111318] text-sm">
+      <section className="pastel-card overflow-hidden">
+        <h2 className="px-4 py-3 border-b border-[var(--line)] font-semibold text-[var(--text)] text-sm">
           Starting XI
         </h2>
         <ul className="divide-y divide-black/5">
@@ -171,8 +171,8 @@ export default async function EliteManagerPage({ params, searchParams }: Props) 
         </ul>
       </section>
 
-      <section className="pastel-card overflow-hidden shadow-sm">
-        <h2 className="px-4 py-3 border-b border-black/5 font-black text-[#111318] text-sm">
+      <section className="pastel-card overflow-hidden">
+        <h2 className="px-4 py-3 border-b border-[var(--line)] font-semibold text-[var(--text)] text-sm">
           Substitutes
         </h2>
         <ul className="divide-y divide-black/5">
@@ -187,9 +187,9 @@ export default async function EliteManagerPage({ params, searchParams }: Props) 
 
 function Tile({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="p-3 rounded-2xl bg-pastel-bg text-center">
+    <div className="p-3 rounded-xl bg-[var(--bg)] text-center">
       <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">{label}</span>
-      <span className="text-base font-black text-[#111318] truncate block">{value}</span>
+      <span className="text-base font-semibold text-[var(--text)] truncate block">{value}</span>
     </div>
   );
 }
@@ -197,12 +197,12 @@ function Tile({ label, value }: { label: string; value: React.ReactNode }) {
 function Missing({ message }: { message: string }) {
   return (
     <div className="max-w-md mx-auto px-4 py-16 text-center">
-      <div className="p-8 rounded-4xl bg-white border border-black/5 shadow-xl">
-        <h2 className="text-xl font-black text-[#111318] mb-2">Not available</h2>
+      <div className="p-8 rounded-xl bg-white border border-[var(--line)]">
+        <h2 className="text-xl font-semibold text-[var(--text)] mb-2">Not available</h2>
         <p className="text-xs text-gray-500 mb-6 leading-relaxed">{message}</p>
         <Link
           href="/elite"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#38003c] text-white font-black text-xs"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[var(--accent)] text-white font-semibold text-xs"
         >
           Back to the cohort
         </Link>

@@ -29,7 +29,7 @@ export default function PlayerJersey({
       <img
         src={officialShirtUrl}
         alt={`Shirt ${teamCode}`}
-        className={`${className} object-contain filter drop-shadow-md transition-transform`}
+        className={`${className} object-contain filter transition-transform`}
         onError={() => setImgError(true)}
         loading="lazy"
       />

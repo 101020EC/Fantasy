@@ -45,15 +45,15 @@ export default function PriceDeadlineCountdown({ deadline }: { deadline: string 
   }
 
   return (
-    <div className="px-3 py-1.5 rounded-2xl bg-white border border-black/5 flex items-center gap-2 text-xs shadow-sm shrink-0">
-      <div className="w-7 h-7 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold shrink-0">
+    <div className="px-3 py-1.5 rounded-xl bg-white border border-[var(--line)] flex items-center gap-2 text-xs shrink-0">
+      <div className="w-7 h-7 rounded-full bg-gray-100 text-[var(--muted)] flex items-center justify-center font-medium shrink-0">
         <Clock className="w-3.5 h-3.5" />
       </div>
       <div className="leading-tight">
-        <span className="font-black text-[#111318] block text-[10px] sm:text-xs">
+        <span className="font-semibold text-[var(--text)] block text-[10px] sm:text-xs">
           Next Price Change
         </span>
-        <span className="block text-[10px] sm:text-xs font-bold text-[#38003c] tabular-nums">
+        <span className="block text-[10px] sm:text-xs font-medium text-[var(--accent)] tabular-nums">
           {remaining || ' '}
         </span>
         <span className="block text-gray-400 text-[9px] sm:text-[10px]">

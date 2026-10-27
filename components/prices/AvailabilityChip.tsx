@@ -34,7 +34,7 @@ export default function AvailabilityChip({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         title={open ? 'Hide details' : news}
-        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-black transition ${tone(pct)}`}
+        className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold transition ${tone(pct)}`}
       >
         <span className="text-[10px] leading-none">⚠️</span>
         <span>{pct}%</span>

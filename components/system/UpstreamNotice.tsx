@@ -29,9 +29,9 @@ function RetryButton({ dark }: { dark?: boolean }) {
         // the page does not re-render, which happens when nothing changed.
         setTimeout(() => setBusy(false), 4000);
       }}
-      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-black text-xs transition disabled:opacity-60 ${
+      className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-xs transition disabled:opacity-60 ${
         dark
-          ? 'bg-[#111318] text-white hover:scale-105'
+          ? 'bg-[var(--text)] text-white '
           : 'bg-amber-900/10 text-amber-900 hover:bg-amber-900/20'
       }`}
     >
@@ -50,10 +50,10 @@ function RetryButton({ dark }: { dark?: boolean }) {
  */
 export function StaleNotice({ capturedAt }: { capturedAt: string | null }) {
   return (
-    <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3.5 flex items-start gap-3">
+    <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 flex items-start gap-3">
       <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
       <div className="min-w-0 flex-1">
-        <p className="text-[13px] font-black text-amber-900">
+        <p className="text-[13px] font-semibold text-amber-900">
           Showing saved data from {ago(capturedAt)}
         </p>
         <p className="text-[11px] text-amber-800/80 font-semibold mt-0.5 leading-snug">
@@ -74,11 +74,11 @@ export function StaleNotice({ capturedAt }: { capturedAt: string | null }) {
 export function FplUnavailable({ status, detail }: { status?: number; detail?: string }) {
   return (
     <div className="max-w-md mx-auto px-4 py-16 text-center">
-      <div className="p-8 rounded-4xl bg-white border border-amber-200 shadow-xl">
+      <div className="p-8 rounded-xl bg-white border border-amber-200">
         <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
           <CloudOff className="w-7 h-7" />
         </div>
-        <h2 className="text-xl font-black text-[#111318] mb-2">FPL is not responding</h2>
+        <h2 className="text-xl font-semibold text-[var(--text)] mb-2">FPL is not responding</h2>
         <p className="text-xs text-gray-500 mb-2 leading-relaxed">
           {detail || 'The official Fantasy Premier League API is refusing requests right now.'}
           {status ? ` (HTTP ${status})` : ''}

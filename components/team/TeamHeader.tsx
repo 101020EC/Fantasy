@@ -35,14 +35,14 @@ function Tile({
     tone === 'emerald'
       ? 'text-emerald-600'
       : tone === 'purple'
-      ? 'text-purple-600'
+      ? 'text-[var(--accent)]'
       : tone === 'orange'
-      ? 'text-pastel-orangeDark'
-      : 'text-[#111318]';
+      ? 'text-amber-700'
+      : 'text-[var(--text)]';
   return (
-    <div className={`p-3.5 rounded-2xl text-center ${tone === 'blue' ? 'bg-pastel-blueLight' : 'bg-pastel-bg'}`}>
+    <div className={`p-3.5 rounded-xl text-center ${tone === 'blue' ? 'bg-gray-100' : 'bg-[var(--bg)]'}`}>
       <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">{label}</span>
-      <span className={`text-base font-black truncate block ${valueTone}`}>{value}</span>
+      <span className={`text-base font-semibold truncate block ${valueTone}`}>{value}</span>
       {note && <span className="block text-[10px] text-gray-400 font-semibold mt-0.5">{note}</span>}
     </div>
   );
@@ -114,9 +114,9 @@ export default function TeamHeader({
     : undefined;
 
   return (
-    <div className="pastel-card p-5 sm:p-7 shadow-sm mb-6 transition-colors space-y-5">
+    <div className="pastel-card p-5 sm:p-7 mb-6 transition-colors space-y-5">
       <section>
-        <h3 className="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2 px-1">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2 px-1">
           {shownGw ? `Gameweek ${shownGw}` : 'This gameweek'}
           {isPreview && <span className="text-gray-300 normal-case"> · not played yet</span>}
         </h3>
@@ -131,7 +131,7 @@ export default function TeamHeader({
       </section>
 
       <section>
-        <h3 className="text-[11px] font-black uppercase tracking-wider text-gray-400 mb-2 px-1">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2 px-1">
           Season so far
           {squadGw && <span className="text-gray-300 normal-case"> · through GW{squadGw}</span>}
         </h3>

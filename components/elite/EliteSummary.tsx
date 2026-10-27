@@ -16,7 +16,7 @@ export interface EliteRow {
 }
 
 function Bar({ value, tone }: { value: number; tone: 'purple' | 'amber' | 'emerald' }) {
-  const bg = { purple: 'bg-[#38003c]', amber: 'bg-amber-500', emerald: 'bg-emerald-500' }[tone];
+  const bg = { purple: 'bg-[var(--accent)]', amber: 'bg-amber-500', emerald: 'bg-emerald-500' }[tone];
   return (
     <div className="h-1.5 rounded-full bg-black/5 overflow-hidden">
       <div
@@ -42,13 +42,13 @@ function PlayerLine({
     <li className="px-4 py-2.5">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-bold text-[#111318] text-[13px] truncate">{row.name}</p>
+          <p className="font-medium text-[var(--text)] text-[13px] truncate">{row.name}</p>
           <p className="text-[10px] text-gray-400 font-semibold">
             {row.position} {row.club}
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <div className="font-black text-[13px] text-[#111318]">{right}</div>
+          <div className="font-semibold text-[13px] text-[var(--text)]">{right}</div>
           {sub && <div className="text-[10px] text-gray-400 font-semibold">{sub}</div>}
         </div>
       </div>
@@ -71,16 +71,16 @@ function Section({
   children?: React.ReactNode;
 }) {
   return (
-    <section className="pastel-card overflow-hidden shadow-sm">
-      <div className="px-4 py-3 border-b border-black/5">
-        <h2 className="font-black text-[#111318] text-sm flex items-center gap-2">
-          <Icon className="w-4 h-4 text-[#38003c]" />
+    <section className="pastel-card overflow-hidden">
+      <div className="px-4 py-3 border-b border-[var(--line)]">
+        <h2 className="font-semibold text-[var(--text)] text-sm flex items-center gap-2">
+          <Icon className="w-4 h-4 text-[var(--accent)]" />
           {title}
         </h2>
         <p className="text-[11px] text-gray-400 font-semibold mt-0.5 leading-snug">{hint}</p>
       </div>
       {empty ? (
-        <p className="px-4 py-6 text-center text-xs text-gray-400 font-bold leading-snug">{empty}</p>
+        <p className="px-4 py-6 text-center text-xs text-gray-400 font-medium leading-snug">{empty}</p>
       ) : (
         <ul className="divide-y divide-black/5">{children}</ul>
       )}

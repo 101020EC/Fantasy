@@ -114,20 +114,20 @@ export default function PrivateLeaguesCard({
   const isEmpty = !orderedLeagues || orderedLeagues.length === 0;
 
   return (
-    <div className="pastel-card p-5 sm:p-7 shadow-sm mb-6">
+    <div className="pastel-card p-5 sm:p-7 mb-6">
       {/* Header with Private Mini-Leagues and Edit button */}
-      <div className="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-black/5">
+      <div className="flex items-start justify-between gap-3 mb-4 pb-3 border-b border-[var(--line)]">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold shrink-0">
+          <div className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-medium shrink-0">
             <Trophy className="w-5 h-5" />
           </div>
-          <h3 className="text-base font-black text-[#111318] truncate">Private Mini-Leagues</h3>
+          <h3 className="text-base font-semibold text-[var(--text)] truncate">Private Mini-Leagues</h3>
         </div>
 
         {/* Count, with the reorder toggle directly beneath it — icon only, since
             the two states are already obvious from its colour and shape. */}
         <div className="flex flex-col items-end gap-1 shrink-0">
-          <span className="text-xs font-bold text-gray-400 font-mono">
+          <span className="text-xs font-medium text-gray-400 font-mono">
             {orderedLeagues.length} leagues
           </span>
           <button
@@ -136,10 +136,10 @@ export default function PrivateLeaguesCard({
             aria-pressed={isReorderMode}
             aria-label={isReorderMode ? 'Finish reordering' : 'Reorder leagues'}
             title={isReorderMode ? 'Done' : 'Reorder leagues'}
-            className={`w-7 h-7 rounded-full flex items-center justify-center transition active:scale-95 shadow-sm ${
+            className={`w-7 h-7 rounded-full flex items-center justify-center transition active:scale-95 ${
               isReorderMode
                 ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                : 'bg-gray-100 hover:bg-purple-100 text-[#38003c]'
+                : 'bg-gray-100 hover:bg-[var(--accent-soft)] text-[var(--accent)]'
             }`}
           >
             {isReorderMode ? (
@@ -153,7 +153,7 @@ export default function PrivateLeaguesCard({
 
       {isEmpty && (
         <div className="py-8 text-center">
-          <p className="text-sm font-bold text-gray-500 mb-1">No private leagues yet</p>
+          <p className="text-sm font-medium text-gray-500 mb-1">No private leagues yet</p>
           <p className="text-xs text-gray-400">
             Join or create an invitational league in the FPL app and it will appear here.
           </p>
@@ -173,14 +173,14 @@ export default function PrivateLeaguesCard({
           return (
             <div
               key={league.id}
-              className={`rounded-2xl border transition overflow-hidden ${
-                isReorderMode ? 'border-purple-300 bg-purple-50/20' : 'border-black/5 bg-gray-50/80'
+              className={`rounded-xl border transition overflow-hidden ${
+                isReorderMode ? 'border-[var(--accent)] bg-[var(--accent-soft)]/20' : 'border-[var(--line)] bg-gray-50/80'
               }`}
             >
               {/* League Header */}
               <div
                 onClick={() => toggleExpand(league.id)}
-                className="w-full p-3.5 sm:p-4 flex items-center justify-between gap-2 text-left hover:bg-purple-50/50 transition cursor-pointer"
+                className="w-full p-3.5 sm:p-4 flex items-center justify-between gap-2 text-left hover:bg-[var(--accent-soft)]/50 transition cursor-pointer"
               >
                 {/* Left: Reorder arrows + Name */}
                 <div className="flex items-center gap-2.5 sm:gap-3 truncate">
@@ -189,7 +189,7 @@ export default function PrivateLeaguesCard({
                       <button
                         onClick={(e) => moveLeagueUp(e, idx)}
                         disabled={idx === 0}
-                        className="p-1 rounded-md bg-white border border-black/10 text-[#38003c] hover:bg-purple-100 disabled:opacity-25 transition shadow-sm"
+                        className="p-1 rounded-md bg-white border border-[var(--line)] text-[var(--accent)] hover:bg-[var(--accent-soft)] disabled:opacity-25 transition"
                         title="Move Up"
                       >
                         <ChevronUp className="w-3.5 h-3.5 stroke-[3]" />
@@ -197,7 +197,7 @@ export default function PrivateLeaguesCard({
                       <button
                         onClick={(e) => moveLeagueDown(e, idx)}
                         disabled={idx === orderedLeagues.length - 1}
-                        className="p-1 rounded-md bg-white border border-black/10 text-[#38003c] hover:bg-purple-100 disabled:opacity-25 transition shadow-sm"
+                        className="p-1 rounded-md bg-white border border-[var(--line)] text-[var(--accent)] hover:bg-[var(--accent-soft)] disabled:opacity-25 transition"
                         title="Move Down"
                       >
                         <ChevronDown className="w-3.5 h-3.5 stroke-[3]" />
@@ -206,7 +206,7 @@ export default function PrivateLeaguesCard({
                   )}
 
                   <div className="truncate">
-                    <span className="font-black text-xs sm:text-sm text-[#111318] block truncate">
+                    <span className="font-semibold text-xs sm:text-sm text-[var(--text)] block truncate">
                       {league.name}
                     </span>
                     <span className="text-[10px] text-gray-400 font-mono">
@@ -218,16 +218,16 @@ export default function PrivateLeaguesCard({
                 {/* Right: Rank & Expand Arrow */}
                 <div className="flex items-center gap-3 shrink-0">
                   <div className="text-right">
-                    <span className="text-sm sm:text-base font-black text-[#38003c] block">
+                    <span className="text-sm sm:text-base font-semibold text-[var(--accent)] block">
                       Rank #{rank.toLocaleString()}
                     </span>
-                    <div className="flex items-center justify-end gap-1 text-[10px] font-bold">
+                    <div className="flex items-center justify-end gap-1 text-[10px] font-medium">
                       {rankDiff > 0 ? (
-                        <span className="text-emerald-600 flex items-center font-black">
+                        <span className="text-emerald-600 flex items-center font-semibold">
                           <ArrowUp className="w-3 h-3 stroke-[3]" /> +{rankDiff}
                         </span>
                       ) : rankDiff < 0 ? (
-                        <span className="text-rose-600 flex items-center font-black">
+                        <span className="text-rose-600 flex items-center font-semibold">
                           <ArrowDown className="w-3 h-3 stroke-[3]" /> {rankDiff}
                         </span>
                       ) : (
@@ -239,7 +239,7 @@ export default function PrivateLeaguesCard({
                   </div>
 
                   {!isReorderMode && (
-                    <div className="p-1.5 rounded-full bg-white shadow-sm text-gray-400 hover:text-[#38003c]">
+                    <div className="p-1.5 rounded-full bg-white text-gray-400 hover:text-[var(--accent)]">
                       {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     </div>
                   )}
@@ -248,14 +248,14 @@ export default function PrivateLeaguesCard({
 
               {/* Expanded Full League Standings Table */}
               {isExpanded && !isReorderMode && (
-                <div className="p-4 border-t border-black/5 bg-white">
+                <div className="p-4 border-t border-[var(--line)] bg-white">
                   <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-1.5 text-xs font-black text-[#38003c]">
-                      <Users className="w-4 h-4 text-purple-600" />
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--accent)]">
+                      <Users className="w-4 h-4 text-[var(--accent)]" />
                       <span>Standings for {league.name}</span>
                     </div>
                     {currentGw && (
-                      <span className="text-[11px] font-bold text-gray-500">
+                      <span className="text-[11px] font-medium text-gray-500">
                         Gameweek {currentGw}
                       </span>
                     )}
@@ -263,7 +263,7 @@ export default function PrivateLeaguesCard({
 
                   {isLoading ? (
                     <div className="py-8 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-[var(--accent)] border-t-transparent rounded-full animate-spin" />
                       <span>Loading standings...</span>
                     </div>
                   ) : standings.length === 0 ? (
@@ -273,7 +273,7 @@ export default function PrivateLeaguesCard({
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-black border-b border-black/5">
+                        <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-semibold border-b border-[var(--line)]">
                           <tr>
                             <th className="px-3 py-2">Rank</th>
                             <th className="px-3 py-2">Team &amp; Manager</th>
@@ -291,12 +291,12 @@ export default function PrivateLeaguesCard({
                                 key={member.entry}
                                 className={`transition ${
                                   isMe
-                                    ? 'bg-purple-50 font-bold text-[#38003c]'
+                                    ? 'bg-[var(--accent-soft)] font-medium text-[var(--accent)]'
                                     : 'hover:bg-gray-50 text-gray-700'
                                 }`}
                               >
                                 <td className="px-3 py-2.5">
-                                  <div className="flex items-center gap-1.5 font-black">
+                                  <div className="flex items-center gap-1.5 font-semibold">
                                     <span>#{member.rank}</span>
                                     {memberDiff > 0 ? (
                                       <span className="text-[9px] text-emerald-600 flex items-center">
@@ -310,10 +310,10 @@ export default function PrivateLeaguesCard({
                                   </div>
                                 </td>
                                 <td className="px-3 py-2.5">
-                                  <div className="font-bold truncate max-w-[150px] sm:max-w-xs">
+                                  <div className="font-medium truncate max-w-[150px] sm:max-w-xs">
                                     {member.entry_name}
                                     {isMe && (
-                                      <span className="ml-1.5 px-1.5 py-0.5 bg-[#38003c] text-white text-[9px] rounded-full">
+                                      <span className="ml-1.5 px-1.5 py-0.5 bg-[var(--accent)] text-white text-[9px] rounded-full">
                                         You
                                       </span>
                                     )}
@@ -322,10 +322,10 @@ export default function PrivateLeaguesCard({
                                     {member.player_name}
                                   </div>
                                 </td>
-                                <td className="px-3 py-2.5 text-center font-mono font-bold text-gray-600">
+                                <td className="px-3 py-2.5 text-center font-mono font-medium text-gray-600">
                                   {member.event_total || 0}
                                 </td>
-                                <td className="px-3 py-2.5 text-right font-mono font-black text-emerald-600">
+                                <td className="px-3 py-2.5 text-right font-mono font-semibold text-emerald-600">
                                   {member.total}
                                 </td>
                               </tr>

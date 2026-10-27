@@ -82,8 +82,8 @@ export default function PlayerSeriesChart({ series }: { series: SeriesPoint[] })
             key={s.key}
             type="button"
             onClick={() => setVisible((v) => ({ ...v, [s.key]: !v[s.key] }))}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition flex items-center gap-1.5 ${
-              visible[s.key] ? 'text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            className={`px-3 py-1.5 rounded-full text-xs font-medium transition flex items-center gap-1.5 ${
+              visible[s.key] ? 'text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
             }`}
             style={visible[s.key] ? { backgroundColor: s.colour } : undefined}
           >
@@ -178,18 +178,18 @@ export default function PlayerSeriesChart({ series }: { series: SeriesPoint[] })
         </svg>
       </div>
 
-      <div className="mt-3 min-h-[3.5rem] p-3 rounded-2xl bg-gray-50 border border-black/5 text-xs">
+      <div className="mt-3 min-h-[3.5rem] p-3 rounded-xl bg-gray-50 border border-[var(--line)] text-xs">
         {hover === null ? (
           <span className="text-gray-400">Hover the chart for a day&apos;s numbers.</span>
         ) : (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-            <span className="font-black text-[#111318]">{series[hover].date}</span>
-            <span className="text-emerald-700 font-bold">£{series[hover].price.toFixed(1)}m</span>
-            <span className="text-purple-700 font-bold">
+            <span className="font-semibold text-[var(--text)]">{series[hover].date}</span>
+            <span className="text-emerald-700 font-medium">£{series[hover].price.toFixed(1)}m</span>
+            <span className="text-[var(--accent)] font-medium">
               Net {series[hover].netTransfers > 0 ? '+' : ''}
               {series[hover].netTransfers.toLocaleString()}
             </span>
-            <span className="text-orange-700 font-bold">{series[hover].ownership}% owned</span>
+            <span className="text-orange-700 font-medium">{series[hover].ownership}% owned</span>
             {series[hover].news && (
               <span className="text-rose-600 font-medium">⚠️ {series[hover].news}</span>
             )}

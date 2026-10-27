@@ -162,16 +162,16 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
 
   // text-base on phones: iOS zooms into any input under 16px on focus.
   const field =
-    'w-full px-4 py-2.5 bg-gray-50 border border-black/10 rounded-2xl text-base sm:text-xs font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500';
+    'w-full px-4 py-2.5 bg-gray-50 border border-[var(--line)] rounded-xl text-base sm:text-xs font-medium placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-sky-500';
 
   return (
     <Modal isOpen onClose={onClose} labelledBy="telegram-settings-title" className="max-w-md">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-11 h-11 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center">
+        <div className="w-11 h-11 rounded-xl bg-gray-100 text-[var(--muted)] flex items-center justify-center">
           <Send className="w-5 h-5" />
         </div>
         <div>
-          <h2 id="telegram-settings-title" className="text-xl font-black text-[#111318]">
+          <h2 id="telegram-settings-title" className="text-xl font-semibold text-[var(--text)]">
             Telegram Price Alerts
           </h2>
           <p className="text-xs text-gray-500">Nightly rise &amp; fall notifications</p>
@@ -186,10 +186,10 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
       ) : (
         <>
           {status?.configured && !staleTeam && (
-            <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs mb-4 flex items-start gap-2">
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs mb-4 flex items-start gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-black">Connected</p>
+                <p className="font-semibold">Connected</p>
                 <p>
                   Bot {status.botTokenMask} · chat {status.chatId} · team #{status.teamId}
                 </p>
@@ -203,10 +203,10 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
           )}
 
           {staleTeam && (
-            <div className="p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs mb-4 flex items-start gap-2">
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs mb-4 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <div>
-                <p className="font-black">Set up again for this team</p>
+                <p className="font-semibold">Set up again for this team</p>
                 <p>
                   Alerts are still pointed at team #{status?.teamId}, but you are now tracking #
                   {savedTeamId}. Save to move them across.
@@ -216,7 +216,7 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
           )}
 
           {!status?.storable && (
-            <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs mb-4 flex items-start gap-2">
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs mb-4 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
               <span>
                 Firebase is not configured on the server, so settings cannot be saved from here.
@@ -225,19 +225,19 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
           )}
 
           {!status?.configured && (
-            <div className="p-3.5 rounded-2xl bg-sky-50 border border-sky-100 text-xs text-sky-900 mb-4 space-y-1.5">
-              <p className="font-bold flex items-center gap-1.5">
-                <Bell className="w-3.5 h-3.5 text-sky-600" />
+            <div className="p-3.5 rounded-xl bg-[var(--bg)] border border-[var(--line)] text-xs text-[var(--text)] mb-4 space-y-1.5">
+              <p className="font-medium flex items-center gap-1.5">
+                <Bell className="w-3.5 h-3.5 text-[var(--muted)]" />
                 <span>Two steps</span>
               </p>
-              <ol className="list-decimal pl-4 space-y-1 text-[11px] text-sky-800">
+              <ol className="list-decimal pl-4 space-y-1 text-[11px] text-[var(--muted)]">
                 <li>
-                  Message <code className="bg-white/80 px-1 rounded font-bold">@BotFather</code> to
+                  Message <code className="bg-white/80 px-1 rounded font-medium">@BotFather</code> to
                   create a bot and copy its token.
                 </li>
                 <li>
                   Press <b>/start</b> with your bot, then message{' '}
-                  <code className="bg-white/80 px-1 rounded font-bold">@userinfobot</code> for your
+                  <code className="bg-white/80 px-1 rounded font-medium">@userinfobot</code> for your
                   chat ID.
                 </li>
               </ol>
@@ -246,7 +246,7 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
 
           <form onSubmit={save} className="space-y-3">
             <div>
-              <label className="block text-xs font-black text-gray-700 mb-1">Bot Token</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Bot Token</label>
               <input
                 type="password"
                 value={botToken}
@@ -261,7 +261,7 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="block text-xs font-black text-gray-700 mb-1">Chat ID</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Chat ID</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -273,7 +273,7 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
                 />
               </div>
               <div>
-                <label className="block text-xs font-black text-gray-700 mb-1">Team ID</label>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Team ID</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -292,8 +292,8 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
                 ['In the 24h summary', ALERT_ROWS],
               ] as const
             ).map(([title, rows]) => (
-              <div key={title} className="pt-1 border-t border-black/5">
-                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block mb-2">
+              <div key={title} className="pt-1 border-t border-[var(--line)]">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 block mb-2">
                   {title}
                 </span>
                 <div className="space-y-1.5">
@@ -308,10 +308,10 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
                         onChange={(e) =>
                           setAlerts((a) => ({ ...a, [row.key]: e.target.checked }))
                         }
-                        className="mt-0.5 w-4 h-4 shrink-0 accent-[#38003c] cursor-pointer"
+                        className="mt-0.5 w-4 h-4 shrink-0 accent-[var(--accent)] cursor-pointer"
                       />
                       <span className="min-w-0">
-                        <span className="block text-xs font-bold text-[#111318] group-hover:text-[#38003c] transition">
+                        <span className="block text-xs font-medium text-[var(--text)] group-hover:text-[var(--accent)] transition">
                           {row.label}
                         </span>
                         <span className="block text-[10px] text-gray-400">{row.hint}</span>
@@ -324,7 +324,7 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
 
             {result && (
               <div
-                className={`p-3 rounded-2xl text-xs font-bold flex items-start gap-2 ${
+                className={`p-3 rounded-xl text-xs font-medium flex items-start gap-2 ${
                   result.ok
                     ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                     : 'bg-rose-50 text-rose-800 border border-rose-200'
@@ -343,7 +343,7 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
               <button
                 type="submit"
                 disabled={busy !== null || !status?.storable}
-                className="flex-1 py-3 bg-[#38003c] text-white font-black text-xs rounded-full shadow-md hover:opacity-90 active:scale-95 transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="flex-1 py-3 bg-[var(--accent)] text-white font-semibold text-xs rounded-full hover:opacity-90 active:scale-95 transition flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 {busy === 'save' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
               </button>
@@ -351,7 +351,7 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
                 type="button"
                 onClick={sendTest}
                 disabled={busy !== null || !status?.configured}
-                className="flex-1 py-3 bg-sky-100 hover:bg-sky-200 text-sky-800 font-black text-xs rounded-full transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+                className="flex-1 py-3 bg-white border border-[var(--line)] hover:bg-[var(--bg)] text-[var(--text)] font-semibold text-xs rounded-lg transition flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
                 {busy === 'test' ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

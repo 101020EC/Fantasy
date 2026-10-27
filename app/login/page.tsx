@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, Suspense } from 'react';
-import Image from 'next/image';
+import Logo from '@/components/Logo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, KeyRound, ArrowRight, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -41,17 +41,15 @@ function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-md p-6 sm:p-8 rounded-4xl bg-white border border-black/5 shadow-2xl text-center">
-      <div className="w-20 h-20 mx-auto mb-4">
-        <Image src="/logo.png" alt="Fanta" width={80} height={80} priority className="w-full h-full object-cover rounded-full shadow-md" />
-      </div>
+    <div className="w-full max-w-md p-6 sm:p-8 rounded-xl bg-white border border-[var(--line)] text-center">
+      <Logo className="w-14 h-14 mx-auto mb-4" />
 
-      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-[#38003c] text-xs font-black mb-3">
+      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] text-xs font-semibold mb-3">
         <Sparkles className="w-3.5 h-3.5" />
         <span>FANTA PRO</span>
       </div>
 
-      <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-[#111318] mb-2">
+      <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-[var(--text)] mb-2">
         Enter Access Password
       </h1>
       <p className="text-xs text-gray-500 mb-6">
@@ -71,13 +69,13 @@ function LoginForm() {
             autoFocus
             required
             autoComplete="current-password"
-            className="w-full pl-11 pr-4 py-3.5 bg-pastel-bg border border-black/10 rounded-full text-[#111318] font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600 text-base transition"
+            className="w-full pl-11 pr-4 py-3.5 bg-[var(--bg)] border border-[var(--line)] rounded-full text-[var(--text)] font-medium placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] text-base transition"
           />
           <KeyRound className="w-4 h-4 text-gray-400 absolute left-4 top-4" />
         </div>
 
         {error && (
-          <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center justify-center gap-2">
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center justify-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
@@ -86,7 +84,7 @@ function LoginForm() {
         <button
           type="submit"
           disabled={busy || !password}
-          className="w-full py-3.5 bg-[#38003c] text-white font-black text-sm rounded-full shadow-lg hover:opacity-90 active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-50"
+          className="w-full py-3.5 bg-[var(--accent)] text-white font-semibold text-sm rounded-full hover:opacity-90 active:scale-95 transition flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {busy ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -99,7 +97,7 @@ function LoginForm() {
         </button>
       </form>
 
-      <p className="mt-6 pt-4 border-t border-black/5 text-[11px] text-gray-400 flex items-center justify-center gap-1.5">
+      <p className="mt-6 pt-4 border-t border-[var(--line)] text-[11px] text-gray-400 flex items-center justify-center gap-1.5">
         <Lock className="w-3 h-3" />
         <span>Verified on the server — the password never reaches your browser</span>
       </p>
@@ -109,8 +107,8 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-pastel-bg text-[#111318]">
-      <Suspense fallback={<div className="animate-spin w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full" />}>
+    <div className="min-h-screen w-full flex items-center justify-center p-4 bg-[var(--bg)] text-[var(--text)]">
+      <Suspense fallback={<div className="animate-spin w-8 h-8 border-4 border-[var(--accent)] border-t-transparent rounded-full" />}>
         <LoginForm />
       </Suspense>
     </div>

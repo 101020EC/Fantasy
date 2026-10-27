@@ -32,8 +32,8 @@ export default function FootballPitch({ players, isPreview = false }: FootballPi
       {/* Pitch Header */}
       <div className="flex items-center justify-between gap-2 mb-3 px-2">
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs font-bold text-gray-500 hidden sm:inline">Formation</span>
-          <span className="px-3 py-0.5 rounded-full bg-[#111318] text-white text-xs font-black">
+          <span className="text-xs font-medium text-gray-500 hidden sm:inline">Formation</span>
+          <span className="px-3 py-0.5 rounded-full bg-[var(--text)] text-white text-xs font-semibold">
             {formation}
           </span>
         </div>
@@ -52,10 +52,10 @@ export default function FootballPitch({ players, isPreview = false }: FootballPi
               onClick={() => setMode(opt.key)}
               title={opt.title}
               aria-pressed={mode === opt.key}
-              className={`w-7 h-7 rounded-full text-xs font-black transition ${
+              className={`w-7 h-7 rounded-full text-xs font-semibold transition ${
                 mode === opt.key
-                  ? 'bg-[#38003c] text-white shadow-sm'
-                  : 'text-gray-500 hover:text-[#38003c]'
+                  ? 'bg-[var(--accent)] text-white'
+                  : 'text-gray-500 hover:text-[var(--accent)]'
               }`}
             >
               {opt.label}

@@ -263,17 +263,17 @@ export default async function TeamPage({ params }: TeamPageProps) {
 
     return (
       <div className="max-w-md mx-auto px-4 py-16 text-center">
-        <div className="p-8 rounded-4xl bg-white border border-rose-200 shadow-xl">
+        <div className="p-8 rounded-xl bg-white border border-rose-200">
           <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-7 h-7" />
           </div>
-          <h2 className="text-xl font-black text-[#111318] mb-2">Team Not Found</h2>
+          <h2 className="text-xl font-semibold text-[var(--text)] mb-2">Team Not Found</h2>
           <p className="text-xs text-gray-500 mb-6 leading-relaxed">
             {err.message || `No data found for FPL Team ID: ${id}. Please verify the number.`}
           </p>
           <Link
             href="/?switch=true"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#111318] text-white font-black text-xs hover:scale-105 transition-transform shadow-md"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[var(--text)] text-white font-semibold text-xs transition-transform"
           >
             <Search className="w-4 h-4" />
             <span>Search Another Team ID</span>

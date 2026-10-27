@@ -277,19 +277,19 @@ export default async function StatusPage() {
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
       <div className="flex items-center justify-between gap-3 mb-4">
-        <h1 className="text-2xl sm:text-4xl font-black text-[#111318] tracking-tight">Status</h1>
+        <h1 className="text-2xl sm:text-4xl font-semibold text-[var(--text)] tracking-tight">Status</h1>
         <Link
           href="/prices"
-          className="text-xs font-black text-[#38003c] px-3 py-2 rounded-2xl bg-white border border-black/5 shadow-sm"
+          className="text-xs font-semibold text-[var(--accent)] px-3 py-2 rounded-xl bg-white border border-[var(--line)]"
         >
           Market
         </Link>
       </div>
 
       {error ? (
-        <div className="rounded-2xl bg-rose-50 border border-rose-200 p-5 flex items-start gap-3">
+        <div className="rounded-xl bg-rose-50 border border-rose-200 p-5 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
-          <p className="text-sm font-bold text-rose-800">{error}</p>
+          <p className="text-sm font-medium text-rose-800">{error}</p>
         </div>
       ) : (
         <div className="space-y-2.5">
@@ -312,12 +312,12 @@ const TONE_META: Record<Tone, { Icon: React.ComponentType<{ className?: string }
 function Row({ label, tone, value, detail }: Check) {
   const meta = TONE_META[tone];
   return (
-    <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-4 flex items-start gap-3">
+    <div className="rounded-xl bg-white border border-[var(--line)] p-4 flex items-start gap-3">
       <meta.Icon className={`w-5 h-5 shrink-0 mt-0.5 ${meta.icon}`} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="font-black text-[#111318] text-sm">{label}</p>
-          <span className={`px-2 py-0.5 rounded-full text-[11px] font-black ${meta.chip}`}>
+          <p className="font-semibold text-[var(--text)] text-sm">{label}</p>
+          <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${meta.chip}`}>
             {value}
           </span>
         </div>

@@ -82,8 +82,8 @@ export default function ForecastTable({
   return (
     <div className="space-y-4">
       {qualityFlags.length > 0 && (
-        <div className="rounded-2xl bg-amber-50 border border-amber-200 p-3.5 space-y-1.5">
-          <div className="flex items-center gap-2 text-amber-900 font-black text-xs">
+        <div className="rounded-xl bg-amber-50 border border-amber-200 p-3.5 space-y-1.5">
+          <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs">
             <AlertTriangle className="w-4 h-4" />
             How much to trust this
           </div>
@@ -101,10 +101,10 @@ export default function ForecastTable({
             key={p}
             type="button"
             onClick={() => setPosition(p)}
-            className={`px-3 py-1.5 rounded-full text-xs font-black transition ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
               position === p
-                ? 'bg-[#38003c] text-white'
-                : 'bg-white text-[#38003c] border border-black/5 hover:bg-purple-50'
+                ? 'bg-[var(--accent)] text-white'
+                : 'bg-white text-[var(--accent)] border border-[var(--line)] hover:bg-[var(--accent-soft)]'
             }`}
           >
             {p === 0 ? 'All' : POSITIONS[p]}
@@ -116,10 +116,10 @@ export default function ForecastTable({
             key={c}
             type="button"
             onClick={() => setMaxCost(c)}
-            className={`px-3 py-1.5 rounded-full text-xs font-black transition ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
               maxCost === c
                 ? 'bg-emerald-600 text-white'
-                : 'bg-white text-emerald-700 border border-black/5 hover:bg-emerald-50'
+                : 'bg-white text-emerald-700 border border-[var(--line)] hover:bg-emerald-50'
             }`}
           >
             {c === 0 ? 'Any price' : `≤ £${c}.0m`}
@@ -131,10 +131,10 @@ export default function ForecastTable({
             <button
               type="button"
               onClick={() => setShowRaw((v) => !v)}
-              className={`px-3 py-1.5 rounded-full text-xs font-black transition ${
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
                 showRaw
                   ? 'bg-black/80 text-white'
-                  : 'bg-white text-black/60 border border-black/5 hover:bg-black/5'
+                  : 'bg-white text-black/60 border border-[var(--line)] hover:bg-black/5'
               }`}
             >
               {showRaw ? 'Showing raw' : 'Show raw'}
@@ -143,64 +143,64 @@ export default function ForecastTable({
         )}
       </div>
 
-      <div className="rounded-2xl bg-white border border-black/5 shadow-sm overflow-x-auto">
+      <div className="rounded-xl bg-white border border-[var(--line)] overflow-x-auto">
         <table className="w-full text-sm min-w-[640px]">
           <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wide text-black/45 border-b border-black/5">
-              <th className="py-2.5 px-3 font-black">#</th>
-              <th className="py-2.5 px-3 font-black">Player</th>
-              <th className="py-2.5 px-3 font-black">Pos</th>
-              <th className="py-2.5 px-3 font-black text-right">Price</th>
-              <th className="py-2.5 px-3 font-black text-right">xPts</th>
-              <th className="py-2.5 px-3 font-black text-right">Range</th>
-              <th className="py-2.5 px-3 font-black text-right">Mins</th>
-              <th className="py-2.5 px-3 font-black text-right">FPL ep</th>
+            <tr className="text-left text-[11px] uppercase tracking-wide text-black/45 border-b border-[var(--line)]">
+              <th className="py-2.5 px-3 font-semibold">#</th>
+              <th className="py-2.5 px-3 font-semibold">Player</th>
+              <th className="py-2.5 px-3 font-semibold">Pos</th>
+              <th className="py-2.5 px-3 font-semibold text-right">Price</th>
+              <th className="py-2.5 px-3 font-semibold text-right">xPts</th>
+              <th className="py-2.5 px-3 font-semibold text-right">Range</th>
+              <th className="py-2.5 px-3 font-semibold text-right">Mins</th>
+              <th className="py-2.5 px-3 font-semibold text-right">FPL ep</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((r, i) => (
-              <tr key={r.elementId} className="border-b border-black/5 last:border-0 hover:bg-purple-50/40">
-                <td className="py-2 px-3 text-black/35 font-bold text-xs">{i + 1}</td>
+              <tr key={r.elementId} className="border-b border-[var(--line)] last:border-0 hover:bg-[var(--accent-soft)]/40">
+                <td className="py-2 px-3 text-black/35 font-medium text-xs">{i + 1}</td>
                 <td className="py-2 px-3">
-                  <span className="font-black text-[#111318]">{r.name}</span>
-                  <span className="ml-2 text-[11px] font-bold text-black/40">{r.team}</span>
+                  <span className="font-semibold text-[var(--text)]">{r.name}</span>
+                  <span className="ml-2 text-[11px] font-medium text-black/40">{r.team}</span>
                 </td>
                 <td className="py-2 px-3">
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                       POSITION_STYLE[r.position] ?? 'bg-black/5 text-black/50'
                     }`}
                   >
                     {POSITIONS[r.position]}
                   </span>
                 </td>
-                <td className="py-2 px-3 text-right font-bold tabular-nums">£{r.cost.toFixed(1)}</td>
-                <td className="py-2 px-3 text-right font-black tabular-nums text-[#38003c]">
+                <td className="py-2 px-3 text-right font-medium tabular-nums">£{r.cost.toFixed(1)}</td>
+                <td className="py-2 px-3 text-right font-semibold tabular-nums text-[var(--accent)]">
                   {(showRaw ? r.rawXPts : r.xPts).toFixed(1)}
                   {/* Per row rather than only in a footnote: a factor large
                       enough to change a decision should be visible beside the
                       number it changed. */}
                   {!showRaw && r.calibrationFactor !== 1 && (
-                    <span className="ml-1.5 text-[10px] font-bold text-black/35">
+                    <span className="ml-1.5 text-[10px] font-medium text-black/35">
                       ×{r.calibrationFactor.toFixed(2)}
                     </span>
                   )}
                 </td>
-                <td className="py-2 px-3 text-right text-[11px] font-bold tabular-nums text-black/40">
+                <td className="py-2 px-3 text-right text-[11px] font-medium tabular-nums text-black/40">
                   {r.floor.toFixed(1)}–{r.ceiling.toFixed(1)}
                 </td>
-                <td className="py-2 px-3 text-right text-[11px] font-bold tabular-nums text-black/50">
+                <td className="py-2 px-3 text-right text-[11px] font-medium tabular-nums text-black/50">
                   {Math.round(r.minutesProb * 100)}%
                 </td>
                 {/* FPL's own projection, side by side: the number to beat. */}
-                <td className="py-2 px-3 text-right font-bold tabular-nums text-black/45">
+                <td className="py-2 px-3 text-right font-medium tabular-nums text-black/45">
                   {r.epNext === null ? '—' : r.epNext.toFixed(1)}
                 </td>
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-black/40 text-sm font-bold">
+                <td colSpan={8} className="py-8 text-center text-black/40 text-sm font-medium">
                   No players match that filter.
                 </td>
               </tr>

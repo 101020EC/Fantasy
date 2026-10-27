@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import Logo from '../Logo';
 import { FPLEntry, PriceStatus, TeamSquadPlayer } from '@/lib/types';
 import { CheckCircle2, History, Star, TrendingUp } from 'lucide-react';
 import { STATUS_META } from '../prices/status-meta';
@@ -117,12 +117,11 @@ export default function TeamPitchTopBar({
 
   return (
     <>
-      {/* Periwinkle Blue Card */}
-      <div className="card-pastel-blue p-5 sm:p-6 mb-4 shadow-xl relative overflow-hidden transition-all text-[#111318]">
+      <div className="pastel-card p-4 sm:p-5 mb-4 relative overflow-hidden text-[var(--text)]">
         {/* Row 1: Left (ID, GW, Region) & Right (Market Icon + Change Team Icon + Telegram Icon attached to right edge) */}
-        <div className="flex items-center justify-between gap-2 mb-3.5 pb-2.5 border-b border-black/10">
+        <div className="flex items-center justify-between gap-2 mb-3.5 pb-2.5 border-b border-[var(--line)]">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="px-3 py-1 rounded-full bg-[#111318] text-white text-[11px] font-black font-mono shadow-sm">
+            <span className="px-3 py-1 rounded-full bg-[var(--text)] text-white text-[11px] font-semibold font-mono">
               ID #{entry.id}
             </span>
             {/* Two plain chips: the squad's gameweek, and the next one to
@@ -149,10 +148,10 @@ export default function TeamPitchTopBar({
                   // arriving on a ?gw= link someone shared is not the viewer
                   // choosing that week, and should not overwrite what they did.
                   onClick={() => rememberGwOffset(offset === 1 ? 1 : 0)}
-                  className={`px-3 py-1 rounded-full text-[11px] font-black shadow-sm transition active:scale-95 ${
+                  className={`px-3 py-1 rounded-full text-[11px] font-semibold transition active:scale-95 ${
                     isShown
-                      ? 'bg-[#111318] text-white'
-                      : 'bg-white/60 text-[#111318] hover:bg-white'
+                      ? 'bg-[var(--text)] text-white'
+                      : 'bg-gray-100 text-[var(--text)] hover:bg-gray-200'
                   }`}
                 >
                   GW {gw}
@@ -160,7 +159,7 @@ export default function TeamPitchTopBar({
               );
             })}
             {entry.player_region_name && (
-              <span className="text-[11px] text-[#111318]/70 font-semibold hidden sm:inline ml-1">
+              <span className="text-[11px] text-[var(--text)]/70 font-semibold hidden sm:inline ml-1">
                 • {entry.player_region_name}
               </span>
             )}
@@ -171,20 +170,20 @@ export default function TeamPitchTopBar({
           <div className="flex items-center gap-1.5 shrink-0">
             <Link
               href="/prices"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-orange-600 shadow-sm flex items-center justify-center transition active:scale-95"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-[var(--line)] hover:bg-[var(--bg)] text-[var(--muted)] hidden md:flex items-center justify-center transition active:scale-95"
               title="Market prices"
               aria-label="Market prices"
             >
-              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+              <TrendingUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[1.75]" />
             </Link>
 
             <Link
               href="/"
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/90 hover:bg-white text-emerald-700 shadow-sm flex items-center justify-center transition active:scale-95"
+              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-[var(--line)] hover:bg-[var(--bg)] text-[var(--muted)] hidden md:flex items-center justify-center transition active:scale-95"
               title="History"
               aria-label="History"
             >
-              <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+              <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[1.75]" />
             </Link>
           </div>
         </div>
@@ -192,15 +191,13 @@ export default function TeamPitchTopBar({
         {/* Row 2: Left (Avatar + Names) & Right (Today Safe aligned to right edge) */}
         <div className="flex items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-white/90 overflow-hidden shrink-0 shadow-md">
-              <Image src="/logo.png" alt="Fanta" width={56} height={56} className="w-full h-full object-cover" />
-            </div>
+            <Logo className="w-11 h-11 sm:w-12 sm:h-12 shrink-0" />
 
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-[#111318] tracking-tight leading-tight truncate">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold text-[var(--text)] tracking-tight leading-tight truncate">
                 {entry.name}
               </h1>
-              <p className="text-xs sm:text-sm text-[#111318]/80 font-semibold mt-0.5 leading-snug">
+              <p className="text-xs sm:text-sm text-[var(--text)]/80 font-semibold mt-0.5 leading-snug">
                 {entry.player_first_name} {entry.player_last_name}
               </p>
             </div>
@@ -209,7 +206,7 @@ export default function TeamPitchTopBar({
           {/* Right Edge: Today Safe with Live Pulse */}
           <div className="shrink-0 flex items-center gap-2">
             {badges.length === 0 ? (
-              <div className="relative overflow-hidden px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-2xl bg-emerald-500 text-white font-black text-xs sm:text-sm shadow-md flex items-center gap-2 border border-white/20">
+              <div className="relative overflow-hidden px-3.5 sm:px-5 py-2.5 sm:py-3.5 rounded-xl bg-emerald-500 text-white font-semibold text-xs sm:text-sm flex items-center gap-2 border border-white/20">
                 <span className="relative flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-100 opacity-85"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
@@ -224,8 +221,8 @@ export default function TeamPitchTopBar({
                   <Link
                     key={badge.status}
                     href="/prices"
-                    className={`relative overflow-hidden px-3 sm:px-4 py-2.5 sm:py-3 rounded-2xl font-black text-xs sm:text-sm transition active:scale-95 flex items-center gap-1.5 border ${
-                      totalCritical > 0 ? 'shadow-md' : ''
+                    className={`relative overflow-hidden px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl font-semibold text-xs sm:text-sm transition active:scale-95 flex items-center gap-1.5 border ${
+                      ''
                     } ${badgeTone(badge.tone, totalCritical > 0)}`}
                     title={`${badge.count} ${meta.label}`}
                   >
@@ -247,14 +244,14 @@ export default function TeamPitchTopBar({
         </div>
 
         {movers.length > 0 && (
-          <div className="mt-3 pt-2.5 border-t border-black/10 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <div className="mt-3 pt-2.5 border-t border-[var(--line)] flex flex-wrap items-center gap-x-3 gap-y-1.5">
             {movers.map((m) => {
               const meta = STATUS_META[m.status];
               const up = m.status === 'rising_soon' || m.status === 'likely_riser';
               return (
                 <span
                   key={`${m.name}-${m.club}`}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#111318]"
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--text)]"
                   title={`${m.name} — ${meta.label}${m.watched ? ' (watchlist)' : ''}`}
                 >
                   <meta.Icon
@@ -263,7 +260,7 @@ export default function TeamPitchTopBar({
                     }`}
                   />
                   <span className={up ? 'text-emerald-800' : 'text-rose-800'}>{m.name}</span>
-                  <span className="text-[#111318]/45 font-semibold">{m.club}</span>
+                  <span className="text-[var(--text)]/45 font-semibold">{m.club}</span>
                   {m.watched && <Star className="w-2.5 h-2.5 text-pink-600 fill-current" />}
                 </span>
               );

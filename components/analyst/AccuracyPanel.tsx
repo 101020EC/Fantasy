@@ -17,8 +17,8 @@ export default function AccuracyPanel({
 }) {
   if (!history.length) {
     return (
-      <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-4 mb-5">
-        <p className="font-black text-[#111318] text-sm">Accuracy</p>
+      <div className="rounded-xl bg-white border border-[var(--line)] p-4 mb-5">
+        <p className="font-semibold text-[var(--text)] text-sm">Accuracy</p>
         <p className="text-[12px] text-black/50 mt-1 leading-snug">
           Nothing scored yet. Scoring begins once FPL finalises a gameweek — and starts at GW2,
           since a GW1 forecast has no earlier gameweek behind it.
@@ -34,8 +34,8 @@ export default function AccuracyPanel({
   const anyPublished = history.some((h) => h.models.as_published);
 
   return (
-    <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-4 mb-5">
-      <p className="font-black text-[#111318] text-sm mb-0.5">Accuracy</p>
+    <div className="rounded-xl bg-white border border-[var(--line)] p-4 mb-5">
+      <p className="font-semibold text-[var(--text)] text-sm mb-0.5">Accuracy</p>
       <p className="text-[11px] text-black/45 mb-3">
         Mean absolute error, lower is better. Scored on {history[0].population.replace(/_/g, ' ')}.
       </p>
@@ -43,36 +43,36 @@ export default function AccuracyPanel({
       <div className="overflow-x-auto">
         <table className="w-full text-sm min-w-[680px]">
           <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wide text-black/45 border-b border-black/5">
-              <th className="py-2 pr-3 font-black">GW</th>
+            <tr className="text-left text-[11px] uppercase tracking-wide text-black/45 border-b border-[var(--line)]">
+              <th className="py-2 pr-3 font-semibold">GW</th>
               {/* As published first: it is the record of what the app showed. */}
-              <th className="py-2 pr-3 font-black text-right">Shown</th>
-              <th className="py-2 pr-3 font-black text-right">Replay</th>
-              <th className="py-2 pr-3 font-black text-right">+ Elite</th>
-              <th className="py-2 pr-3 font-black text-right">FPL ep</th>
-              <th className="py-2 pr-3 font-black text-right">±2 pts</th>
-              <th className="py-2 pr-3 font-black text-right">Bias</th>
-              <th className="py-2 pr-3 font-black text-right">Rank ρ</th>
-              <th className="py-2 font-black text-right">Cohort</th>
+              <th className="py-2 pr-3 font-semibold text-right">Shown</th>
+              <th className="py-2 pr-3 font-semibold text-right">Replay</th>
+              <th className="py-2 pr-3 font-semibold text-right">+ Elite</th>
+              <th className="py-2 pr-3 font-semibold text-right">FPL ep</th>
+              <th className="py-2 pr-3 font-semibold text-right">±2 pts</th>
+              <th className="py-2 pr-3 font-semibold text-right">Bias</th>
+              <th className="py-2 pr-3 font-semibold text-right">Rank ρ</th>
+              <th className="py-2 font-semibold text-right">Cohort</th>
             </tr>
           </thead>
           <tbody>
             {history.map((h) => (
-              <tr key={h.gameweek} className="border-b border-black/5 last:border-0">
-                <td className="py-2 pr-3 font-black">{h.gameweek}</td>
-                <td className="py-2 pr-3 text-right tabular-nums font-black">
+              <tr key={h.gameweek} className="border-b border-[var(--line)] last:border-0">
+                <td className="py-2 pr-3 font-semibold">{h.gameweek}</td>
+                <td className="py-2 pr-3 text-right tabular-nums font-semibold">
                   {fmt(h.models.as_published?.mae)}
                   {h.publishedCoverage !== undefined && h.publishedCoverage < 1 && (
-                    <span className="ml-1 text-[10px] font-bold text-amber-600">
+                    <span className="ml-1 text-[10px] font-medium text-amber-600">
                       {Math.round(h.publishedCoverage * 100)}%
                     </span>
                   )}
                 </td>
-                <td className="py-2 pr-3 text-right tabular-nums font-bold">{fmt(h.models.base?.mae)}</td>
-                <td className="py-2 pr-3 text-right tabular-nums font-bold">{fmt(h.models.elite?.mae)}</td>
+                <td className="py-2 pr-3 text-right tabular-nums font-medium">{fmt(h.models.base?.mae)}</td>
+                <td className="py-2 pr-3 text-right tabular-nums font-medium">{fmt(h.models.elite?.mae)}</td>
                 <td className="py-2 pr-3 text-right tabular-nums text-black/50">{fmt(h.models.ep_next?.mae)}</td>
                 {/* Of the players projected at 3+, the set you actually pick from. */}
-                <td className="py-2 pr-3 text-right tabular-nums font-bold">
+                <td className="py-2 pr-3 text-right tabular-nums font-medium">
                   {pct((h.models.as_published ?? h.models.base)?.within2Considered)}
                 </td>
                 <td className="py-2 pr-3 text-right tabular-nums text-black/50">

@@ -111,7 +111,7 @@ export default function NotificationsModal({
       s.deadlineIn !== null && {
         Icon: Hourglass,
         text: `deadline in ${s.deadlineIn}h`,
-        cls: 'bg-purple-100 text-purple-800',
+        cls: 'bg-[var(--accent-soft)] text-[var(--accent)]',
       },
     ].filter(Boolean) as {
       Icon: React.ComponentType<{ className?: string }>;
@@ -122,11 +122,11 @@ export default function NotificationsModal({
   return (
     <Modal isOpen onClose={onClose} labelledBy="notifications-title" className="max-w-lg">
       <div className="flex items-center gap-3 mb-5">
-        <div className="w-11 h-11 rounded-2xl bg-purple-100 text-[#38003c] flex items-center justify-center">
+        <div className="w-11 h-11 rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center">
           <Bell className="w-5 h-5" />
         </div>
         <div>
-          <h2 id="notifications-title" className="text-xl font-black text-[#111318]">
+          <h2 id="notifications-title" className="text-xl font-semibold text-[var(--text)]">
             Notifications
           </h2>
           <p className="text-xs text-gray-500">What has been sent to your Telegram</p>
@@ -140,7 +140,7 @@ export default function NotificationsModal({
         </div>
       ) : items.length === 0 ? (
         <div className="py-10 text-center">
-          <p className="text-sm font-bold text-gray-500 mb-1">Nothing sent yet</p>
+          <p className="text-sm font-medium text-gray-500 mb-1">Nothing sent yet</p>
           <p className="text-xs text-gray-400 leading-relaxed max-w-xs mx-auto">
             {configured
               ? 'Messages go out 24h and 2h before each deadline, and straight away when a squad player is ruled out. A test from the alert settings shows up here too.'
@@ -152,7 +152,7 @@ export default function NotificationsModal({
           {days.map((day) => (
             <div key={day.date}>
               <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 shrink-0">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 shrink-0">
                   {dayLabel(day.date)}
                 </span>
                 <span className="flex-1 h-px bg-black/5" />
@@ -163,11 +163,11 @@ export default function NotificationsModal({
                 {day.entries.map((n) => (
                   <details
                     key={n.id}
-                    className="rounded-2xl bg-gray-50 border border-black/5 overflow-hidden"
+                    className="rounded-xl bg-gray-50 border border-[var(--line)] overflow-hidden"
                   >
                     <summary className="p-3 cursor-pointer list-none">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-xs font-black text-[#111318]">
+                        <span className="text-xs font-semibold text-[var(--text)]">
                           {KIND_LABEL[n.kind] ?? 'Price alert'}
                         </span>
                         <span className="text-[10px] text-gray-400 font-mono tabular-nums shrink-0">
@@ -181,7 +181,7 @@ export default function NotificationsModal({
                           chips(n.summary).map(({ Icon, text, cls }) => (
                             <span
                               key={text}
-                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold ${cls}`}
+                              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${cls}`}
                             >
                               <Icon className="w-2.5 h-2.5" />
                               {text}
@@ -190,7 +190,7 @@ export default function NotificationsModal({
                         )}
                       </div>
                     </summary>
-                    <pre className="px-3 pb-3 text-[11px] text-gray-600 whitespace-pre-wrap font-sans leading-relaxed border-t border-black/5 pt-2">
+                    <pre className="px-3 pb-3 text-[11px] text-gray-600 whitespace-pre-wrap font-sans leading-relaxed border-t border-[var(--line)] pt-2">
                       {n.text}
                     </pre>
                   </details>

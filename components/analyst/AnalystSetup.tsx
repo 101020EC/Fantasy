@@ -103,7 +103,7 @@ export default function AnalystSetup({
   }
 
   return (
-    <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-4 mb-5 space-y-4">
+    <div className="rounded-xl bg-white border border-[var(--line)] p-4 mb-5 space-y-4">
       {steps.map((step) => {
         const needed = step.key === 'priors' ? needsPriors : needsCohort;
         if (!needed && !done[step.key]) return null;
@@ -112,7 +112,7 @@ export default function AnalystSetup({
           <div key={step.key} className="flex items-start gap-3">
             <div
               className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                complete ? 'bg-emerald-100 text-emerald-600' : 'bg-indigo-100 text-indigo-600'
+                complete ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-[var(--muted)]'
               }`}
             >
               {complete ? (
@@ -124,14 +124,14 @@ export default function AnalystSetup({
               )}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-black text-[#111318] text-sm">{step.title}</p>
+              <p className="font-semibold text-[var(--text)] text-sm">{step.title}</p>
               <p className="text-[12px] text-black/50 mt-1 leading-snug">{step.body}</p>
               {step.urgency && !complete && (
                 <p className="text-[11px] text-amber-700 mt-1.5 leading-snug">{step.urgency}</p>
               )}
 
               {complete && (
-                <p className="text-[12px] text-emerald-700 font-bold mt-2">
+                <p className="text-[12px] text-emerald-700 font-medium mt-2">
                   {done[step.key]} Reloading…
                 </p>
               )}
@@ -144,7 +144,7 @@ export default function AnalystSetup({
                   type="button"
                   onClick={() => run(step)}
                   disabled={running !== null}
-                  className="mt-3 px-4 py-2 rounded-2xl bg-[#38003c] text-white text-xs font-black disabled:opacity-50 flex items-center gap-2"
+                  className="mt-3 px-4 py-2 rounded-xl bg-[var(--accent)] text-white text-xs font-semibold disabled:opacity-50 flex items-center gap-2"
                 >
                   {running === step.key && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   {running === step.key

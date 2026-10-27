@@ -51,10 +51,10 @@ export default function TransferSuggestions({ teamId }: { teamId: string }) {
   }, [teamId, horizon]);
 
   return (
-    <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-4 mb-5">
+    <div className="rounded-xl bg-white border border-[var(--line)] p-4 mb-5">
       <div className="flex items-center justify-between gap-3 mb-3">
         <div>
-          <p className="font-black text-[#111318] text-sm">Transfer suggestions</p>
+          <p className="font-semibold text-[var(--text)] text-sm">Transfer suggestions</p>
           <p className="text-[11px] text-black/45 leading-snug">
             Single swaps ranked by points gained over the horizon, within budget and the
             three-per-club limit.
@@ -66,8 +66,8 @@ export default function TransferSuggestions({ teamId }: { teamId: string }) {
               key={h}
               type="button"
               onClick={() => setHorizon(h)}
-              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black transition ${
-                horizon === h ? 'bg-[#38003c] text-white' : 'bg-pastel-bg text-[#38003c]'
+              className={`px-2.5 py-1.5 rounded-xl text-[11px] font-semibold transition ${
+                horizon === h ? 'bg-[var(--accent)] text-white' : 'bg-[var(--bg)] text-[var(--accent)]'
               }`}
             >
               {h} GW
@@ -83,7 +83,7 @@ export default function TransferSuggestions({ teamId }: { teamId: string }) {
       )}
 
       {!loading && data?.error && (
-        <p className="text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl p-3">
+        <p className="text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">
           {data.error}
         </p>
       )}
@@ -97,16 +97,16 @@ export default function TransferSuggestions({ teamId }: { teamId: string }) {
           ) : (
             <div className="space-y-2">
               {data.suggestions.map((s, i) => (
-                <div key={i} className="rounded-2xl bg-pastel-bg p-3">
+                <div key={i} className="rounded-xl bg-[var(--bg)] p-3">
                   <div className="flex items-center gap-2 flex-wrap text-sm">
-                    <span className="font-bold text-black/50 line-through">{s.out.name}</span>
+                    <span className="font-medium text-black/50 line-through">{s.out.name}</span>
                     <ArrowRight className="w-3.5 h-3.5 text-black/30" />
-                    <span className="font-black text-[#111318]">{s.in.name}</span>
-                    <span className="text-[11px] font-bold text-black/40">
+                    <span className="font-semibold text-[var(--text)]">{s.in.name}</span>
+                    <span className="text-[11px] font-medium text-black/40">
                       {s.in.teamShort} · £{(s.in.cost / 10).toFixed(1)}m
                     </span>
                     <span
-                      className={`ml-auto px-2 py-0.5 rounded-full text-[11px] font-black ${
+                      className={`ml-auto px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                         s.netGain > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
                       }`}
                     >

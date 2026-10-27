@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
-import Image from 'next/image';
+import Logo from '@/components/Logo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/AuthContext';
 import {
@@ -225,14 +225,14 @@ function HistoryView() {
   if (loading && savedTeamId) {
     return (
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
-        <div className="h-32 rounded-3xl bg-amber-100/70 animate-pulse" />
-        <div className="h-16 rounded-3xl bg-gray-200/70 animate-pulse" />
+        <div className="h-32 rounded-xl bg-gray-100 animate-pulse" />
+        <div className="h-16 rounded-xl bg-gray-200/70 animate-pulse" />
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
           {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="h-24 rounded-2xl bg-gray-200/70 animate-pulse" />
+            <div key={i} className="h-24 rounded-xl bg-gray-200/70 animate-pulse" />
           ))}
         </div>
-        <div className="h-64 rounded-3xl bg-gray-200/50 animate-pulse" />
+        <div className="h-64 rounded-xl bg-gray-200/50 animate-pulse" />
       </div>
     );
   }
@@ -240,16 +240,16 @@ function HistoryView() {
   if (loadError) {
     return (
       <div className="max-w-md mx-auto px-4 py-16 text-center">
-        <div className="p-8 rounded-4xl bg-white border border-rose-200 shadow-xl">
+        <div className="p-8 rounded-xl bg-white border border-rose-200">
           <div className="w-14 h-14 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-7 h-7" />
           </div>
-          <h2 className="text-xl font-black text-[#111318] mb-2">Could not load your team</h2>
+          <h2 className="text-xl font-semibold text-[var(--text)] mb-2">Could not load your team</h2>
           <p className="text-xs text-gray-500 mb-6 leading-relaxed">{loadError}</p>
           <button
             onClick={() => setIsSetupModalOpen(true)}
             type="button"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#111318] text-white font-black text-xs hover:scale-105 transition-transform shadow-md"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[var(--text)] text-white font-semibold text-xs transition-transform"
           >
             <Search className="w-4 h-4" />
             <span>Use a different Team ID</span>
@@ -262,32 +262,30 @@ function HistoryView() {
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4">
       {/* 1. Dark Yellow / Amber Top Banner */}
-      <div className="rounded-3xl p-5 sm:p-7 bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-xl relative overflow-hidden transition-all">
+      <div className="pastel-card p-5 sm:p-6 text-[var(--text)] relative overflow-hidden">
         <div className="flex flex-row items-center justify-between gap-3 sm:gap-4">
           {/* Avatar + Manager Name + Team Name */}
           <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden shrink-0 shadow-lg bg-white">
-              <Image src="/logo.png" alt="Fanta" width={64} height={64} className="w-full h-full object-cover" />
-            </div>
+            <Logo className="w-12 h-12 sm:w-14 sm:h-14 shrink-0" />
 
             {/* min-w-0 on every flex ancestor, or truncate below has nothing to
                 shrink against and the long name slides under the button. */}
             <div className="min-w-0">
               <div className="flex items-center gap-2 mb-1 min-w-0">
-                <span className="px-3 py-0.5 rounded-full bg-black/30 backdrop-blur-sm text-white text-[11px] font-mono font-black shrink-0 whitespace-nowrap">
+                <span className="px-3 py-0.5 rounded-full bg-gray-100 text-[var(--text)] text-[11px] font-mono font-semibold shrink-0 whitespace-nowrap">
                   ID #{entryData?.id || savedTeamId || '-'}
                 </span>
                 {entryData?.player_region_name && (
-                  <span className="text-xs text-amber-100 font-semibold truncate">
+                  <span className="text-xs text-[var(--muted)] font-semibold truncate">
                     • {entryData.player_region_name}
                   </span>
                 )}
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight truncate">
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight leading-tight truncate">
                 {entryData?.name || 'My Fantasy Team'}
               </h1>
-              <p className="text-xs sm:text-sm text-amber-100 font-semibold truncate">
+              <p className="text-xs sm:text-sm text-[var(--muted)] font-semibold truncate">
                 {entryData ? `${entryData.player_first_name} ${entryData.player_last_name}` : 'Manager'}
               </p>
             </div>
@@ -303,9 +301,9 @@ function HistoryView() {
                 setIsSetupModalOpen(true);
               }}
               type="button"
-              className="px-3 py-2 sm:px-5 sm:py-2.5 rounded-full bg-white text-[#111318] hover:bg-amber-50 font-black text-[11px] sm:text-sm shadow-md transition active:scale-95 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap"
+              className="px-3 py-2 sm:px-5 sm:py-2.5 rounded-full bg-white text-[var(--text)] hover:bg-[var(--bg)] font-semibold text-[11px] sm:text-sm transition active:scale-95 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap"
             >
-              <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 stroke-[2.5] shrink-0" />
+              <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--accent)] stroke-[1.75] shrink-0" />
               <span>Team Setup</span>
             </button>
           </div>
@@ -313,7 +311,7 @@ function HistoryView() {
       </div>
 
       {/* 2. Gameweek Horizontal Capsule Scroll Bar */}
-      <div className="pastel-card p-2.5 sm:p-3 shadow-sm flex items-center overflow-x-auto gap-2 scrollbar-none">
+      <div className="pastel-card p-2.5 sm:p-3 flex items-center overflow-x-auto gap-2 scrollbar-none">
         {Array.from({ length: 38 }, (_, i) => i + 1).map((gw) => {
           const isSelected = gw === selectedGw;
           const isFinished = gw <= latestScoredGw;
@@ -325,16 +323,16 @@ function HistoryView() {
               type="button"
               className={`flex-shrink-0 min-w-[65px] text-center py-2 px-2 rounded-full text-xs transition active:scale-95 ${
                 isSelected
-                  ? 'bg-[#38003c] text-white font-black shadow-md ring-2 ring-purple-300'
+                  ? 'bg-[var(--accent)] text-white font-semibold ring-2 ring-[var(--accent)]'
                   : isFinished
-                  ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold border border-amber-200'
+                  ? 'bg-[var(--bg)] hover:bg-gray-100 text-[var(--accent)] font-medium border border-[var(--line)]'
                   : 'bg-gray-50 hover:bg-gray-100 text-gray-400 font-medium'
               }`}
             >
               <span className="block text-[8px] uppercase opacity-75">
                 {gw === activeGw ? 'Current' : isFinished ? 'Done' : 'Upcoming'}
               </span>
-              <span className="text-xs font-black">GW {gw}</span>
+              <span className="text-xs font-semibold">GW {gw}</span>
             </button>
           );
         })}
@@ -346,62 +344,62 @@ function HistoryView() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
           <div className="pastel-card p-4 text-center">
             <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">GW {selectedGw} Pts</span>
-            <span className="text-2xl font-black text-[#38003c]">
+            <span className="text-2xl font-semibold text-[var(--accent)]">
               {currentGwStats?.points ?? '-'}
             </span>
           </div>
 
           <div className="pastel-card p-4 text-center">
             <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Total Points</span>
-            <span className="text-2xl font-black text-[#111318]">
+            <span className="text-2xl font-semibold text-[var(--text)]">
               {currentGwStats?.total_points ?? '-'}
             </span>
           </div>
 
           <div className="pastel-card p-4 text-center">
             <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">GW {selectedGw} Rank</span>
-            <span className="text-base font-black text-amber-700 truncate block">
+            <span className="text-base font-semibold text-[var(--accent)] truncate block">
               {currentGwStats?.rank ? `#${currentGwStats.rank.toLocaleString()}` : '-'}
             </span>
           </div>
 
           <div className="pastel-card p-4 text-center">
             <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Overall Rank</span>
-            <span className="text-base font-black text-[#111318] truncate block">
+            <span className="text-base font-semibold text-[var(--text)] truncate block">
               {currentGwStats?.overall_rank ? `#${currentGwStats.overall_rank.toLocaleString()}` : '-'}
             </span>
           </div>
 
           <div className="pastel-card p-4 text-center">
             <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Transfers</span>
-            <span className="text-base font-black text-purple-700">
+            <span className="text-base font-semibold text-[var(--accent)]">
               {currentGwStats ? `${currentGwStats.event_transfers} (${currentGwStats.event_transfers_cost}pt)` : '-'}
             </span>
           </div>
 
           <div className="pastel-card p-4 text-center">
             <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Bench Points</span>
-            <span className="text-base font-black text-emerald-600">
+            <span className="text-base font-semibold text-emerald-600">
               {currentGwStats?.points_on_bench ?? '-'} pt
             </span>
           </div>
         </div>
 
         {/* Squad Lineup in this GW */}
-        <div className="pastel-card p-5 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-black/5">
+        <div className="pastel-card p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--line)]">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-purple-100 text-[#38003c] flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center font-medium">
                 <Shield className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-base font-black text-[#111318]">
+                <h3 className="text-base font-semibold text-[var(--text)]">
                   Squad Lineup (Gameweek {selectedGw})
                 </h3>
                 <p className="text-xs text-gray-500">Starting XI &amp; Substitutes</p>
               </div>
             </div>
-            {gwPicksLoading && <Loader2 className="w-4 h-4 text-purple-600 animate-spin" />}
+            {gwPicksLoading && <Loader2 className="w-4 h-4 text-[var(--accent)] animate-spin" />}
           </div>
 
           {gwPicks.length === 0 ? (
@@ -412,7 +410,7 @@ function HistoryView() {
             <div className="space-y-4">
               {/* Starters Grid */}
               <div>
-                <span className="text-xs font-black uppercase text-gray-400 mb-2 block">Starting XI</span>
+                <span className="text-xs font-semibold uppercase text-gray-400 mb-2 block">Starting XI</span>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                   {starters.map((p) => {
                     const el = elementMap.get(p.element);
@@ -421,21 +419,21 @@ function HistoryView() {
                     return (
                       <div
                         key={p.element}
-                        className="p-2.5 rounded-2xl bg-gray-50 border border-black/5 flex items-center gap-2.5"
+                        className="p-2.5 rounded-xl bg-gray-50 border border-[var(--line)] flex items-center gap-2.5"
                       >
                         <PlayerJersey teamCode={el?.team_code || 1} isGkp={el?.element_type === 1} className="w-8 h-8 shrink-0" />
                         <div className="truncate">
                           <div className="flex items-center gap-1">
-                            <span className="font-bold text-xs text-[#111318] truncate block">
+                            <span className="font-medium text-xs text-[var(--text)] truncate block">
                               {el?.web_name || `Player #${p.element}`}
                             </span>
                             {p.is_captain && (
-                              <span className="px-1.5 py-0.5 bg-[#38003c] text-white text-[9px] font-black rounded-full">
+                              <span className="px-1.5 py-0.5 bg-[var(--accent)] text-white text-[9px] font-semibold rounded-full">
                                 C
                               </span>
                             )}
                             {p.is_vice_captain && (
-                              <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[9px] font-black rounded-full">
+                              <span className="px-1.5 py-0.5 bg-[var(--accent)] text-white text-[9px] font-semibold rounded-full">
                                 V
                               </span>
                             )}
@@ -451,8 +449,8 @@ function HistoryView() {
               </div>
 
               {/* Bench Grid */}
-              <div className="pt-2 border-t border-black/5">
-                <span className="text-xs font-black uppercase text-gray-400 mb-2 block">Bench</span>
+              <div className="pt-2 border-t border-[var(--line)]">
+                <span className="text-xs font-semibold uppercase text-gray-400 mb-2 block">Bench</span>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {bench.map((p, idx) => {
                     const el = elementMap.get(p.element);
@@ -461,11 +459,11 @@ function HistoryView() {
                     return (
                       <div
                         key={p.element}
-                        className="p-2.5 rounded-2xl bg-gray-50/70 border border-black/5 flex items-center gap-2.5 opacity-90"
+                        className="p-2.5 rounded-xl bg-gray-50/70 border border-[var(--line)] flex items-center gap-2.5 opacity-90"
                       >
                         <PlayerJersey teamCode={el?.team_code || 1} isGkp={el?.element_type === 1} className="w-8 h-8 shrink-0" />
                         <div className="truncate">
-                          <span className="font-bold text-xs text-[#111318] truncate block">
+                          <span className="font-medium text-xs text-[var(--text)] truncate block">
                             {idx === 0 ? 'GK: ' : `Sub ${idx}: `}{el?.web_name || `Player #${p.element}`}
                           </span>
                           <span className="text-[10px] text-gray-400">
@@ -482,14 +480,14 @@ function HistoryView() {
         </div>
 
         {/* Private Leagues Standings */}
-        <div className="pastel-card p-5 sm:p-6 shadow-sm">
-          <div className="flex items-center justify-between mb-4 pb-3 border-b border-black/5">
+        <div className="pastel-card p-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-[var(--line)]">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-full bg-gray-100 text-[var(--accent)] flex items-center justify-center font-medium">
                 <Trophy className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-base font-black text-[#111318]">Leagues</h3>
+                <h3 className="text-base font-semibold text-[var(--text)]">Leagues</h3>
                 <p className="text-xs text-gray-500">
                   Your position in every league on this team
                 </p>
@@ -506,13 +504,13 @@ function HistoryView() {
               return (
                 <div
                   key={league.id}
-                  className="p-3.5 rounded-2xl bg-gray-50 border border-black/5 flex items-center justify-between gap-2"
+                  className="p-3.5 rounded-xl bg-gray-50 border border-[var(--line)] flex items-center justify-between gap-2"
                 >
                   <div className="truncate">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="font-bold text-xs text-[#111318] truncate">{league.name}</span>
+                      <span className="font-medium text-xs text-[var(--text)] truncate">{league.name}</span>
                       {league.league_type === 'x' && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[9px] font-black shrink-0">
+                        <span className="px-1.5 py-0.5 rounded-full bg-gray-100 text-[var(--accent)] text-[9px] font-semibold shrink-0">
                           PRIVATE
                         </span>
                       )}
@@ -521,14 +519,14 @@ function HistoryView() {
                   </div>
 
                   <div className="text-right shrink-0">
-                    <span className="text-sm font-black text-[#38003c] block">Rank #{rank}</span>
-                    <div className="flex items-center justify-end gap-1 text-[10px] font-bold">
+                    <span className="text-sm font-semibold text-[var(--accent)] block">Rank #{rank}</span>
+                    <div className="flex items-center justify-end gap-1 text-[10px] font-medium">
                       {rankDiff > 0 ? (
-                        <span className="text-emerald-600 flex items-center font-black">
+                        <span className="text-emerald-600 flex items-center font-semibold">
                           <ArrowUp className="w-2.5 h-2.5" /> +{rankDiff}
                         </span>
                       ) : rankDiff < 0 ? (
-                        <span className="text-rose-600 flex items-center font-black">
+                        <span className="text-rose-600 flex items-center font-semibold">
                           <ArrowDown className="w-2.5 h-2.5" /> {rankDiff}
                         </span>
                       ) : (
@@ -546,10 +544,10 @@ function HistoryView() {
 
         {/* Transfers in this Gameweek */}
         {gwTransfers.length > 0 && (
-          <div className="pastel-card p-5 sm:p-6 shadow-sm">
-            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-black/5">
-              <ArrowRightLeft className="w-4 h-4 text-purple-600" />
-              <h3 className="text-sm font-black text-[#111318]">
+          <div className="pastel-card p-5 sm:p-6">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--line)]">
+              <ArrowRightLeft className="w-4 h-4 text-[var(--accent)]" />
+              <h3 className="text-sm font-semibold text-[var(--text)]">
                 Gameweek {selectedGw} Transfers ({gwTransfers.length})
               </h3>
             </div>
@@ -561,7 +559,7 @@ function HistoryView() {
                 return (
                   <div
                     key={idx}
-                    className="p-3 rounded-2xl bg-gray-50 border border-black/5 flex items-center justify-between text-xs font-bold"
+                    className="p-3 rounded-xl bg-gray-50 border border-[var(--line)] flex items-center justify-between text-xs font-medium"
                   >
                     <div className="flex items-center gap-2 text-emerald-700">
                       <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px]">IN</span>
@@ -590,11 +588,11 @@ function HistoryView() {
         className="max-w-md"
       >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-11 h-11 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center">
+              <div className="w-11 h-11 rounded-xl bg-gray-100 text-[var(--accent)] flex items-center justify-center">
                 <ArrowRightLeft className="w-5 h-5" />
               </div>
               <div>
-                <h2 id="team-setup-title" className="text-xl font-black text-[#111318]">Team Setup</h2>
+                <h2 id="team-setup-title" className="text-xl font-semibold text-[var(--text)]">Team Setup</h2>
                 <p className="text-xs text-gray-500">Enter a new FPL Team ID to track</p>
               </div>
             </div>
@@ -608,13 +606,13 @@ function HistoryView() {
                   onChange={(e) => setNewTeamInput(e.target.value)}
                   placeholder="Enter FPL Team ID (e.g. 12345)..."
                   required
-                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-black/10 rounded-full text-base font-bold text-[#111318] focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-[var(--line)] rounded-full text-base font-medium text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
                 />
                 <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
               </div>
 
               {previewError && (
-                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{previewError}</span>
                 </div>
@@ -624,7 +622,7 @@ function HistoryView() {
                 <button
                   type="submit"
                   disabled={previewLoading}
-                  className="w-full py-3 bg-[#111318] text-white font-black text-xs rounded-full shadow-md hover:opacity-90 active:scale-95 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-[var(--text)] text-white font-semibold text-xs rounded-full hover:opacity-90 active:scale-95 transition disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {previewLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Find Team'}
                 </button>
@@ -633,24 +631,24 @@ function HistoryView() {
 
             {/* Confirmation Box when team is found */}
             {previewNewEntry && (
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-3 mb-4 animate-fadeIn">
-                <div className="flex items-center gap-2 text-amber-900 font-bold text-xs">
+              <div className="p-4 rounded-xl bg-[var(--bg)] border border-[var(--line)] space-y-3 mb-4 animate-fadeIn">
+                <div className="flex items-center gap-2 text-[var(--accent)] font-medium text-xs">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>New team found! Confirm switch:</span>
                 </div>
 
-                <div className="p-3 rounded-xl bg-white border border-amber-200/80 text-xs space-y-1">
+                <div className="p-3 rounded-xl bg-white border border-[var(--line)] text-xs space-y-1">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Current Team:</span>
-                    <span className="font-bold text-[#111318]">#{savedTeamId || '-'} ({entryData?.name || '-'})</span>
+                    <span className="font-medium text-[var(--text)]">#{savedTeamId || '-'} ({entryData?.name || '-'})</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">New Team:</span>
-                    <span className="font-black text-[#38003c]">#{previewNewEntry.id} ({previewNewEntry.name})</span>
+                    <span className="font-semibold text-[var(--accent)]">#{previewNewEntry.id} ({previewNewEntry.name})</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Manager:</span>
-                    <span className="font-bold text-gray-700">{previewNewEntry.player_first_name} {previewNewEntry.player_last_name}</span>
+                    <span className="font-medium text-gray-700">{previewNewEntry.player_first_name} {previewNewEntry.player_last_name}</span>
                   </div>
                 </div>
 
@@ -658,14 +656,14 @@ function HistoryView() {
                   <button
                     onClick={handleConfirmSwitch}
                     type="button"
-                    className="flex-1 py-2.5 bg-[#38003c] text-white font-black text-xs rounded-full shadow-md active:scale-95 transition"
+                    className="flex-1 py-2.5 bg-[var(--accent)] text-white font-semibold text-xs rounded-full active:scale-95 transition"
                   >
                     Confirm Switch
                   </button>
                   <button
                     onClick={() => setPreviewNewEntry(null)}
                     type="button"
-                    className="px-4 py-2.5 bg-gray-200 text-gray-700 font-bold text-xs rounded-full transition"
+                    className="px-4 py-2.5 bg-gray-200 text-gray-700 font-medium text-xs rounded-full transition"
                   >
                     Cancel
                   </button>
@@ -682,7 +680,7 @@ export default function HistoryPage() {
     <Suspense
       fallback={
         <div className="max-w-6xl mx-auto px-3 sm:px-6 py-16 flex justify-center">
-          <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
+          <Loader2 className="w-6 h-6 text-[var(--accent)] animate-spin" />
         </div>
       }
     >

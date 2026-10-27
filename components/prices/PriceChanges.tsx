@@ -86,9 +86,9 @@ export default function PriceChanges({ days, analyses, teams, types }: PriceChan
 
   if (!days.length) {
     return (
-      <div className="pastel-card p-8 text-center shadow-sm">
+      <div className="pastel-card p-8 text-center">
         <CalendarClock className="w-8 h-8 mx-auto mb-3 text-gray-300" />
-        <p className="font-black text-[#111318] text-sm">No price history yet</p>
+        <p className="font-semibold text-[var(--text)] text-sm">No price history yet</p>
         <p className="text-xs text-gray-500 mt-1.5 leading-snug max-w-md mx-auto">
           A change is the difference between two daily snapshots, so the first one appears the day
           after a second snapshot has been captured. Nothing is missing — there is simply nothing
@@ -102,7 +102,7 @@ export default function PriceChanges({ days, analyses, teams, types }: PriceChan
 
   return (
     <div className="space-y-3">
-      <p className="text-[11px] text-gray-400 font-bold px-1">
+      <p className="text-[11px] text-gray-400 font-medium px-1">
         History from {earliest ? prettyDate(earliest) : '—'}. Prices change daily between 08:30 and
         09:30 Bangkok.
       </p>
@@ -112,21 +112,21 @@ export default function PriceChanges({ days, analyses, teams, types }: PriceChan
         const shown = isOpen ? rows : rows.slice(0, 8);
 
         return (
-          <div key={day.date} className="pastel-card overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-black/5 flex items-center justify-between gap-3 flex-wrap">
+          <div key={day.date} className="pastel-card overflow-hidden">
+            <div className="px-4 py-3 border-b border-[var(--line)] flex items-center justify-between gap-3 flex-wrap">
               <div className="min-w-0">
-                <p className="font-black text-[#111318] text-sm">{prettyDate(day.changedOn)}</p>
+                <p className="font-semibold text-[var(--text)] text-sm">{prettyDate(day.changedOn)}</p>
                 <p className="text-[11px] text-gray-400 font-semibold">
                   {day.gameweek ? `Gameweek ${day.gameweek} · ` : ''}
                   {day.comparedPlayers.toLocaleString()} players compared
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-semibold">
                   <TrendingUp className="w-3 h-3" />
                   {day.risesCount}
                 </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-[11px] font-black">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 text-[11px] font-semibold">
                   <TrendingDown className="w-3 h-3" />
                   {day.fallsCount}
                 </span>
@@ -139,7 +139,7 @@ export default function PriceChanges({ days, analyses, teams, types }: PriceChan
             {day.spansGap && (
               <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 flex items-start gap-2">
                 <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
-                <p className="text-[11px] text-amber-900 font-bold leading-snug">
+                <p className="text-[11px] text-amber-900 font-medium leading-snug">
                   No snapshot between {prettyDate(day.previousDate)} and {prettyDate(day.date)}, so
                   these totals may cover more than one night.
                 </p>
@@ -147,7 +147,7 @@ export default function PriceChanges({ days, analyses, teams, types }: PriceChan
             )}
 
             {rows.length === 0 ? (
-              <p className="px-4 py-6 text-center text-xs text-gray-400 font-bold">
+              <p className="px-4 py-6 text-center text-xs text-gray-400 font-medium">
                 No prices moved on this day.
               </p>
             ) : (
@@ -165,7 +165,7 @@ export default function PriceChanges({ days, analyses, teams, types }: PriceChan
                             {up ? '🔺' : '🔻'}
                           </span>
                           <div className="min-w-0">
-                            <p className="font-bold text-[#111318] text-[13px] truncate">
+                            <p className="font-medium text-[var(--text)] text-[13px] truncate">
                               {row.name}
                             </p>
                             <p className="text-[10px] text-gray-400 font-semibold">
@@ -176,9 +176,9 @@ export default function PriceChanges({ days, analyses, teams, types }: PriceChan
                         <div className="flex items-center gap-2 shrink-0 font-mono text-[11px]">
                           <span className="text-gray-400">{money(row.from)}</span>
                           <span className="text-gray-300">→</span>
-                          <span className="font-black text-[#111318]">{money(row.to)}</span>
+                          <span className="font-semibold text-[var(--text)]">{money(row.to)}</span>
                           <span
-                            className={`font-black w-14 text-right ${
+                            className={`font-semibold w-14 text-right ${
                               up ? 'text-emerald-600' : 'text-rose-600'
                             }`}
                           >
@@ -202,7 +202,7 @@ export default function PriceChanges({ days, analyses, teams, types }: PriceChan
                         return next;
                       })
                     }
-                    className="w-full py-2.5 text-[11px] font-black text-[#38003c] hover:bg-purple-50 transition border-t border-black/5"
+                    className="w-full py-2.5 text-[11px] font-semibold text-[var(--accent)] hover:bg-[var(--accent-soft)] transition border-t border-[var(--line)]"
                   >
                     {isOpen ? 'Show fewer' : `Show all ${rows.length}`}
                   </button>

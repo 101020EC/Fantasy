@@ -96,13 +96,13 @@ export default function AnalysisPanel({
   }
 
   return (
-    <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-4 mb-5">
+    <div className="rounded-xl bg-white border border-[var(--line)] p-4 mb-5">
       <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-8 h-8 rounded-xl bg-purple-100 text-[#38003c] flex items-center justify-center">
+        <div className="w-8 h-8 rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center">
           <Sparkles className="w-4 h-4" />
         </div>
         <div>
-          <p className="font-black text-[#111318] text-sm">What the numbers say</p>
+          <p className="font-semibold text-[var(--text)] text-sm">What the numbers say</p>
           <p className="text-[11px] text-black/45 leading-snug">
             Written from the projections above. The model explains them — it never produces them.
           </p>
@@ -114,13 +114,13 @@ export default function AnalysisPanel({
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
           placeholder="Optional: ask something specific, e.g. who should I captain?"
-          className="flex-1 px-3.5 py-2.5 rounded-2xl bg-pastel-bg border border-black/5 text-sm font-medium outline-none focus:border-[#38003c]/25"
+          className="flex-1 px-3.5 py-2.5 rounded-xl bg-[var(--bg)] border border-[var(--line)] text-sm font-medium outline-none focus:border-[var(--accent)]/25"
         />
         <button
           type="button"
           onClick={() => run(false)}
           disabled={state === 'loading'}
-          className="px-4 py-2.5 rounded-2xl bg-[#38003c] text-white text-sm font-black disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
+          className="px-4 py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold disabled:opacity-50 flex items-center justify-center gap-2 shrink-0"
         >
           {state === 'loading' && <Loader2 className="w-4 h-4 animate-spin" />}
           {state === 'loading' ? 'Reading' : 'Explain'}
@@ -130,8 +130,8 @@ export default function AnalysisPanel({
       {/* The ceiling is a stop, not a fault: say what still works rather than
           presenting it as a broken request. */}
       {state === 'error' && data?.status === 'AI_BUDGET_EXCEEDED' ? (
-        <div className="mt-3 text-[12px] text-sky-900 bg-sky-50 border border-sky-200 rounded-2xl p-3 leading-snug">
-          <p className="font-black mb-1">Monthly AI budget reached</p>
+        <div className="mt-3 text-[12px] text-sky-900 bg-sky-50 border border-sky-200 rounded-xl p-3 leading-snug">
+          <p className="font-semibold mb-1">Monthly AI budget reached</p>
           <p>{data.error}</p>
           {data.forecastReady && (
             <p className="mt-1.5 text-sky-800">
@@ -145,15 +145,15 @@ export default function AnalysisPanel({
             <button
               type="button"
               onClick={() => run(true)}
-              className="mt-2.5 px-3.5 py-2 rounded-2xl bg-sky-900 text-white text-[12px] font-black"
+              className="mt-2.5 px-3.5 py-2 rounded-xl bg-sky-900 text-white text-[12px] font-semibold"
             >
               Resume from the unfinished step
             </button>
           )}
         </div>
       ) : state === 'error' && data?.status === 'JOB_STALE' ? (
-        <div className="mt-3 text-[12px] text-amber-900 bg-amber-50 border border-amber-200 rounded-2xl p-3 leading-snug">
-          <p className="font-black mb-1">The projections moved on</p>
+        <div className="mt-3 text-[12px] text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-3 leading-snug">
+          <p className="font-semibold mb-1">The projections moved on</p>
           <p>{data.error}</p>
           <p className="mt-1.5 text-amber-800">
             Press Explain for a fresh one. The unfinished analysis is kept as history — nothing
@@ -163,7 +163,7 @@ export default function AnalysisPanel({
       ) : (
         state === 'error' &&
         data?.error && (
-          <p className="mt-3 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl p-3 leading-snug">
+          <p className="mt-3 text-[12px] text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3 leading-snug">
             {data.error}
           </p>
         )
@@ -174,7 +174,7 @@ export default function AnalysisPanel({
           {/* Surfaced, not hidden: a figure the model stated that was not in
               its inputs is the one failure worth seeing immediately. */}
           {data.ungroundedNumbers && data.ungroundedNumbers.length > 0 && (
-            <div className="mb-3 flex items-start gap-2 text-[12px] text-rose-800 bg-rose-50 border border-rose-200 rounded-2xl p-3">
+            <div className="mb-3 flex items-start gap-2 text-[12px] text-rose-800 bg-rose-50 border border-rose-200 rounded-xl p-3">
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <p className="leading-snug">
                 These figures do not appear in the data the model was given:{' '}
@@ -183,7 +183,7 @@ export default function AnalysisPanel({
             </div>
           )}
 
-          <div className="text-[13px] text-[#111318]/85 leading-relaxed space-y-2.5">
+          <div className="text-[13px] text-[var(--text)]/85 leading-relaxed space-y-2.5">
             {data.analysis.split(/\n{2,}/).map((para, i) => (
               <p key={i}>{para}</p>
             ))}
@@ -208,11 +208,11 @@ function StepList({ job }: { job: JobView }) {
       {job.steps.map((s) => (
         <li key={s.id} className="flex items-center gap-2 text-[11px]">
           <span
-            className={`px-1.5 py-0.5 rounded-md font-black ${STEP_TONE[s.state] ?? STEP_TONE.pending}`}
+            className={`px-1.5 py-0.5 rounded-md font-semibold ${STEP_TONE[s.state] ?? STEP_TONE.pending}`}
           >
             {s.state}
           </span>
-          <span className="font-bold text-black/70">{STEP_LABEL[s.id] ?? s.id}</span>
+          <span className="font-medium text-black/70">{STEP_LABEL[s.id] ?? s.id}</span>
           {s.kind === 'ai' && <span className="text-black/35">costs a model call</span>}
         </li>
       ))}

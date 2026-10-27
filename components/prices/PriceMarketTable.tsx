@@ -197,7 +197,7 @@ export default function PriceMarketTable({
    */
   const sortChips = (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mr-1">
         Sort
       </span>
       {SORT_CHIPS.map((chip) => {
@@ -207,9 +207,9 @@ export default function PriceMarketTable({
             key={chip.field}
             type="button"
             onClick={() => handleSort(chip.field)}
-            className={`px-3 py-1.5 rounded-full text-xs font-black transition flex items-center gap-1 ${
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1 ${
               isOn
-                ? 'bg-[#38003c] text-white shadow-sm'
+                ? 'bg-[var(--accent)] text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -238,8 +238,8 @@ export default function PriceMarketTable({
             key={key}
             type="button"
             onClick={() => selectTab(key)}
-            className={`px-5 py-1.5 rounded-full text-xs font-black transition ${
-              tab === key ? 'bg-white text-[#38003c] shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            className={`px-5 py-1.5 rounded-full text-xs font-semibold transition ${
+              tab === key ? 'bg-white text-[var(--accent)]' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             {label}
@@ -259,22 +259,22 @@ export default function PriceMarketTable({
           onClick={() =>
             setStatusFilter(statusFilter === 'critical_risers' ? 'all' : 'critical_risers')
           }
-          className={`p-4 sm:p-5 rounded-3xl text-left transition transform hover:scale-[1.01] active:scale-95 shadow-md flex items-center justify-between ${
+          className={`p-4 sm:p-5 rounded-xl text-left transition active:scale-[0.98] flex items-center justify-between bg-white border ${
             statusFilter === 'critical_risers'
-              ? 'bg-emerald-600 text-white ring-4 ring-emerald-300'
-              : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+              ? 'border-[var(--up)] ring-1 ring-[var(--up)]'
+              : 'border-[var(--line)] hover:bg-[var(--bg)]'
           }`}
         >
           <div>
-            <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-emerald-100">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-[var(--up)]">
               <Rocket className="w-4 h-4" />
               <span>Rising Tonight</span>
             </div>
-            <div className="text-2xl sm:text-4xl font-black mt-1">
-              {criticalRisersCount} <span className="text-sm font-normal opacity-90">players</span>
+            <div className="text-2xl sm:text-3xl font-semibold mt-1 text-[var(--text)]">
+              {criticalRisersCount} <span className="text-sm font-normal text-[var(--muted)]">players</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full bg-emerald-50 text-[var(--up)] flex items-center justify-center shrink-0">
             <Rocket className="w-5 h-5 animate-blink" />
           </div>
         </button>
@@ -283,22 +283,22 @@ export default function PriceMarketTable({
           onClick={() =>
             setStatusFilter(statusFilter === 'critical_fallers' ? 'all' : 'critical_fallers')
           }
-          className={`p-4 sm:p-5 rounded-3xl text-left transition transform hover:scale-[1.01] active:scale-95 shadow-md flex items-center justify-between ${
+          className={`p-4 sm:p-5 rounded-xl text-left transition active:scale-[0.98] flex items-center justify-between bg-white border ${
             statusFilter === 'critical_fallers'
-              ? 'bg-rose-700 text-white ring-4 ring-rose-300'
-              : 'bg-rose-600 hover:bg-rose-700 text-white'
+              ? 'border-[var(--down)] ring-1 ring-[var(--down)]'
+              : 'border-[var(--line)] hover:bg-[var(--bg)]'
           }`}
         >
           <div>
-            <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-rose-100">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-[var(--down)]">
               <Leaf className="w-4 h-4 rotate-[135deg]" />
               <span>Falling Tonight</span>
             </div>
-            <div className="text-2xl sm:text-4xl font-black mt-1">
-              {criticalFallersCount} <span className="text-sm font-normal opacity-90">players</span>
+            <div className="text-2xl sm:text-3xl font-semibold mt-1 text-[var(--text)]">
+              {criticalFallersCount} <span className="text-sm font-normal text-[var(--muted)]">players</span>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-full bg-rose-50 text-[var(--down)] flex items-center justify-center shrink-0">
             <Leaf className="w-5 h-5 rotate-[135deg] animate-blink" />
           </div>
         </button>
@@ -315,10 +315,10 @@ export default function PriceMarketTable({
             <button
               key={tab.key}
               onClick={() => setStatusFilter(isOn ? 'all' : tab.key)}
-              className={`px-3 py-2 rounded-full text-xs font-bold transition truncate flex items-center justify-center gap-1.5 ${
+              className={`px-3 py-2 rounded-full text-xs font-medium transition truncate flex items-center justify-center gap-1.5 ${
                 isOn
-                  ? `${tab.active} shadow-sm ring-1 ring-black/10`
-                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-black/5 shadow-sm'
+                  ? `${tab.active} ring-1 ring-black/10`
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-[var(--line)]'
               }`}
             >
               {/* Selected chips invert to a solid fill, so the icon takes the
@@ -333,7 +333,7 @@ export default function PriceMarketTable({
       </div>
 
       {/* Search and position controls */}
-      <div className="pastel-card p-4 sm:p-5 shadow-sm mb-4 space-y-3">
+      <div className="pastel-card p-4 sm:p-5 mb-4 space-y-3">
         <div className="flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
             <input
@@ -341,7 +341,7 @@ export default function PriceMarketTable({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search player name or club..."
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-black/5 rounded-full text-base sm:text-xs text-[#111318] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-600 transition shadow-inner"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-[var(--line)] rounded-full text-base sm:text-xs text-[var(--text)] placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)] transition"
             />
             <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
           </div>
@@ -355,9 +355,9 @@ export default function PriceMarketTable({
                 ? 'Add or remove players from your watchlist'
                 : 'Pick a team first to use the watchlist'
             }
-            className={`shrink-0 px-3.5 py-2.5 rounded-full text-xs font-black transition flex items-center gap-1.5 disabled:opacity-40 ${
+            className={`shrink-0 px-3.5 py-2.5 rounded-full text-xs font-semibold transition flex items-center gap-1.5 disabled:opacity-40 ${
               watchMode
-                ? 'bg-pink-500 text-white shadow-md'
+                ? 'bg-pink-500 text-white'
                 : 'bg-gray-100 text-gray-600 hover:bg-pink-50 hover:text-pink-600'
             }`}
           >
@@ -376,7 +376,7 @@ export default function PriceMarketTable({
         </div>
 
         {watchMode && !watchlistReady && savedTeamId && (
-          <div className="p-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-bold flex items-start gap-2">
+          <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-[11px] font-medium flex items-start gap-2">
             <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
             <span>
               The watchlist needs Firebase configured on the server, otherwise it cannot be saved or
@@ -386,25 +386,25 @@ export default function PriceMarketTable({
         )}
 
         {saveError && (
-          <div className="p-2.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-bold flex items-start gap-2">
+          <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] font-medium flex items-start gap-2">
             <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
             <span>{saveError}</span>
           </div>
         )}
 
-        <div className="pt-2 border-t border-black/5">{sortChips}</div>
+        <div className="pt-2 border-t border-[var(--line)]">{sortChips}</div>
 
-        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-black/5">
-          <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 mr-1">
+        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-[var(--line)]">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mr-1">
             Position
           </span>
           {watchIds.size > 0 && (
             <button
               type="button"
               onClick={() => setWatchOnly((v) => !v)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-black transition flex items-center gap-1 mr-1 ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1 mr-1 ${
                 watchOnly
-                  ? 'bg-pink-500 text-white shadow-sm'
+                  ? 'bg-pink-500 text-white'
                   : 'bg-pink-50 text-pink-700 hover:bg-pink-100'
               }`}
             >
@@ -416,9 +416,9 @@ export default function PriceMarketTable({
             <button
               key={tab.key}
               onClick={() => setPositionFilter(tab.key)}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-black transition ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition ${
                 positionFilter === tab.key
-                  ? 'bg-[#38003c] text-white shadow-sm'
+                  ? 'bg-[var(--accent)] text-white'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -428,10 +428,10 @@ export default function PriceMarketTable({
         </div>
       </div>
 
-      <div className="pastel-card overflow-hidden shadow-sm">
+      <div className="pastel-card overflow-hidden">
         <div>
           <table className="w-full text-left text-sm text-gray-700 table-fixed">
-            <thead className="text-[10px] uppercase text-gray-400 border-b border-black/5 font-black tracking-wide">
+            <thead className="text-[10px] uppercase text-gray-400 border-b border-[var(--line)] font-semibold tracking-wide">
               <tr>
                 {/* Target leads: this is a price radar, so the prediction is
                     the column you scan first. Four columns, not seven — position,
@@ -470,7 +470,7 @@ export default function PriceMarketTable({
                   ? 'bg-sky-50 hover:bg-sky-100'
                   : watched
                   ? 'bg-pink-50 hover:bg-pink-100'
-                  : 'hover:bg-purple-50/40';
+                  : 'hover:bg-[var(--accent-soft)]/40';
 
                 return (
                   <tr
@@ -482,7 +482,7 @@ export default function PriceMarketTable({
                         number is allowed to run past it. */}
                     <td className="px-2 py-2.5">
                       <div className="w-14 mx-auto">
-                        <div className="flex items-center justify-center gap-1 mb-1 text-[10px] font-bold">
+                        <div className="flex items-center justify-center gap-1 mb-1 text-[10px] font-medium">
                           {/* Only the two "tonight" states are marked — a pulse
                               on every row would stop meaning anything. */}
                           {tonight && (
@@ -534,7 +534,7 @@ export default function PriceMarketTable({
                         />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1">
-                            <div className="font-bold text-[13px] text-[#111318] group-hover:text-purple-700 transition truncate">
+                            <div className="font-medium text-[13px] text-[var(--text)] group-hover:text-[var(--accent)] transition truncate">
                               {player.webName}
                             </div>
                             {/* No "MY TEAM" chip: the row already carries a
@@ -567,7 +567,7 @@ export default function PriceMarketTable({
                               name is what pushed this column wide. */}
                           <div className="text-[10px] text-gray-500 font-semibold truncate">
                             {type?.singular_name_short ?? ''}{' '}
-                            <span className="font-mono text-[#111318] font-bold">
+                            <span className="font-mono text-[var(--text)] font-medium">
                               £{player.currentCost.toFixed(1)}
                             </span>{' '}
                             {club?.short_name ?? ''}
@@ -584,10 +584,10 @@ export default function PriceMarketTable({
                         since this player's last price change, not since the
                         gameweek started — that is the number FPL counts. */}
                     <td className="px-2 py-2.5 text-center font-mono">
-                      <div className="text-[12px] font-bold text-gray-700">
+                      <div className="text-[12px] font-medium text-gray-700">
                         {player.selectedByPercent}%
                       </div>
-                      <div className="text-[11px] font-bold">
+                      <div className="text-[11px] font-medium">
                         {player.netTransfers > 0 ? (
                           <span className="text-emerald-600">
                             +{player.netTransfers.toLocaleString()}
@@ -610,7 +610,7 @@ export default function PriceMarketTable({
                         FPL's own likelihood band rather than from the percentage,
                         so this column and the Status pill can never disagree. */}
                     <td className="px-2 py-2.5 hidden sm:table-cell">
-                      <div className="flex items-center justify-center gap-1 font-mono text-[11px] font-bold">
+                      <div className="flex items-center justify-center gap-1 font-mono text-[11px] font-medium">
                         {[0, 1, 2].map((i) => {
                           const percent = player[`proj${i}` as 'proj0'];
                           const likelihood = player[`lk${i}` as 'lk0'];
@@ -655,7 +655,7 @@ export default function PriceMarketTable({
           <button
             type="button"
             onClick={() => setLimit((n) => n + PAGE * 3)}
-            className="w-full py-3 text-xs font-black text-[#38003c] hover:bg-purple-50 transition border-t border-black/5"
+            className="w-full py-3 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent-soft)] transition border-t border-[var(--line)]"
           >
             Show more · {visibleRows.length} of {filteredData.length}
           </button>
@@ -663,7 +663,7 @@ export default function PriceMarketTable({
 
         {filteredData.length === 0 && (
           <div className="py-12 text-center">
-            <p className="text-sm font-bold text-gray-500 mb-1">No players match these filters</p>
+            <p className="text-sm font-medium text-gray-500 mb-1">No players match these filters</p>
             <p className="text-xs text-gray-400">
               Try a different name, or clear the status and position filters.
             </p>
@@ -687,7 +687,7 @@ export default function PriceMarketTable({
           </p>
         </div>
 
-        <div className="p-3 text-center text-xs text-gray-400 border-t border-black/5 bg-gray-50/50 mt-2">
+        <div className="p-3 text-center text-xs text-gray-400 border-t border-[var(--line)] bg-gray-50/50 mt-2">
           {filteredData.length === 0
             ? 'No matching players'
             : filteredData.length > visibleRows.length

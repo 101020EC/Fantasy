@@ -7,7 +7,7 @@ import { AuthProvider } from '@/components/AuthContext';
 export const metadata: Metadata = {
   title: 'Fanta | Fantasy Premier League Team & Price Radar',
   description:
-    'Fanta - Fantasy Premier League live team tracker with nightly price change radar and history archive.',
+    'Fanta - Fantasy Premier League live team tracker with price change radar and history archive.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: '/favicon-64.png', sizes: '64x64', type: 'image/png' },
       { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
@@ -29,7 +30,7 @@ export const viewport: Viewport = {
   // Pinch-zoom stays available: blocking it fails WCAG 1.4.4, and the iOS
   // input auto-zoom it was meant to stop is already handled by text-base inputs.
   viewportFit: 'cover',
-  themeColor: '#38003c',
+  themeColor: '#ffffff',
 };
 
 export default function RootLayout({
@@ -64,11 +65,11 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased min-h-screen flex flex-col bg-pastel-bg text-[#111318] w-full overflow-x-hidden">
+      <body className="antialiased min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text)] w-full overflow-x-hidden">
         <Splash />
         <AuthProvider>
           <Navbar />
-          <div className="flex-1 w-full">{children}</div>
+          <div className="app-main flex-1 w-full">{children}</div>
         </AuthProvider>
       </body>
     </html>

@@ -74,11 +74,11 @@ export default async function PricesPage() {
           right-hand side of both. */}
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex items-center gap-2 sm:gap-3">
-          <h1 className="text-2xl sm:text-4xl font-black text-[#111318] tracking-tight">
+          <h1 className="text-2xl sm:text-4xl font-semibold text-[var(--text)] tracking-tight">
             Price Change
           </h1>
           {currentEventName && (
-            <span className="px-2.5 py-0.5 rounded-full bg-purple-100 text-[#38003c] text-xs font-black hidden sm:inline-block">
+            <span className="px-2.5 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] text-xs font-semibold hidden sm:inline-block">
               {currentEventName}
             </span>
           )}
@@ -86,9 +86,9 @@ export default async function PricesPage() {
       </div>
 
       {errorMsg ? (
-        <div className="p-6 rounded-3xl bg-rose-50 border border-rose-200 text-center text-rose-800">
+        <div className="p-6 rounded-xl bg-rose-50 border border-rose-200 text-center text-rose-800">
           <AlertCircle className="w-8 h-8 mx-auto mb-2 text-rose-600" />
-          <p className="font-bold text-base">{errorMsg}</p>
+          <p className="font-medium text-base">{errorMsg}</p>
         </div>
       ) : (
         <PriceMarketTable

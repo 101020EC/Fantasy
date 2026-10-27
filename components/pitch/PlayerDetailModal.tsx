@@ -18,7 +18,7 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
     switch (priceAnalysis.status) {
       case 'rising_soon':
         return (
-          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-100 text-emerald-800 rounded-full font-bold text-xs animate-pulse-rise">
+          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-100 text-emerald-800 rounded-full font-medium text-xs animate-pulse-rise">
             <TrendingUp className="w-4 h-4" />
             <span>Alert: Expected to Rise (£+0.1m) Tonight!</span>
           </div>
@@ -32,7 +32,7 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
         );
       case 'falling_soon':
         return (
-          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-100 text-rose-800 rounded-full font-bold text-xs animate-pulse-fall">
+          <div className="flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-100 text-rose-800 rounded-full font-medium text-xs animate-pulse-fall">
             <TrendingDown className="w-4 h-4" />
             <span>Alert: At Risk of Falling (£-0.1m) Tonight!</span>
           </div>
@@ -58,27 +58,27 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
     <Modal isOpen onClose={onClose} labelledBy="player-detail-title" className="max-w-lg">
         {/* Header with Jersey & Name */}
         <div className="flex items-center gap-4 mb-5">
-          <div className="p-3 bg-pastel-bg rounded-2xl">
+          <div className="p-3 bg-[var(--bg)] rounded-xl">
             <PlayerJersey teamCode={element.team_code} isGkp={elementType.id === 1} className="w-14 h-14" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#111318] text-white">
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--text)] text-white">
                 {elementType.singular_name_short}
               </span>
-              <span className="text-xs font-bold text-gray-500">{team.name}</span>
+              <span className="text-xs font-medium text-gray-500">{team.name}</span>
               {pick.is_captain && (
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pastel-blue text-[#111318]">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-[var(--text)]">
                   CAPTAIN
                 </span>
               )}
               {pick.is_vice_captain && (
-                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-pastel-orange text-[#111318]">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-200 text-[var(--text)]">
                   VICE
                 </span>
               )}
             </div>
-            <h2 id="player-detail-title" className="text-xl sm:text-2xl font-black mt-1 text-[#111318]">{priceAnalysis.fullName}</h2>
+            <h2 id="player-detail-title" className="text-xl sm:text-2xl font-semibold mt-1 text-[var(--text)]">{priceAnalysis.fullName}</h2>
             <p className="text-xs text-gray-400">ID: {element.id} • {element.web_name}</p>
           </div>
         </div>
@@ -88,7 +88,7 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
 
         {/* Injury / News Alert if any */}
         {element.news && (
-          <div className="mb-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-2.5">
+          <div className="mb-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5">
             <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
             <p className="text-xs text-rose-800 font-medium leading-relaxed">{element.news}</p>
           </div>
@@ -96,35 +96,35 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-5 text-center">
-          <div className="p-3 bg-pastel-bg rounded-2xl">
+          <div className="p-3 bg-[var(--bg)] rounded-xl">
             <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Current Price</span>
-            <span className="text-lg font-black text-emerald-600">£{priceAnalysis.currentCost.toFixed(1)}m</span>
+            <span className="text-lg font-semibold text-emerald-600">£{priceAnalysis.currentCost.toFixed(1)}m</span>
           </div>
 
-          <div className="p-3 bg-pastel-bg rounded-2xl">
+          <div className="p-3 bg-[var(--bg)] rounded-xl">
             <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Total Points</span>
-            <span className="text-lg font-black text-[#111318]">{element.total_points}</span>
+            <span className="text-lg font-semibold text-[var(--text)]">{element.total_points}</span>
           </div>
 
-          <div className="p-3 bg-pastel-bg rounded-2xl">
+          <div className="p-3 bg-[var(--bg)] rounded-xl">
             <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Form</span>
-            <span className="text-lg font-black text-pastel-blueDark">{element.form}</span>
+            <span className="text-lg font-semibold text-[var(--text)]">{element.form}</span>
           </div>
 
-          <div className="p-3 bg-pastel-bg rounded-2xl">
+          <div className="p-3 bg-[var(--bg)] rounded-xl">
             <span className="text-[11px] text-gray-500 block mb-0.5 font-semibold">Selected By</span>
-            <span className="text-lg font-black text-pastel-orangeDark">{priceAnalysis.selectedByPercent}%</span>
+            <span className="text-lg font-semibold text-amber-700">{priceAnalysis.selectedByPercent}%</span>
           </div>
         </div>
 
         {/* Transfer Velocity & Price Change Prediction Meter */}
-        <div className="p-4 bg-pastel-bg rounded-2xl mb-4">
+        <div className="p-4 bg-[var(--bg)] rounded-xl mb-4">
           <div className="flex justify-between items-center mb-2">
-            <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-              <Activity className="w-4 h-4 text-pastel-blueDark" />
+            <span className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
+              <Activity className="w-4 h-4 text-[var(--text)]" />
               Target % (Price Momentum)
             </span>
-            <span className={`text-xs font-black ${
+            <span className={`text-xs font-semibold ${
               priceAnalysis.changeScore > 0 ? 'text-emerald-600' : priceAnalysis.changeScore < 0 ? 'text-rose-600' : 'text-gray-500'
             }`}>
               {priceAnalysis.changeScore > 0 ? `+${priceAnalysis.changeScore}` : priceAnalysis.changeScore}%
@@ -149,17 +149,17 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center text-xs">
-            <div className="p-2 bg-white rounded-xl shadow-sm">
+            <div className="p-2 bg-white rounded-xl">
               <span className="text-gray-400 text-[10px] block font-medium">Transfers In</span>
-              <span className="font-black text-emerald-600">+{priceAnalysis.transfersInEvent.toLocaleString()}</span>
+              <span className="font-semibold text-emerald-600">+{priceAnalysis.transfersInEvent.toLocaleString()}</span>
             </div>
-            <div className="p-2 bg-white rounded-xl shadow-sm">
+            <div className="p-2 bg-white rounded-xl">
               <span className="text-gray-400 text-[10px] block font-medium">Transfers Out</span>
-              <span className="font-black text-rose-600">-{priceAnalysis.transfersOutEvent.toLocaleString()}</span>
+              <span className="font-semibold text-rose-600">-{priceAnalysis.transfersOutEvent.toLocaleString()}</span>
             </div>
-            <div className="p-2 bg-white rounded-xl shadow-sm">
+            <div className="p-2 bg-white rounded-xl">
               <span className="text-gray-400 text-[10px] block font-medium">Net</span>
-              <span className={`font-black ${priceAnalysis.netTransfers >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+              <span className={`font-semibold ${priceAnalysis.netTransfers >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                 {priceAnalysis.netTransfers >= 0 ? `+${priceAnalysis.netTransfers.toLocaleString()}` : priceAnalysis.netTransfers.toLocaleString()}
               </span>
             </div>
@@ -168,14 +168,14 @@ export default function PlayerDetailModal({ player, onClose }: PlayerDetailModal
 
         {/* Next Fixture */}
         {nextFixture && (
-          <div className="p-3.5 bg-pastel-bg rounded-2xl flex items-center justify-between">
+          <div className="p-3.5 bg-[var(--bg)] rounded-xl flex items-center justify-between">
             <div className="text-xs text-gray-500 font-medium">Next Fixture</div>
             <div className="flex items-center gap-2">
-              <span className="font-black text-xs sm:text-sm text-[#111318]">
+              <span className="font-semibold text-xs sm:text-sm text-[var(--text)]">
                 {nextFixture.isHome ? `${nextFixture.opponent.short_name} (H)` : `${nextFixture.opponent.short_name} (A)`}
               </span>
               <span
-                className={`text-[10px] font-black px-2 py-0.5 rounded-full text-white ${
+                className={`text-[10px] font-semibold px-2 py-0.5 rounded-full text-white ${
                   nextFixture.difficulty <= 2
                     ? 'bg-emerald-500'
                     : nextFixture.difficulty === 3

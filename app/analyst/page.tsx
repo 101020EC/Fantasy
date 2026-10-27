@@ -213,8 +213,8 @@ export default async function AnalystPage() {
           {llm?.configured ? (
             <AnalysisPanel gameweek={target} teamId={trackedTeamId} />
           ) : (
-            <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-4 mb-5">
-              <p className="font-black text-[#111318] text-sm">Written analysis is off</p>
+            <div className="rounded-xl bg-white border border-[var(--line)] p-4 mb-5">
+              <p className="font-semibold text-[var(--text)] text-sm">Written analysis is off</p>
               <p className="text-[12px] text-black/50 mt-1 leading-snug">
                 Add a key with <code className="text-[11px]">PUT /api/analyst/llm-settings</code> or set
                 OPENAI_API_KEY to have the projections explained in prose. The forecast below does not
@@ -248,14 +248,14 @@ function Shell({ children }: { children: React.ReactNode }) {
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-2 sm:gap-3">
-          <h1 className="text-2xl sm:text-4xl font-black text-[#111318] tracking-tight">Analyst</h1>
-          <span className="px-2.5 py-0.5 rounded-full bg-purple-100 text-[#38003c] text-xs font-black">
+          <h1 className="text-2xl sm:text-4xl font-semibold text-[var(--text)] tracking-tight">Analyst</h1>
+          <span className="px-2.5 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] text-xs font-semibold">
             Expected points
           </span>
         </div>
         <Link
           href="/prices"
-          className="text-xs font-black text-[#38003c] px-3 py-2 rounded-2xl bg-white border border-black/5 shadow-sm"
+          className="text-xs font-semibold text-[var(--accent)] px-3 py-2 rounded-xl bg-white border border-[var(--line)]"
         >
           Market
         </Link>
@@ -267,23 +267,24 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function Notice({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-5 flex items-start gap-3">
+    <div className="rounded-xl bg-white border border-[var(--line)] p-5 flex items-start gap-3">
       <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
         <AlertCircle className="w-4 h-4" />
       </div>
       <div>
-        <p className="font-black text-[#111318]">{title}</p>
-        <p className="text-sm text-black/55 mt-1 leading-snug">{body}</p>
+        <p className="font-semibold text-[var(--text)]">{title}</p>
+        <p className="text-sm text-[var(--muted)] mt-1 leading-snug">{body}</p>
       </div>
     </div>
   );
 }
 
 const TONES: Record<string, string> = {
-  indigo: 'bg-indigo-100 text-indigo-600',
-  emerald: 'bg-emerald-100 text-emerald-600',
-  purple: 'bg-purple-100 text-[#38003c]',
-  amber: 'bg-amber-100 text-amber-600',
+  // One neutral tile for every stat: the label says what it is, colour does not need to.
+  indigo: 'bg-gray-100 text-[var(--muted)]',
+  emerald: 'bg-gray-100 text-[var(--muted)]',
+  purple: 'bg-gray-100 text-[var(--muted)]',
+  amber: 'bg-gray-100 text-[var(--muted)]',
 };
 
 function Stat({
@@ -292,12 +293,12 @@ function Stat({
   icon: React.ReactNode; tone: string; label: string; value: string; hint: string;
 }) {
   return (
-    <div className="rounded-2xl bg-white border border-black/5 shadow-sm p-3.5">
+    <div className="rounded-xl bg-white border border-[var(--line)] p-3.5">
       <div className="flex items-center gap-2.5">
         <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${TONES[tone]}`}>{icon}</div>
         <div className="min-w-0">
-          <p className="text-[10px] uppercase tracking-wide font-black text-black/40">{label}</p>
-          <p className="font-black text-[#111318] text-sm truncate">{value}</p>
+          <p className="text-[10px] uppercase tracking-wide font-semibold text-black/40">{label}</p>
+          <p className="font-semibold text-[var(--text)] text-sm truncate">{value}</p>
         </div>
       </div>
       <p className="text-[11px] text-black/45 mt-2 leading-snug">{hint}</p>

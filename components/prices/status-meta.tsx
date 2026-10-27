@@ -29,7 +29,7 @@ export const STATUS_META: Record<PriceStatus, StatusMeta> = {
     short: 'Tonight',
     Icon: Rocket,
     iconClass: 'text-emerald-600 animate-blink',
-    pillClass: 'bg-emerald-600 text-white shadow-sm',
+    pillClass: 'bg-emerald-600 text-white',
   },
   likely_riser: {
     label: 'Trending Up',
@@ -58,7 +58,7 @@ export const STATUS_META: Record<PriceStatus, StatusMeta> = {
     // A leaf tipped off its stem — the falling-leaf reading, without a custom asset.
     Icon: Leaf,
     iconClass: 'text-rose-600 rotate-[135deg] animate-blink',
-    pillClass: 'bg-rose-600 text-white shadow-sm',
+    pillClass: 'bg-rose-600 text-white',
   },
 };
 
@@ -75,7 +75,7 @@ export function StatusPill({ status }: { status: PriceStatus }) {
 
   return (
     <span
-      className={`inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-bold whitespace-nowrap ${meta.pillClass}`}
+      className={`inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-medium whitespace-nowrap ${meta.pillClass}`}
       title={meta.label}
     >
       <span className="sm:hidden">{meta.short}</span>
