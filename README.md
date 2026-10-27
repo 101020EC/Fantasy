@@ -96,7 +96,7 @@
 | `SESSION_SECRET` | คีย์เซ็น session cookie | ใช้ `APP_PASSWORD` แทน |
 | `FIREBASE_SERVICE_ACCOUNT` | service account JSON เข้ารหัส base64 สำหรับเขียน Firestore | ปุ่ม Backup ถูกปิดพร้อมคำอธิบาย |
 | `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` / `TELEGRAM_TEAM_ID` | ส่งแจ้งเตือนราคา | โมดัล Telegram แสดงวิธีตั้งค่า |
-| `CRON_SECRET` | ป้องกัน `/api/cron/price-alert` | endpoint ตอบ 503 |
+| `CRON_SECRET` | ป้องกัน `/api/cron/*` (hourly, market-snapshot, price-alert) | endpoint ตอบ 503 |
 
 ## 🏗️ สถาปัตยกรรม
 

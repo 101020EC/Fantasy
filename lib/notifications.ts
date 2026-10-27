@@ -15,8 +15,13 @@ export type NotificationOutcome = 'sent' | 'failed' | 'skipped';
 export interface SentNotification {
   id: string;
   sentAt: string;
-  /** 'alert' for the nightly run, 'test' for the button in settings. */
-  kind: 'alert' | 'test';
+  /**
+   * 'deadline-24h' / 'deadline-2h' for the deadline messages, 'status-drop'
+   * for a squad player's availability getting worse, 'test' for the button in
+   * settings. 'alert' is the retired nightly and hourly messages — old
+   * entries still carry it.
+   */
+  kind: 'alert' | 'test' | 'deadline-24h' | 'deadline-2h' | 'status-drop';
   /**
    * What happened. Entries written before this field existed are all
    * successful sends, so a missing value reads as 'sent'.

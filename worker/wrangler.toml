@@ -17,12 +17,11 @@ FANTA_ORIGIN = "https://fantasy-tau-drab.vercel.app"
 [triggers]
 # Five past the hour: FPL's own data settles on the hour, and Vercel cold starts
 # are cheaper away from the crowd of jobs everyone else schedules at :00.
-# Every schedule Fanta has: the hourly watch, the market snapshot half an hour
-# before FPL's price deadline, and the Telegram alert at 21:00 Bangkok. The two
-# daily jobs used to live in vercel.json; Hobby runs them once a day without a
-# timing guarantee, and the snapshot's whole value is landing before the
-# deadline.
-crons = ["5 * * * *", "30 22 * * *", "0 14 * * *"]
+# Every schedule Fanta has: the hourly watch (which also sends the Telegram
+# messages 24h and 2h before each gameweek deadline) and the market snapshot
+# half an hour before FPL's price deadline. The 21:00 Bangkok daily alert was
+# removed on 2026-10-27 — see docs/plan-alerts-deadline.md.
+crons = ["5 * * * *", "30 22 * * *"]
 
 # CRON_SECRET is set with `wrangler secret put CRON_SECRET` — it must match the
 # value in the Vercel project, and it must never appear in this file.

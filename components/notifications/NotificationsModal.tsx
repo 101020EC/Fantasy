@@ -7,7 +7,7 @@ import Modal from '../ui/Modal';
 interface Sent {
   id: string;
   sentAt: string;
-  kind: 'alert' | 'test';
+  kind: 'alert' | 'test' | 'deadline-24h' | 'deadline-2h' | 'status-drop';
   date: string;
   summary: {
     risers: number;
@@ -20,6 +20,14 @@ interface Sent {
 }
 
 /** Bangkok, matching the date the entries are grouped under. */
+const KIND_LABEL: Record<Sent['kind'], string> = {
+  alert: 'Price alert',
+  test: 'Test message',
+  'deadline-24h': 'Deadline summary',
+  'deadline-2h': 'Deadline reminder',
+  'status-drop': 'Squad availability',
+};
+
 const timeOf = (iso: string) =>
   new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Asia/Bangkok',
@@ -135,7 +143,7 @@ export default function NotificationsModal({
           <p className="text-sm font-bold text-gray-500 mb-1">Nothing sent yet</p>
           <p className="text-xs text-gray-400 leading-relaxed max-w-xs mx-auto">
             {configured
-              ? 'The nightly alert runs at 06:00 Bangkok and only sends when there is something to report. A test from the alert settings shows up here too.'
+              ? 'Messages go out 24h and 2h before each deadline, and straight away when a squad player is ruled out. A test from the alert settings shows up here too.'
               : 'Firebase is not configured on the server, so sent messages are not being recorded.'}
           </p>
         </div>
@@ -160,7 +168,7 @@ export default function NotificationsModal({
                     <summary className="p-3 cursor-pointer list-none">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <span className="text-xs font-black text-[#111318]">
-                          {n.kind === 'test' ? 'Test message' : 'Price alert'}
+                          {KIND_LABEL[n.kind] ?? 'Price alert'}
                         </span>
                         <span className="text-[10px] text-gray-400 font-mono tabular-nums shrink-0">
                           {timeOf(n.sentAt)}

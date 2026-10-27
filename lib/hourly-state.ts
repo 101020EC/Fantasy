@@ -1,4 +1,5 @@
 import { getAdminDb, isAdminConfigured } from './firebase-admin';
+import { DeadlineState, EMPTY_DEADLINE_STATE } from './deadline-alerts';
 
 /**
  * The last state the hourly alert has already told the user about.
@@ -71,5 +72,34 @@ export async function writeHourlyState(next: Omit<HourlyState, 'updatedAt' | 'se
   await getAdminDb()
     .collection(DOC.collection)
     .doc(DOC.doc)
+    .set({ ...next, updatedAt: new Date().toISOString() });
+}
+
+/**
+ * Which deadline slots have gone out for the gameweek being counted down to.
+ * Its own document so the wholesale rewrite of the watermark above can never
+ * erase it, which would re-send a summary.
+ */
+const DEADLINE_DOC = { collection: 'settings', doc: 'deadlineAlerts' } as const;
+
+export async function readDeadlineState(): Promise<DeadlineState | null> {
+  if (!isAdminConfigured) return EMPTY_DEADLINE_STATE;
+  try {
+    const d = (await getAdminDb().collection(DEADLINE_DOC.collection).doc(DEADLINE_DOC.doc).get()).data();
+    if (!d) return EMPTY_DEADLINE_STATE;
+    return { event: d.event ?? null, sent: d.sent ?? {}, newsAtSummary: d.newsAtSummary ?? {} };
+  } catch (err) {
+    // Unknown, not empty: reading it as empty could send the same summary
+    // every hour until Firestore answers again. The caller skips this run.
+    console.warn('Could not read the deadline alert state:', err);
+    return null;
+  }
+}
+
+export async function writeDeadlineState(next: DeadlineState) {
+  if (!isAdminConfigured) return;
+  await getAdminDb()
+    .collection(DEADLINE_DOC.collection)
+    .doc(DEADLINE_DOC.doc)
     .set({ ...next, updatedAt: new Date().toISOString() });
 }

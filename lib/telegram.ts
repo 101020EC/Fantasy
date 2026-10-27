@@ -58,7 +58,10 @@ export async function sendTelegramMessage(
   return { ok: false, description };
 }
 
-/** Which kinds of alert the nightly job should send. */
+/**
+ * Which messages go out, and what the T−24h summary contains. The first five
+ * shape the summary; the last three are the messages themselves.
+ */
 export interface AlertToggles {
   /** At or beyond ±100% of the threshold — a change expected tonight. */
   priceMoves: boolean;
@@ -74,8 +77,12 @@ export interface AlertToggles {
    * makes a player you were saving for more or less affordable.
    */
   priceChanged: boolean;
-  /** Hours before a squad deadline to start mentioning it. */
-  deadlineHours: number;
+  /** The full summary 24h before each deadline. */
+  deadlineSummary: boolean;
+  /** The line-up and captain reminder 2h before each deadline. */
+  deadlineReminder: boolean;
+  /** An immediate message when a squad player's availability gets worse. */
+  statusDrops: boolean;
 }
 
 export const DEFAULT_ALERTS: AlertToggles = {
@@ -84,8 +91,30 @@ export const DEFAULT_ALERTS: AlertToggles = {
   injuries: true,
   watchlist: true,
   priceChanged: true,
-  deadlineHours: 36,
+  deadlineSummary: true,
+  deadlineReminder: true,
+  statusDrops: true,
 };
+
+/**
+ * Stored settings with defaults filled in and retired keys dropped. Documents
+ * saved before the deadline-only alerts carry `deadlineHours`, which nothing
+ * reads any more.
+ */
+export function normaliseAlerts(stored: Record<string, unknown> | undefined): AlertToggles {
+  const a = stored ?? {};
+  const pick = (k: keyof AlertToggles) => Boolean(a[k] ?? DEFAULT_ALERTS[k]);
+  return {
+    priceMoves: pick('priceMoves'),
+    trends: pick('trends'),
+    injuries: pick('injuries'),
+    watchlist: pick('watchlist'),
+    priceChanged: pick('priceChanged'),
+    deadlineSummary: pick('deadlineSummary'),
+    deadlineReminder: pick('deadlineReminder'),
+    statusDrops: pick('statusDrops'),
+  };
+}
 
 export interface TelegramSettings {
   botToken: string;
@@ -120,7 +149,7 @@ export async function getTelegramConfig(): Promise<TelegramSettings> {
           botToken: String(d.botToken),
           chatId: String(d.chatId),
           teamId: String(d.teamId ?? ''),
-          alerts: { ...DEFAULT_ALERTS, ...(d.alerts ?? {}) },
+          alerts: normaliseAlerts(d.alerts),
           configured: true,
           source: 'firestore',
         };

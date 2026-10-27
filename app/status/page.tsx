@@ -144,8 +144,8 @@ export default async function StatusPage() {
           : failedSinceSent
           ? `Telegram rejected it: ${lastFailure!.error ?? 'no reason given'}`
           : lastSent
-          ? `Bot ${maskToken(telegram.botToken) ?? ''}, from ${telegram.source}. Runs 21:00 Bangkok.`
-          : 'Configured but no message has gone out. Most likely no player has been close enough to a change.',
+          ? `Bot ${maskToken(telegram.botToken) ?? ''}, from ${telegram.source}. Sends 24h and 2h before each deadline, and when a squad player is ruled out.`
+          : 'Configured but no message has gone out yet. The first one is the summary 24h before the next deadline.',
       });
 
       // ── Alert attempts ───────────────────────────────────────────────────

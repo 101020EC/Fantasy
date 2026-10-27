@@ -16,7 +16,9 @@ interface Alerts {
   injuries: boolean;
   watchlist: boolean;
   priceChanged: boolean;
-  deadlineHours: number;
+  deadlineSummary: boolean;
+  deadlineReminder: boolean;
+  statusDrops: boolean;
 }
 
 interface Status {
@@ -29,15 +31,27 @@ interface Status {
   storable: boolean;
 }
 
+/** The messages themselves. Fanta no longer sends anything daily. */
+const MESSAGE_ROWS: { key: keyof Alerts; label: string; hint: string }[] = [
+  { key: 'deadlineSummary', label: 'Summary 24h before the deadline', hint: 'Prices, fitness, free transfers' },
+  { key: 'deadlineReminder', label: 'Reminder 2h before the deadline', hint: 'Captain, flagged starters, late news' },
+  {
+    key: 'statusDrops',
+    label: 'Squad player ruled out',
+    hint: 'Straight away, when a squad player turns doubtful, injured or suspended',
+  },
+];
+
+/** What goes into the 24h summary. */
 const ALERT_ROWS: { key: keyof Alerts; label: string; hint: string }[] = [
-  { key: 'priceMoves', label: 'Price changes tonight', hint: 'Players at the edge of a rise or fall' },
+  { key: 'priceMoves', label: 'Price changes predicted', hint: 'Players at the edge of a rise or fall' },
   { key: 'trends', label: 'Early trends', hint: 'Sooner warning, less certain' },
   { key: 'injuries', label: 'Fitness news', hint: 'A squad player picking up a flag' },
   { key: 'watchlist', label: 'Include watchlist', hint: 'Not just your squad' },
   {
     key: 'priceChanged',
     label: 'Prices that already changed',
-    hint: 'What FPL actually did overnight, not a prediction',
+    hint: 'What FPL actually did, not a prediction',
   },
 ];
 
@@ -57,7 +71,9 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
     injuries: true,
     watchlist: true,
     priceChanged: true,
-    deadlineHours: 36,
+    deadlineSummary: true,
+    deadlineReminder: true,
+    statusDrops: true,
   });
 
   const load = useCallback(async () => {
@@ -270,51 +286,41 @@ export default function TelegramSettingsModal({ isOpen, onClose }: TelegramSetti
               </div>
             </div>
 
-            <div className="pt-1 border-t border-black/5">
-              <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block mb-2">
-                What to send
-              </span>
-              <div className="space-y-1.5">
-                {ALERT_ROWS.map((row) => (
-                  <label
-                    key={row.key}
-                    className="flex items-start gap-2.5 cursor-pointer group"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={Boolean(alerts[row.key])}
-                      onChange={(e) =>
-                        setAlerts((a) => ({ ...a, [row.key]: e.target.checked }))
-                      }
-                      className="mt-0.5 w-4 h-4 shrink-0 accent-[#38003c] cursor-pointer"
-                    />
-                    <span className="min-w-0">
-                      <span className="block text-xs font-bold text-[#111318] group-hover:text-[#38003c] transition">
-                        {row.label}
+            {(
+              [
+                ['Messages', MESSAGE_ROWS],
+                ['In the 24h summary', ALERT_ROWS],
+              ] as const
+            ).map(([title, rows]) => (
+              <div key={title} className="pt-1 border-t border-black/5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block mb-2">
+                  {title}
+                </span>
+                <div className="space-y-1.5">
+                  {rows.map((row) => (
+                    <label
+                      key={row.key}
+                      className="flex items-start gap-2.5 cursor-pointer group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={Boolean(alerts[row.key])}
+                        onChange={(e) =>
+                          setAlerts((a) => ({ ...a, [row.key]: e.target.checked }))
+                        }
+                        className="mt-0.5 w-4 h-4 shrink-0 accent-[#38003c] cursor-pointer"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-xs font-bold text-[#111318] group-hover:text-[#38003c] transition">
+                          {row.label}
+                        </span>
+                        <span className="block text-[10px] text-gray-400">{row.hint}</span>
                       </span>
-                      <span className="block text-[10px] text-gray-400">{row.hint}</span>
-                    </span>
-                  </label>
-                ))}
-
-                <label className="flex items-center gap-2.5 pt-1">
-                  <input
-                    type="checkbox"
-                    checked={alerts.deadlineHours > 0}
-                    onChange={(e) =>
-                      setAlerts((a) => ({ ...a, deadlineHours: e.target.checked ? 36 : 0 }))
-                    }
-                    className="w-4 h-4 shrink-0 accent-[#38003c] cursor-pointer"
-                  />
-                  <span className="min-w-0">
-                    <span className="block text-xs font-bold text-[#111318]">Squad deadline</span>
-                    <span className="block text-[10px] text-gray-400">
-                      Mentioned once it is within 36 hours
-                    </span>
-                  </span>
-                </label>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
+            ))}
 
             {result && (
               <div

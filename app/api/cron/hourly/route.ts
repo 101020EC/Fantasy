@@ -1,26 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { FPLElement } from '@/lib/types';
 import { fetchFPLBootstrap, fetchFPLEntry, fetchFPLPicks } from '@/lib/fpl-api';
-import { escapeMarkdown, getTelegramConfig, sendTelegramMessage } from '@/lib/telegram';
+import {
+  escapeMarkdown,
+  getTelegramConfig,
+  sendTelegramMessage,
+  nextDeadline,
+} from '@/lib/telegram';
 import { getAdminDb, isAdminConfigured } from '@/lib/firebase-admin';
-import { recordNotification } from '@/lib/notifications';
-import { readHourlyState, writeHourlyState } from '@/lib/hourly-state';
+import { recordNotification, pruneNotifications, SentNotification } from '@/lib/notifications';
+import {
+  readHourlyState,
+  writeHourlyState,
+  readDeadlineState,
+  writeDeadlineState,
+} from '@/lib/hourly-state';
 import { nextWatermark } from '@/lib/hourly-watermark';
+import { dueSlots, markSent, statusDrops, STATUS_WORD, SLOT_HOURS } from '@/lib/deadline-alerts';
+import { loadSquadContext, buildSummary, buildReminder } from '@/lib/deadline-messages';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs'; // firebase-admin cannot run on the Edge runtime
 
 /**
- * Hourly watch on the squad and watchlist.
+ * The only Telegram clock Fanta has (see docs/plan-alerts-deadline.md).
  *
- * The nightly price-alert answers "what is likely to happen tonight". This
- * answers "what has changed since the last hour" — a price that has already
- * moved, an injury note that has appeared, a player flagged out. Those events
- * do not wait for the 21:00 Bangkok alert, and acting on them late costs a transfer.
+ * Every hour it does two things:
+ * 1. Sends the deadline messages — the full summary on the first run inside
+ *    24h of the deadline, the line-up reminder inside 2h — once each per
+ *    gameweek. Deadlines move around, so no fixed cron could hit them.
+ * 2. Messages at once when a SQUAD player's availability gets worse
+ *    (available → doubtful → injured/suspended/unavailable). Price moves,
+ *    reworded news and the watchlist wait for the summary; messaging them
+ *    hourly turned into a message every morning.
  *
- * Deliberately small: bootstrap (cached 300s), entry, picks, two Firestore
- * reads and one write. It must stay cheap enough to run twenty-four times a day
- * without thinking about it, so nothing from the analyst pipeline belongs here.
+ * Quiet runs stay small: bootstrap (cached 300s), entry, picks, three
+ * Firestore reads and one write. The heavier summary inputs are fetched only
+ * on the two runs per gameweek that send one.
  *
  * Scheduled by an external clock (a Cloudflare Worker cron trigger) which sends
  * `Authorization: Bearer $CRON_SECRET`, exactly as Vercel's own cron does.
@@ -37,8 +53,6 @@ const EMPTY_SUMMARY = {
 
 /** Beyond this the message is a list, not an alert; the rest is summarised. */
 const MAX_NAMED = 15;
-
-const money = (tenths: number) => (tenths / 10).toFixed(1);
 
 interface Tracked {
   el: FPLElement;
@@ -129,136 +143,125 @@ export async function GET(req: NextRequest) {
     });
     const next = nextWatermark(state, seen, lookupFailed);
 
-    // The first ever run has nothing to compare against. Seeding silently is
-    // the only honest option: every tracked player differs from nothing.
-    if (!state.seeded) {
-      await writeHourlyState(next);
-      return NextResponse.json({
-        alertSent: false,
-        seeded: true,
-        trackedCount: tracked.length,
-        message: 'Baseline recorded. Changes will be reported from the next run.',
-      });
-    }
-
-    const priceMoves: { t: Tracked; from: number; to: number }[] = [];
-    const newsItems: Tracked[] = [];
-    const flagged: { t: Tracked; from: string; to: string }[] = [];
-
-    tracked.forEach((t) => {
-      const { el } = t;
-      const key = String(el.id);
-
-      // A player only just added to the watchlist has no prior value. That is
-      // not a change, so they are seeded on this pass and reported from the
-      // next one — the same rule as the first run, applied per player.
-      const wasPrice = state.price[key];
-      if (alerts.priceChanged && wasPrice !== undefined && wasPrice !== el.now_cost) {
-        priceMoves.push({ t, from: wasPrice, to: el.now_cost });
-      }
-
-      const wasNews = state.news[key];
-      const nowNews = el.news ?? '';
-      if (alerts.injuries && wasNews !== undefined && wasNews !== nowNews && nowNews) {
-        newsItems.push(t);
-      }
-
-      const wasFlag = state.flag[key];
-      if (alerts.injuries && wasFlag !== undefined && wasFlag !== el.status) {
-        flagged.push({ t, from: wasFlag, to: el.status });
-      }
-    });
+    // The first ever run has nothing to compare against, so it seeds silently:
+    // every tracked player differs from nothing. A squad player with no
+    // previous value is likewise not a change (statusDrops skips them).
+    const drops =
+      state.seeded && alerts.statusDrops
+        ? statusDrops(
+            tracked.filter((t) => t.owned).map((t) => t.el),
+            state.flag
+          )
+        : [];
 
     // Written before the send. If Telegram fails, the next hour reporting the
     // same change would be worse than losing it once: the failure is recorded
     // in `notifications` either way, and a repeating false alarm is not.
     await writeHourlyState(next);
 
-    const summary = {
-      ...EMPTY_SUMMARY,
-      injuries: newsItems.length + flagged.length,
-      priceChanges: priceMoves.length,
-      watchlist: tracked.filter((t) => !t.owned).length,
+    const results: Record<string, unknown> = { trackedCount: tracked.length, seeded: !state.seeded };
+    let failed: string | null = null;
+
+    const deliver = async (
+      kind: SentNotification['kind'],
+      text: string,
+      summary: SentNotification['summary']
+    ) => {
+      const result = await sendTelegramMessage(botToken, chatId, text);
+      await recordNotification({
+        kind,
+        outcome: result.ok ? 'sent' : 'failed',
+        error: result.ok ? result.description ?? null : result.description ?? 'Telegram rejected the message',
+        summary,
+        text,
+      });
+      if (!result.ok) failed = `Telegram rejected the ${kind} message: ${result.description}`;
+      return result.ok;
     };
 
-    if (!priceMoves.length && !newsItems.length && !flagged.length) {
-      return NextResponse.json({
-        alertSent: false,
-        trackedCount: tracked.length,
-        message: 'Nothing changed since the last hour.',
-      });
-    }
-
-    const label = (t: Tracked) =>
-      `*${escapeMarkdown(t.el.web_name)}* \\(${escapeMarkdown(t.club)}\\)${
-        t.owned ? '' : ' 👁'
-      }`;
-
-    let text = `⏱ *Fanta: hourly update*\n\n`;
-
-    if (priceMoves.length) {
-      text += `💰 *Price moved:*\n`;
-      priceMoves.slice(0, MAX_NAMED).forEach(({ t, from, to }) => {
-        const arrow = to > from ? '🔺' : '🔻';
-        text += `${arrow} ${label(t)} £${escapeMarkdown(money(from))} → £${escapeMarkdown(
-          money(to)
-        )}\n`;
-      });
-      if (priceMoves.length > MAX_NAMED) {
-        text += `_\\+${escapeMarkdown(priceMoves.length - MAX_NAMED)} more_\n`;
-      }
-      text += `\n`;
-    }
-
-    if (newsItems.length) {
-      text += `🏥 *New team news:*\n`;
-      newsItems.slice(0, MAX_NAMED).forEach((t) => {
-        const chance = t.el.chance_of_playing_next_round;
+    // ── 1. Squad availability got worse ──────────────────────────────────
+    if (drops.length) {
+      const byId = new Map(tracked.map((t) => [t.el.id, t]));
+      let text = `🚦 *Fanta: squad availability*\n\n`;
+      drops.slice(0, MAX_NAMED).forEach(({ el, from, to }) => {
+        const t = byId.get(el.id)!;
+        const chance = el.chance_of_playing_next_round;
         const pct = chance === null ? '' : ` \\(${escapeMarkdown(String(chance))}%\\)`;
-        text += `• ${label(t)}${pct} — ${escapeMarkdown(t.el.news)}\n`;
+        text += `• *${escapeMarkdown(el.web_name)}* \\(${escapeMarkdown(t.club)}\\) ${escapeMarkdown(
+          STATUS_WORD[from] ?? from
+        )} → *${escapeMarkdown(STATUS_WORD[to] ?? to)}*${pct}${
+          el.news ? ` — ${escapeMarkdown(el.news)}` : ''
+        }\n`;
       });
-      text += `\n`;
-    }
-
-    if (flagged.length) {
-      const word = (s: string) =>
-        ({ a: 'available', d: 'doubtful', i: 'injured', s: 'suspended', u: 'unavailable' })[s] ??
-        s;
-      text += `🚦 *Availability changed:*\n`;
-      flagged.slice(0, MAX_NAMED).forEach(({ t, from, to }) => {
-        text += `• ${label(t)} ${escapeMarkdown(word(from))} → *${escapeMarkdown(
-          word(to)
-        )}*\n`;
+      results.statusDrops = drops.length;
+      await deliver('status-drop', text.trimEnd(), {
+        ...EMPTY_SUMMARY,
+        injuries: drops.length,
       });
-      text += `\n`;
     }
 
-    text += `_👁 \\= watchlist, not in your squad_`;
+    // ── 2. Deadline messages ─────────────────────────────────────────────
+    const deadline = nextDeadline(bootstrap.events, SLOT_HOURS['24h']);
+    if (deadline && (alerts.deadlineSummary || alerts.deadlineReminder)) {
+      const dlState = await readDeadlineState();
+      const slots = dlState
+        ? dueSlots({
+            hoursAway: deadline.hoursAway,
+            state: dlState,
+            event: deadline.event,
+            summary: alerts.deadlineSummary,
+            reminder: alerts.deadlineReminder,
+          })
+        : [];
 
-    const result = await sendTelegramMessage(botToken, chatId, text);
-    await recordNotification({
-      kind: 'alert',
-      outcome: result.ok ? 'sent' : 'failed',
-      error: result.ok
-        ? result.description ?? null
-        : result.description ?? 'Telegram rejected the message',
-      summary,
-      text,
-    });
+      if (dlState && slots.length) {
+        const ctx = await loadSquadContext(teamId, bootstrap, deadline.event);
+        const newsNow: Record<string, string> = {};
+        ctx.squadPlayers.forEach((p) => (newsNow[p.element.id] = p.element.news ?? ''));
+        const priorNews =
+          dlState.event === deadline.event && dlState.sent['24h'] ? dlState.newsAtSummary : null;
 
-    if (!result.ok) {
-      return NextResponse.json(
-        { alertSent: false, error: `Telegram rejected the message: ${result.description}` },
-        { status: 502 }
-      );
+        // Recorded before the send, for the same reason as the watermark: a
+        // summary repeated every hour is worse than one lost to an outage.
+        await writeDeadlineState(
+          markSent(dlState, deadline.event, slots, new Date().toISOString(), newsNow)
+        );
+
+        const parts: string[] = [];
+        let summary: SentNotification['summary'] = {
+          ...EMPTY_SUMMARY,
+          deadlineIn: Math.round(deadline.hoursAway),
+        };
+        if (slots.includes('24h')) {
+          const s = await buildSummary(ctx, alerts, deadline);
+          parts.push(`📋 *Fanta: GW${escapeMarkdown(deadline.event)} deadline summary*\n\n${s.text}`);
+          summary = s.summary;
+        }
+        if (slots.includes('2h')) {
+          // In a caught-up message the summary was built just now, so nothing
+          // in the squad's news is "new since" it.
+          const r = buildReminder(ctx, deadline, slots.includes('24h') ? newsNow : priorNews);
+          parts.push(
+            `${slots.includes('24h') ? '' : `⏰ *Fanta: GW${escapeMarkdown(deadline.event)} — set your team*\n\n`}${r.text}`
+          );
+          if (!slots.includes('24h')) summary = r.summary;
+        }
+        const kind = slots.includes('2h') ? 'deadline-2h' : 'deadline-24h';
+        results.deadline = { event: deadline.event, slots };
+        await deliver(kind, parts.join('\n\n— — —\n\n'), summary);
+      }
     }
 
+    if (results.deadline || results.statusDrops) await pruneNotifications();
+
+    if (failed) {
+      return NextResponse.json({ ...results, alertSent: false, error: failed }, { status: 502 });
+    }
     return NextResponse.json({
-      alertSent: true,
-      trackedCount: tracked.length,
-      priceMoves: priceMoves.length,
-      newsItems: newsItems.length,
-      flagged: flagged.length,
+      ...results,
+      alertSent: Boolean(results.deadline || results.statusDrops),
+      message:
+        results.deadline || results.statusDrops ? undefined : 'Nothing to send this hour.',
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Error executing cron job' }, { status: 500 });

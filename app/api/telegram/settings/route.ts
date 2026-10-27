@@ -6,7 +6,7 @@ import {
   saveTelegramConfig,
   clearTelegramConfig,
   maskToken,
-  DEFAULT_ALERTS,
+  normaliseAlerts,
   AlertToggles,
 } from '@/lib/telegram';
 
@@ -67,17 +67,8 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  // Normalise rather than trusting the form: unknown keys dropped, the
-  // deadline window clamped to something a daily job can actually honour.
-  const a = body.alerts ?? {};
-  const alerts: AlertToggles = {
-    priceMoves: Boolean(a.priceMoves ?? DEFAULT_ALERTS.priceMoves),
-    trends: Boolean(a.trends ?? DEFAULT_ALERTS.trends),
-    injuries: Boolean(a.injuries ?? DEFAULT_ALERTS.injuries),
-    watchlist: Boolean(a.watchlist ?? DEFAULT_ALERTS.watchlist),
-    priceChanged: Boolean(a.priceChanged ?? DEFAULT_ALERTS.priceChanged),
-    deadlineHours: Math.min(72, Math.max(0, Number(a.deadlineHours) || 0)),
-  };
+  // Normalise rather than trusting the form: unknown keys dropped.
+  const alerts: AlertToggles = normaliseAlerts(body.alerts);
 
   await saveTelegramConfig({ botToken, chatId, teamId, alerts });
   return NextResponse.json({
