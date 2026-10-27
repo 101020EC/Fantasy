@@ -3,7 +3,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   dueSlots,
-  markSent,
+  markAttempt,
+  markDelivered,
+  slotStatus,
+  fixturesPerTeam,
+  captainPicks,
   statusDrops,
   reminderFindings,
   EMPTY_DEADLINE_STATE,
@@ -18,7 +22,8 @@ test('nothing is due more than 24h out, or once the deadline has passed', () => 
 
 test('the summary is due inside 24h, and only once per gameweek', () => {
   assert.deepEqual(dueSlots({ ...on, hoursAway: 23.4, state: EMPTY_DEADLINE_STATE }), ['24h']);
-  const state = markSent(EMPTY_DEADLINE_STATE, 10, ['24h'], 't', {});
+  const tried = markAttempt(EMPTY_DEADLINE_STATE, 10, ['24h'], {});
+  const state = markDelivered(tried, 10, ['24h'], 't');
   assert.deepEqual(dueSlots({ ...on, hoursAway: 22.4, state }), []);
   assert.deepEqual(dueSlots({ ...on, hoursAway: 1.4, state }), ['2h']);
 });
@@ -28,7 +33,7 @@ test('a missed summary is caught up together with the reminder', () => {
 });
 
 test('state from the previous gameweek does not suppress this one', () => {
-  const old = markSent(EMPTY_DEADLINE_STATE, 9, ['24h', '2h'], 't', {});
+  const old = markDelivered(EMPTY_DEADLINE_STATE, 9, ['24h', '2h'], 't');
   assert.deepEqual(dueSlots({ ...on, hoursAway: 20, state: old }), ['24h']);
 });
 
@@ -43,11 +48,29 @@ test('switched-off slots are never due', () => {
   );
 });
 
-test('markSent keeps the news snapshot from the summary when only the reminder is sent', () => {
-  const after24 = markSent(EMPTY_DEADLINE_STATE, 10, ['24h'], 'a', { 1: 'Knock' });
-  const after2 = markSent(after24, 10, ['2h'], 'b', { 1: 'Ruled out' });
+test('the news snapshot is the summary\'s, not the reminder\'s', () => {
+  const after24 = markAttempt(EMPTY_DEADLINE_STATE, 10, ['24h'], { 1: 'Knock' });
+  const after2 = markAttempt(after24, 10, ['2h'], { 1: 'Ruled out' });
   assert.deepEqual(after2.newsAtSummary, { 1: 'Knock' });
-  assert.deepEqual(after2.sent, { '24h': 'a', '2h': 'b' });
+});
+
+test('a rejected slot is retried until the third attempt, then given up', () => {
+  let state = EMPTY_DEADLINE_STATE;
+  for (let i = 0; i < 3; i++) {
+    assert.deepEqual(dueSlots({ ...on, hoursAway: 20 - i, state }), ['24h']);
+    state = markAttempt(state, 10, ['24h'], {});
+  }
+  assert.deepEqual(dueSlots({ ...on, hoursAway: 17, state }), []);
+  assert.equal(slotStatus(state, 10, '24h'), 'gave-up');
+  // The reminder has its own three attempts.
+  assert.deepEqual(dueSlots({ ...on, hoursAway: 1.5, state }), ['2h']);
+});
+
+test('a delivered slot reads as sent even after failed attempts', () => {
+  let state = markAttempt(EMPTY_DEADLINE_STATE, 10, ['24h'], {});
+  state = markAttempt(state, 10, ['24h'], {});
+  state = markDelivered(state, 10, ['24h'], 't');
+  assert.equal(slotStatus(state, 10, '24h'), 'sent');
 });
 
 test('only a worse status is a drop; improvements and new players are not', () => {
@@ -82,4 +105,29 @@ test('the reminder flags starters only, and news only when it changed', () => {
   const r = reminderFindings(picks, els, { 1: 'Knock' });
   assert.deepEqual(r.flaggedStarters.map((e) => e.id), [1]);
   assert.deepEqual(r.freshNews.map((e) => e.id), [2]);
+});
+
+test('fixture counts: blanking clubs are absent, doubles count two', () => {
+  const fx = [
+    { event: 10, team_h: 1, team_a: 2 },
+    { event: 10, team_h: 3, team_a: 1 },
+    { event: 11, team_h: 4, team_a: 5 },
+  ];
+  const c = fixturesPerTeam(fx, 10);
+  assert.equal(c.get(1), 2);
+  assert.equal(c.get(2), 1);
+  assert.equal(c.get(4), undefined);
+});
+
+test('captain picks skip flagged and blanking players and rank by xPts', () => {
+  const squad = [
+    { id: 1, status: 'a', team: 1 },
+    { id: 2, status: 'd', team: 1 }, // flagged
+    { id: 3, status: 'a', team: 9 }, // blanks
+    { id: 4, status: 'a', team: 2 },
+    { id: 5, status: 'a', team: 2 }, // no forecast
+  ];
+  const xp = { 1: 6.1, 2: 9.9, 3: 12, 4: 7.4 };
+  const picks = captainPicks(squad, (id) => xp[id] ?? null, new Map([[1, 1], [2, 1]]));
+  assert.deepEqual(picks.map((p) => p.el.id), [4, 1]);
 });

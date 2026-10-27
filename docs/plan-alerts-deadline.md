@@ -86,3 +86,45 @@ _Interview complete — D1–D7 decided._
 - `/api/cron/price-alert` sends the summary on demand and does not mark the slot.
 - Dry run against live FPL (team 2792350, GW9 deadline Sat 31 Oct 18:00 Bangkok): summary and
   reminder render as intended; the first scheduled summary is due ~Fri 30 Oct 18:05 Bangkok.
+
+# Round 2 — what else to add (grill 2026-10-27)
+
+**E1 · Scope — DECIDED:** (a) blank/double gameweek warnings, (b) a deadline-alerts row on
+`/status`, (c) transfer and captain suggestions in the T−24h summary. Chips left: not wanted.
+
+**E2 · Suggestions — DECIDED: captain only.** No transfer swaps in the message. The summary
+names the captain and vice the forecast rates highest in the squad — no optimiser run, no AI.
+- Source (from the code): the stored forecast for the deadline's GW
+  (`readForecast(season, gw)`, written by the nightly market-snapshot when the analyst is on);
+  if none, FPL's own `ep_next` from bootstrap. The message names the source.
+- Candidates: all 15 of the last-confirmed squad, excluding anyone flagged (d/i/s/u) and
+  anyone whose team blanks. Shown in both the T−24h summary and the T−2h reminder, next to the
+  current captain, so a mismatch is visible.
+
+**E3 · Blank/double GW — DECIDED (from the code):** both messages. From `/fixtures` for the
+deadline's GW: starters whose club has no fixture (a certain 0) are listed with "bench or sell";
+players with two fixtures get ×2 next to their name; the summary adds "N of 15 have a fixture".
+
+**E4 · Failed sends — DECIDED: retry hourly, at most 3 attempts per slot.** The slot state
+records `attempts` per slot alongside `sent`. Each run still writes the attempt *before* the
+send (a crash mid-send must not loop), but a slot counts as done only once Telegram accepts it
+or attempts reach 3, and never after the deadline. Status drops stay fire-once (as today).
+
+**E5 · `/status` row — DECIDED (from the code):** "Deadline alerts": next GW and its deadline
+(Bangkok), each slot as sent (time) / due at (time) / failed after N attempts / off; tone bad
+when a slot gave up or the deadline passed with a slot unsent while it was switched on.
+
+_Round 2 interview complete — E1–E5 decided._
+
+## Round 2 implementation (2026-10-27)
+- `lib/deadline-alerts.ts`: `attempts` per slot, `markAttempt` (before send) /
+  `markDelivered` (after Telegram accepts), `slotStatus` (sent / gave-up / pending),
+  `MAX_ATTEMPTS = 3`, `fixturesPerTeam`, `captainPicks`. 46 tests in total.
+- `lib/deadline-messages.ts`: fixtures for the deadline GW (null when FPL sends none — then
+  nothing is called a blank), expected points from the stored forecast else `ep_next`, captain
+  line and blank/double lines in both messages.
+- `/status` row "Deadline alerts": next GW, each slot's state, red on give-up or a slot missed
+  before the last deadline.
+- Dry run on team 2792350 (GW9, no blanks): suggested Haaland 9.0 / De Cuyper 7.3 (FPL ep_next,
+  no Firebase locally); a simulated blank + double rendered "13 of 15 have a fixture · 1 play
+  twice" and listed the blanking starters.

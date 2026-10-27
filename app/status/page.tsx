@@ -10,7 +10,15 @@ import {
   listSnapshotDates,
   storedChangeDates,
 } from '@/lib/price-changes-store';
-import { getTelegramConfig, maskToken } from '@/lib/telegram';
+import { getTelegramConfig, maskToken, formatBangkok } from '@/lib/telegram';
+import { readDeadlineState } from '@/lib/hourly-state';
+import {
+  slotStatus,
+  SLOT_HOURS,
+  MAX_ATTEMPTS,
+  DeadlineSlot,
+  EMPTY_DEADLINE_STATE,
+} from '@/lib/deadline-alerts';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -51,13 +59,14 @@ export default async function StatusPage() {
       const current = bootstrap.events.find((e) => e.is_current);
       const next = bootstrap.events.find((e) => e.is_next);
 
-      const [snapshotDates, changeDates, telegram, notifications, stats] =
+      const [snapshotDates, changeDates, telegram, notifications, stats, dlState] =
         await Promise.all([
           listSnapshotDates().catch((): string[] => []),
           storedChangeDates().catch((): string[] => []),
           getTelegramConfig().catch(() => null),
           listNotifications(30).catch(() => []),
           storedPlayerStatGameweeks(season).catch((): number[] => []),
+          readDeadlineState().catch(() => null),
         ]);
 
       // ── Market snapshot ──────────────────────────────────────────────────
@@ -147,6 +156,71 @@ export default async function StatusPage() {
           ? `Bot ${maskToken(telegram.botToken) ?? ''}, from ${telegram.source}. Sends 24h and 2h before each deadline, and when a squad player is ruled out.`
           : 'Configured but no message has gone out yet. The first one is the summary 24h before the next deadline.',
       });
+
+      // ── Deadline alerts ──────────────────────────────────────────────────
+      // The only scheduled messages now, so a silent miss must show here: the
+      // hourly job decides when they go, and nothing else would notice.
+      if (telegram?.configured) {
+        const now = Date.now();
+        const upcoming = bootstrap.events
+          .filter((e) => new Date(e.deadline_time).getTime() > now)
+          .sort((a, b) => a.deadline_time.localeCompare(b.deadline_time))[0];
+        // The gameweek just gone, to catch a slot that never went before its deadline.
+        const last = bootstrap.events
+          .filter((e) => new Date(e.deadline_time).getTime() <= now)
+          .sort((a, b) => b.deadline_time.localeCompare(a.deadline_time))[0];
+        const state = dlState ?? EMPTY_DEADLINE_STATE;
+        const enabled: Record<DeadlineSlot, boolean> = {
+          '24h': telegram.alerts.deadlineSummary,
+          '2h': telegram.alerts.deadlineReminder,
+        };
+        const slots: DeadlineSlot[] = ['24h', '2h'];
+
+        const describe = (event: number, deadline: Date, slot: DeadlineSlot) => {
+          if (!enabled[slot]) return `T−${slot} off`;
+          const st = slotStatus(state, event, slot);
+          if (st === 'sent') {
+            return `T−${slot} sent ${formatBangkok(new Date(state.sent[slot]!))}`;
+          }
+          if (st === 'gave-up') return `T−${slot} failed after ${MAX_ATTEMPTS} attempts`;
+          const tries = state.event === event ? state.attempts[slot] ?? 0 : 0;
+          const due = new Date(deadline.getTime() - SLOT_HOURS[slot] * 3_600_000);
+          return `T−${slot} due ${formatBangkok(due)}${tries ? ` (${tries} failed)` : ''}`;
+        };
+
+        const gaveUp = upcoming
+          ? slots.some((s) => enabled[s] && slotStatus(state, upcoming.id, s) === 'gave-up')
+          : false;
+        // Only meaningful when the state still belongs to that gameweek; once
+        // it has moved on, the previous week's outcome is in the alert log.
+        const missedLast =
+          last && state.event === last.id
+            ? slots.filter((s) => enabled[s] && slotStatus(state, last.id, s) !== 'sent')
+            : [];
+
+        checks.push({
+          label: 'Deadline alerts',
+          tone: !dlState ? 'warn' : gaveUp || missedLast.length ? 'bad' : upcoming ? 'ok' : 'idle',
+          value: upcoming
+            ? `GW${upcoming.id} · ${formatBangkok(new Date(upcoming.deadline_time))}`
+            : 'no upcoming deadline',
+          detail: !dlState
+            ? 'Could not read the deadline alert state from Firestore.'
+            : [
+                upcoming
+                  ? slots
+                      .map((s) => describe(upcoming.id, new Date(upcoming.deadline_time), s))
+                      .join(' · ')
+                  : null,
+                missedLast.length
+                  ? `GW${last!.id}: T−${missedLast.join(', T−')} never went out before the deadline.`
+                  : null,
+                'Checked every hour at :05; a rejected message is retried up to three times.',
+              ]
+                .filter(Boolean)
+                .join(' '),
+        });
+      }
 
       // ── Alert attempts ───────────────────────────────────────────────────
       const skipped = notifications.filter((n) => n.outcome === 'skipped').length;

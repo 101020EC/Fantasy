@@ -4,6 +4,7 @@ import {
   fetchFPLPicks,
   fetchFPLHistory,
   fetchFPLTransfers,
+  fetchFPLFixtures,
   buildSquadPlayers,
 } from './fpl-api';
 import { escapeMarkdown, formatBangkok, AlertToggles } from './telegram';
@@ -12,7 +13,14 @@ import { analyzePlayerPrice } from './price-calculator';
 import { listSnapshotDates, readSnapshot } from './price-changes-store';
 import { diffAgainstLive, PriceChangeDay } from './price-changes';
 import { freeTransfersFor } from './free-transfers';
-import { reminderFindings, STATUS_WORD } from './deadline-alerts';
+import {
+  reminderFindings,
+  STATUS_WORD,
+  fixturesPerTeam,
+  captainPicks,
+} from './deadline-alerts';
+import { readForecast } from './analyst-store';
+import { seasonKey } from './analyst';
 import type { SentNotification } from './notifications';
 
 /**
@@ -44,6 +52,42 @@ export interface SquadContext {
   squadPlayers: ReturnType<typeof buildSquadPlayers>;
   /** Null when FPL would not give the history to count from. */
   freeTransfers: number | null;
+  /**
+   * Club → fixtures in the deadline's gameweek. Null when FPL would not send
+   * the fixture list: then nothing is called a blank, rather than everyone.
+   */
+  fixtures: Map<number, number> | null;
+  /** Expected points per player for the deadline's gameweek, and where they came from. */
+  xPts: Map<number, number>;
+  xPtsSource: 'forecast' | 'fpl';
+}
+
+/**
+ * Fanta's own forecast for the gameweek when the nightly job has written one,
+ * otherwise FPL's `ep_next`. Never mixed: two models side by side would rank
+ * players on different scales.
+ */
+async function expectedPoints(
+  bootstrap: FPLBootstrap,
+  event: number
+): Promise<{ xPts: Map<number, number>; source: 'forecast' | 'fpl' }> {
+  if (isAdminConfigured) {
+    try {
+      const f = await readForecast(seasonKey(bootstrap), event);
+      const entries = Object.entries(f?.predictions ?? {});
+      if (entries.length) {
+        return { xPts: new Map(entries.map(([id, p]) => [Number(id), p.xPts])), source: 'forecast' };
+      }
+    } catch {
+      // FPL's number is a fine fallback for picking a captain.
+    }
+  }
+  const xPts = new Map<number, number>();
+  bootstrap.elements.forEach((el) => {
+    const v = parseFloat(el.ep_next ?? '');
+    if (Number.isFinite(v)) xPts.set(el.id, v);
+  });
+  return { xPts, source: 'fpl' };
 }
 
 export async function loadSquadContext(
@@ -51,10 +95,12 @@ export async function loadSquadContext(
   bootstrap: FPLBootstrap,
   nextEvent: number
 ): Promise<SquadContext> {
-  const [entry, history, transfers] = await Promise.all([
+  const [entry, history, transfers, fixtureList, expected] = await Promise.all([
     fetchFPLEntry(teamId),
     fetchFPLHistory(teamId),
     fetchFPLTransfers(teamId),
+    fetchFPLFixtures(),
+    expectedPoints(bootstrap, nextEvent),
   ]);
   const currentEvent =
     bootstrap.events.find((e) => e.is_current) ||
@@ -72,7 +118,20 @@ export async function loadSquadContext(
         pendingTransfers: transfers.filter((t: any) => t.event === nextEvent).length,
       })
     : null;
-  return { bootstrap, teamId, entry, picks, squadPlayers, freeTransfers };
+  return {
+    bootstrap,
+    teamId,
+    entry,
+    picks,
+    squadPlayers,
+    freeTransfers,
+    // fetchFPLFixtures returns [] when FPL fails; a real gameweek always has some.
+    fixtures: fixtureList.some((f) => f.event === nextEvent)
+      ? fixturesPerTeam(fixtureList, nextEvent)
+      : null,
+    xPts: expected.xPts,
+    xPtsSource: expected.source,
+  };
 }
 
 /**
@@ -108,6 +167,71 @@ function deadlineLine(deadline: Deadline): string {
 function freeTransfersLine(ctx: SquadContext): string {
   if (ctx.freeTransfers === null) return `🔁 Free transfers: _could not read your history_\n`;
   return `🔁 Free transfers: *${escapeMarkdown(ctx.freeTransfers)}*\n`;
+}
+
+/** ×2 after a name in a double gameweek. */
+function doubleMark(ctx: SquadContext, team: number): string {
+  return (ctx.fixtures?.get(team) ?? 0) >= 2 ? ' ×2' : '';
+}
+
+/**
+ * Starters whose club has no fixture this gameweek — a certain zero — and,
+ * for the summary, how many of the fifteen play at all.
+ */
+function fixtureLines(ctx: SquadContext, withCount: boolean): string {
+  if (!ctx.fixtures) return withCount ? `📅 _Fixture list unavailable — blanks not checked\\._\n\n` : '';
+  const fx = ctx.fixtures;
+  const elements = new Map(ctx.bootstrap.elements.map((el) => [el.id, el]));
+  const teamMap = new Map(ctx.bootstrap.teams.map((t) => [t.id, t]));
+  const squad = ctx.picks.picks
+    .map((p) => ({ pos: p.position, el: elements.get(p.element) }))
+    .filter((p): p is { pos: number; el: NonNullable<typeof p.el> } => Boolean(p.el));
+  const blankStarters = squad.filter((p) => p.pos <= 11 && !fx.get(p.el.team));
+  const playing = squad.filter((p) => (fx.get(p.el.team) ?? 0) > 0).length;
+  const doubles = squad.filter((p) => (fx.get(p.el.team) ?? 0) >= 2).length;
+
+  let text = '';
+  if (withCount && (playing < squad.length || doubles > 0)) {
+    text += `📅 *${escapeMarkdown(playing)} of ${escapeMarkdown(squad.length)}* have a fixture${
+      doubles ? ` · ${escapeMarkdown(doubles)} play twice` : ''
+    }\n`;
+  }
+  if (blankStarters.length) {
+    text += `⛔ *Starters with no fixture — bench or sell:*\n`;
+    blankStarters.forEach(
+      (p) =>
+        (text += `• *${escapeMarkdown(p.el.web_name)}* \\(${escapeMarkdown(
+          teamMap.get(p.el.team)?.short_name ?? 'CLB'
+        )}\\)\n`)
+    );
+  }
+  return text ? text + `\n` : '';
+}
+
+/** Recommended captain and vice next to the current ones, so a mismatch shows. */
+function captainLines(ctx: SquadContext): string {
+  const elements = new Map(ctx.bootstrap.elements.map((el) => [el.id, el]));
+  const squad = ctx.picks.picks
+    .map((p) => elements.get(p.element))
+    .filter((el): el is NonNullable<typeof el> => Boolean(el));
+  // Without the fixture list nobody is excluded as blanking.
+  const fx = ctx.fixtures ?? new Map(squad.map((el) => [el.team, 1]));
+  const picks = captainPicks(squad, (id) => ctx.xPts.get(id) ?? null, fx);
+  const current = ctx.picks.picks.find((p) => p.is_captain)?.element;
+  if (!picks.length) return `🎯 _No captain suggestion — no expected points available\\._\n`;
+
+  const label = (c: (typeof picks)[number]) =>
+    `*${escapeMarkdown(c.el.web_name)}*${doubleMark(ctx, c.el.team)} ${escapeMarkdown(
+      c.xPts.toFixed(1)
+    )} xP`;
+  const source = ctx.xPtsSource === 'forecast' ? 'Fanta forecast' : 'FPL expected points';
+  let text = `🎯 Suggested captain: ${label(picks[0])}${
+    picks[1] ? ` · vice ${label(picks[1])}` : ''
+  } _\\(${escapeMarkdown(source)}\\)_\n`;
+  if (current !== undefined && current !== picks[0].el.id) {
+    text += `_Your current captain is ${escapeMarkdown(elements.get(current)?.web_name ?? current)}\\._\n`;
+  }
+  return text;
 }
 
 /** The T−24h summary. Without a header, so it can open a combined message. */
@@ -174,7 +298,9 @@ export async function buildSummary(
   let text = `👤 *Team:* ${escapeMarkdown(ctx.entry.name)} \\(\\#${escapeMarkdown(ctx.entry.id)}\\)\n`;
   text += deadlineLine(deadline);
   text += freeTransfersLine(ctx);
+  text += captainLines(ctx);
   text += `\n`;
+  text += fixtureLines(ctx, true);
 
   if (changed && changed.changes.length > 0) {
     const elementMap = new Map(bootstrap.elements.map((el) => [el.id, el]));
@@ -280,7 +406,9 @@ export function buildReminder(
     vice ? name(vice.element) : '—'
   }\n`;
   text += freeTransfersLine(ctx);
+  text += captainLines(ctx);
   text += `_As last confirmed with FPL — changes you have made since are not visible\\._\n\n`;
+  text += fixtureLines(ctx, false);
 
   if (flaggedStarters.length) {
     text += `🚦 *Starters with a flag — consider a bench swap:*\n`;

@@ -21,8 +21,13 @@ export const SLOT_HOURS: Record<DeadlineSlot, number> = { '24h': 24, '2h': 2 };
 export interface DeadlineState {
   /** The gameweek whose deadline the slots below belong to. */
   event: number | null;
-  /** slot → ISO time it was sent. Missing means not sent yet. */
+  /** slot → ISO time Telegram accepted it. Missing means not delivered yet. */
   sent: Partial<Record<DeadlineSlot, string>>;
+  /**
+   * slot → how many sends have been tried. Written before each send, so a run
+   * that dies mid-send still counts; a slot stops at MAX_ATTEMPTS.
+   */
+  attempts: Partial<Record<DeadlineSlot, number>>;
   /**
    * elementId → `news` as it stood when the T−24h summary went out, so the
    * T−2h reminder can say only what is new since.
@@ -30,7 +35,28 @@ export interface DeadlineState {
   newsAtSummary: Record<string, string>;
 }
 
-export const EMPTY_DEADLINE_STATE: DeadlineState = { event: null, sent: {}, newsAtSummary: {} };
+export const EMPTY_DEADLINE_STATE: DeadlineState = {
+  event: null,
+  sent: {},
+  attempts: {},
+  newsAtSummary: {},
+};
+
+/** A slot Telegram keeps rejecting is retried hourly this many times, then given up. */
+export const MAX_ATTEMPTS = 3;
+
+/** The state's view of one gameweek: another gameweek's state says nothing about it. */
+function forEvent(state: DeadlineState, event: number): DeadlineState {
+  return state.event === event ? state : { ...EMPTY_DEADLINE_STATE, event };
+}
+
+export type SlotStatus = 'sent' | 'gave-up' | 'pending';
+
+export function slotStatus(state: DeadlineState, event: number, slot: DeadlineSlot): SlotStatus {
+  const s = forEvent(state, event);
+  if (s.sent[slot]) return 'sent';
+  return (s.attempts[slot] ?? 0) >= MAX_ATTEMPTS ? 'gave-up' : 'pending';
+}
 
 /**
  * The slots to send on this run, in the order they belong in one message.
@@ -48,33 +74,48 @@ export function dueSlots(opts: {
   summary: boolean;
   reminder: boolean;
 }): DeadlineSlot[] {
-  const { hoursAway, event } = opts;
+  const { hoursAway, event, state } = opts;
   if (hoursAway <= 0) return [];
-  // A state written for another gameweek says nothing about this one.
-  const sent = opts.state.event === event ? opts.state.sent : {};
+  const open = (slot: DeadlineSlot) =>
+    slotStatus(state, event, slot) === 'pending' && hoursAway <= SLOT_HOURS[slot];
 
   const due: DeadlineSlot[] = [];
-  if (opts.summary && !sent['24h'] && hoursAway <= SLOT_HOURS['24h']) due.push('24h');
-  if (opts.reminder && !sent['2h'] && hoursAway <= SLOT_HOURS['2h']) due.push('2h');
+  if (opts.summary && open('24h')) due.push('24h');
+  if (opts.reminder && open('2h')) due.push('2h');
   return due;
 }
 
-/** The state to write once `slots` are about to be sent for `event`. */
-export function markSent(
+/**
+ * The state to write just BEFORE sending `slots`: one more attempt each, and
+ * the squad's news as the summary is about to report it.
+ */
+export function markAttempt(
   state: DeadlineState,
   event: number,
   slots: DeadlineSlot[],
-  at: string,
   newsNow: Record<string, string>
 ): DeadlineState {
-  const base = state.event === event ? state : { ...EMPTY_DEADLINE_STATE, event };
-  const sent = { ...base.sent };
-  slots.forEach((s) => (sent[s] = at));
+  const base = forEvent(state, event);
+  const attempts = { ...base.attempts };
+  slots.forEach((s) => (attempts[s] = (attempts[s] ?? 0) + 1));
   return {
-    event,
-    sent,
+    ...base,
+    attempts,
     newsAtSummary: slots.includes('24h') ? newsNow : base.newsAtSummary,
   };
+}
+
+/** The state to write once Telegram has accepted `slots`. */
+export function markDelivered(
+  state: DeadlineState,
+  event: number,
+  slots: DeadlineSlot[],
+  at: string
+): DeadlineState {
+  const base = forEvent(state, event);
+  const sent = { ...base.sent };
+  slots.forEach((s) => (sent[s] = at));
+  return { ...base, sent };
 }
 
 /**
@@ -128,4 +169,37 @@ export function reminderFindings<T extends { id: number; status: string; news: s
       .filter((p) => p.el.news && p.el.news !== (newsAtSummary[String(p.el.id)] ?? ''))
       .map((p) => p.el),
   };
+}
+
+/** Fixtures per club in one gameweek. A club missing from the map blanks. */
+export function fixturesPerTeam(
+  fixtures: { event: number | null; team_h: number; team_a: number }[],
+  event: number
+): Map<number, number> {
+  const count = new Map<number, number>();
+  fixtures
+    .filter((f) => f.event === event)
+    .forEach((f) => {
+      count.set(f.team_h, (count.get(f.team_h) ?? 0) + 1);
+      count.set(f.team_a, (count.get(f.team_a) ?? 0) + 1);
+    });
+  return count;
+}
+
+/**
+ * Captain and vice by expected points: anyone flagged or blanking is out,
+ * because a captain who does not play hands the armband to the vice at best.
+ * Returns fewer than two when fewer qualify.
+ */
+export function captainPicks<T extends { id: number; status: string; team: number }>(
+  squad: T[],
+  xPts: (id: number) => number | null,
+  fixtures: Map<number, number>
+): { el: T; xPts: number }[] {
+  return squad
+    .filter((el) => severity(el.status) === 0 && (fixtures.get(el.team) ?? 0) > 0)
+    .map((el) => ({ el, xPts: xPts(el.id) }))
+    .filter((c): c is { el: T; xPts: number } => c.xPts !== null && Number.isFinite(c.xPts))
+    .sort((a, b) => b.xPts - a.xPts)
+    .slice(0, 2);
 }

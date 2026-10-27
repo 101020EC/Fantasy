@@ -16,7 +16,14 @@ import {
   writeDeadlineState,
 } from '@/lib/hourly-state';
 import { nextWatermark } from '@/lib/hourly-watermark';
-import { dueSlots, markSent, statusDrops, STATUS_WORD, SLOT_HOURS } from '@/lib/deadline-alerts';
+import {
+  dueSlots,
+  markAttempt,
+  markDelivered,
+  statusDrops,
+  STATUS_WORD,
+  SLOT_HOURS,
+} from '@/lib/deadline-alerts';
 import { loadSquadContext, buildSummary, buildReminder } from '@/lib/deadline-messages';
 
 export const dynamic = 'force-dynamic';
@@ -221,11 +228,12 @@ export async function GET(req: NextRequest) {
         const priorNews =
           dlState.event === deadline.event && dlState.sent['24h'] ? dlState.newsAtSummary : null;
 
-        // Recorded before the send, for the same reason as the watermark: a
-        // summary repeated every hour is worse than one lost to an outage.
-        await writeDeadlineState(
-          markSent(dlState, deadline.event, slots, new Date().toISOString(), newsNow)
-        );
+        // The attempt is recorded before the send, so a run that dies mid-send
+        // still counts towards MAX_ATTEMPTS and cannot repeat every hour. Only
+        // Telegram accepting it marks the slot done; a rejection is retried
+        // next hour, up to three attempts in all.
+        const attempted = markAttempt(dlState, deadline.event, slots, newsNow);
+        await writeDeadlineState(attempted);
 
         const parts: string[] = [];
         let summary: SentNotification['summary'] = {
@@ -248,7 +256,11 @@ export async function GET(req: NextRequest) {
         }
         const kind = slots.includes('2h') ? 'deadline-2h' : 'deadline-24h';
         results.deadline = { event: deadline.event, slots };
-        await deliver(kind, parts.join('\n\n— — —\n\n'), summary);
+        if (await deliver(kind, parts.join('\n\n— — —\n\n'), summary)) {
+          await writeDeadlineState(
+            markDelivered(attempted, deadline.event, slots, new Date().toISOString())
+          );
+        }
       }
     }
 

@@ -87,7 +87,12 @@ export async function readDeadlineState(): Promise<DeadlineState | null> {
   try {
     const d = (await getAdminDb().collection(DEADLINE_DOC.collection).doc(DEADLINE_DOC.doc).get()).data();
     if (!d) return EMPTY_DEADLINE_STATE;
-    return { event: d.event ?? null, sent: d.sent ?? {}, newsAtSummary: d.newsAtSummary ?? {} };
+    return {
+      event: d.event ?? null,
+      sent: d.sent ?? {},
+      attempts: d.attempts ?? {},
+      newsAtSummary: d.newsAtSummary ?? {},
+    };
   } catch (err) {
     // Unknown, not empty: reading it as empty could send the same summary
     // every hour until Firestore answers again. The caller skips this run.
